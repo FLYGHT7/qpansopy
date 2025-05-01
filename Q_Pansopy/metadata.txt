@@ -1,0 +1,8 @@
+[general]
+name=QPANSOPY
+description=Procedure Analysis and Obstacle Protection Surfaces
+version=0.1
+qgisMinimumVersion=3.0
+author=Tu Nombre
+email=tu.email@ejemplo.com
+about=Este plugin proporciona herramientas para el análisis de procedimientos y superficies de protección de obstáculos.
