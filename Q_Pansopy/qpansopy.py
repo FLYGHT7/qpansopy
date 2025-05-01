@@ -1,46 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-/***************************************************************************
-QPANSOPY
-                                A QGIS plugin
-Procedure Analysis and Obstacle Protection Surfaces
-                            -------------------
-       begin                : 2023-04-29
-       copyright            : (C) 2023 by Your Name
-       email                : your.email@example.com
-***************************************************************************/
-
-/***************************************************************************
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-***************************************************************************/
+QPANSOPY Plugin for QGIS
 """
 import os
-import sys
-import inspect
-from PyQt5.QtCore import QSettings, QTranslator, QCoreApplication, Qt
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QAction, QToolBar, QMessageBox, QMenu
-from qgis.core import QgsProject, Qgis, QgsApplication
-from qgis.utils import iface
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox
+from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform
 
-# Import the code for the dock widgets
+# Import the dock widgets
 from .qpansopy_vss_dockwidget import QPANSOPYVSSDockWidget
 from .qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
 
-# Import the processing provider
-from .qpansopy_provider import QPANSOPYProvider
-
-class QPANSOPY:
-    """QGIS Plugin Implementation."""
+class Qpansopy:
+    """QPANSOPY Plugin Implementation"""
 
     def __init__(self, iface):
         """Constructor.
-
+        
         :param iface: An interface instance that will be passed to this class
             which provides the hook by which you can manipulate the QGIS
             application at run time.
@@ -50,51 +27,14 @@ class QPANSOPY:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-        # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'QPANSOPY_{}.qm'.format(locale))
-
-        if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-            QCoreApplication.installTranslator(self.translator)
-
-        # Declare instance attributes
+        
+        # Create actions
         self.actions = []
-        self.menu = self.tr(u'&QPANSOPY')
-
-        # Check if plugin was started the first time in current QGIS session
-        # Must be set in initGui() to survive plugin reloads
-        self.first_start = None
+        self.menu = "QPANSOPY"
         
-        # Initialize dock widgets
-        self.pluginIsActive = False
-        self.vss_dockwidget = None
-        self.ils_dockwidget = None
-        
-        # Initialize processing provider
-        self.provider = None
-        
-        # Initialize menu
-        self.qpansopy_menu = None
-
-    # noinspection PyMethodMayBeStatic
-    def tr(self, message):
-        """Get the translation for a string using Qt translation API.
-
-        We implement this ourselves since we do not inherit QObject.
-
-        :param message: String for translation.
-        :type message: str, QString
-
-        :returns: Translated version of message.
-        :rtype: QString
-        """
-        # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('QPANSOPY', message)
+        # Initialize dock widgets to None
+        self.vss_dock = None
+        self.ils_dock = None
 
     def add_action(
         self,
@@ -107,44 +47,7 @@ class QPANSOPY:
         status_tip=None,
         whats_this=None,
         parent=None):
-        """Add a toolbar icon to the toolbar.
-
-        :param icon_path: Path to the icon for this action. Can be a resource
-            path (e.g. ':/plugins/foo/bar.png') or a normal file system path.
-        :type icon_path: str
-
-        :param text: Text that should be shown in menu items for this action.
-        :type text: str
-
-        :param callback: Function to be called when the action is triggered.
-        :type callback: function
-
-        :param enabled_flag: A flag indicating if the action should be enabled
-            by default. Defaults to True.
-        :type enabled_flag: bool
-
-        :param add_to_menu: Flag indicating whether the action should also
-            be added to the menu. Defaults to True.
-        :type add_to_menu: bool
-
-        :param add_to_toolbar: Flag indicating whether the action should also
-            be added to the toolbar. Defaults to True.
-        :type add_to_toolbar: bool
-
-        :param status_tip: Optional text to show in a popup when mouse pointer
-            hovers over the action.
-        :type status_tip: str
-
-        :param parent: Parent widget for the new action. Defaults None.
-        :type parent: QWidget
-
-        :param whats_this: Optional text to show in the status bar when the
-            mouse pointer hovers over the action.
-
-        :returns: The action that was created. Note that the action is also
-            added to self.actions list.
-        :rtype: QAction
-        """
+        """Add a toolbar icon to the toolbar."""
 
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
@@ -158,7 +61,7 @@ class QPANSOPY:
             action.setWhatsThis(whats_this)
 
         if add_to_toolbar:
-            # Adds plugin icon to Plugins toolbar
+            # Añadir a la barra de herramientas principal de QGIS
             self.iface.addToolBarIcon(action)
 
         if add_to_menu:
@@ -172,133 +75,80 @@ class QPANSOPY:
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
-
-        # Create QPANSOPY menu
-        self.qpansopy_menu = QMenu("QPANSOPY")
-        self.iface.mainWindow().menuBar().insertMenu(
-            self.iface.firstRightStandardMenu().menuAction(), 
-            self.qpansopy_menu
-        )
-
-        # Add VSS action
-        vss_icon_path = os.path.join(self.plugin_dir, 'icons', 'vss_icon.png')
-        if not os.path.exists(vss_icon_path):
-            # Intentar con .ico si .png no existe
-            vss_icon_path = os.path.join(self.plugin_dir, 'icons', 'vss_icon.ico')
         
-        self.vss_action = QAction(
-            QIcon(vss_icon_path),
-            "VSS",
-            self.iface.mainWindow()
-        )
-        self.vss_action.triggered.connect(self.run_vss)
-        self.qpansopy_menu.addAction(self.vss_action)
-        self.iface.addToolBarIcon(self.vss_action)
-        self.actions.append(self.vss_action)
-
-        # Add ILS action
-        ils_icon_path = os.path.join(self.plugin_dir, 'icons', 'ils_icon.png')
-        if not os.path.exists(ils_icon_path):
-            # Intentar con .ico si .png no existe
-            ils_icon_path = os.path.join(self.plugin_dir, 'icons', 'ils_icon.ico')
+        # Create action for VSS tool
+        self.add_action(
+            os.path.join(self.plugin_dir, 'icons', 'vss_icon.png'),
+            text="QPANSOPY VSS Tool",
+            callback=self.toggle_vss_dock,
+            parent=self.iface.mainWindow())
             
-        self.ils_action = QAction(
-            QIcon(ils_icon_path),
-            "ILS",
-            self.iface.mainWindow()
-        )
-        self.ils_action.triggered.connect(self.run_ils)
-        self.qpansopy_menu.addAction(self.ils_action)
-        self.iface.addToolBarIcon(self.ils_action)
-        self.actions.append(self.ils_action)
-
-        # will be set False in run()
-        self.first_start = True
-        
-        # Add processing provider
-        self.provider = QPANSOPYProvider()
-        QgsApplication.processingRegistry().addProvider(self.provider)
-
-    def onCloseVSSDockWidget(self):
-        """Cleanup necessary items here when VSS dockwidget is closed"""
-        self.vss_dockwidget.closingPlugin.disconnect(self.onCloseVSSDockWidget)
-        self.vss_dockwidget = None
-
-    def onCloseILSDockWidget(self):
-        """Cleanup necessary items here when ILS dockwidget is closed"""
-        self.ils_dockwidget.closingPlugin.disconnect(self.onCloseILSDockWidget)
-        self.ils_dockwidget = None
+        # Create action for ILS tool
+        self.add_action(
+            os.path.join(self.plugin_dir, 'icons', 'ils_icon.png'),
+            text="QPANSOPY ILS Tool",
+            callback=self.toggle_ils_dock,
+            parent=self.iface.mainWindow())
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(
-                self.tr(u'&QPANSOPY'),
+                "QPANSOPY",
                 action)
             self.iface.removeToolBarIcon(action)
         
-        # Remove QPANSOPY menu
-        if self.qpansopy_menu:
-            self.qpansopy_menu.deleteLater()
+        # Close dock widgets if they exist
+        if self.vss_dock:
+            self.iface.removeDockWidget(self.vss_dock)
+            self.vss_dock = None
             
-        # Remove processing provider
-        if self.provider:
-            QgsApplication.processingRegistry().removeProvider(self.provider)
+        if self.ils_dock:
+            self.iface.removeDockWidget(self.ils_dock)
+            self.ils_dock = None
 
-    def run_vss(self):
-        """Run method that loads and starts the VSS dockwidget"""
-        # Mostrar mensaje para depuración
-        self.iface.messageBar().pushMessage("QPANSOPY", "Iniciando VSS Dock Widget", level=Qgis.Info)
-        
-        try:
-            if self.vss_dockwidget is None:
-                # Create the dockwidget and keep reference
-                self.vss_dockwidget = QPANSOPYVSSDockWidget(self.iface)
-                # connect to provide cleanup on closing of dockwidget
-                self.vss_dockwidget.closingPlugin.connect(self.onCloseVSSDockWidget)
-                # show the dockwidget
-                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.vss_dockwidget)
+    def toggle_vss_dock(self):
+        """Toggle the VSS dock widget"""
+        if self.vss_dock is None:
+            # Create the dock widget
+            self.vss_dock = QPANSOPYVSSDockWidget(self.iface)
+            # Connect the closing signal
+            self.vss_dock.closingPlugin.connect(self.on_vss_dock_closed)
+            # Add the dock widget to the interface
+            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.vss_dock)
             
-            # Asegurarse de que el dock widget sea visible
-            self.vss_dockwidget.show()
-            self.vss_dockwidget.raise_()
-            self.vss_dockwidget.activateWindow()
+            # Close ILS dock if it's open
+            if self.ils_dock:
+                self.iface.removeDockWidget(self.ils_dock)
+                self.ils_dock = None
+        else:
+            # If the dock widget exists, remove it
+            self.iface.removeDockWidget(self.vss_dock)
+            self.vss_dock = None
+    
+    def toggle_ils_dock(self):
+        """Toggle the ILS dock widget"""
+        if self.ils_dock is None:
+            # Create the dock widget
+            self.ils_dock = QPANSOPYILSDockWidget(self.iface)
+            # Connect the closing signal
+            self.ils_dock.closingPlugin.connect(self.on_ils_dock_closed)
+            # Add the dock widget to the interface
+            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.ils_dock)
             
-            # Mensaje de confirmación
-            self.iface.messageBar().pushMessage("QPANSOPY", "VSS Dock Widget mostrado correctamente", level=Qgis.Success)
-        except Exception as e:
-            # Mostrar error si algo falla
-            self.iface.messageBar().pushMessage("Error", f"Error al mostrar VSS Dock Widget: {str(e)}", level=Qgis.Critical)
-            import traceback
-            print(traceback.format_exc())
-
-    def run_ils(self):
-        """Run method that loads and starts the ILS dockwidget"""
-        # Mostrar mensaje para depuración
-        self.iface.messageBar().pushMessage("QPANSOPY", "Iniciando ILS Dock Widget", level=Qgis.Info)
-        
-        try:
-            if self.ils_dockwidget is None:
-                # Create the dockwidget and keep reference
-                self.ils_dockwidget = QPANSOPYILSDockWidget(self.iface)
-                # connect to provide cleanup on closing of dockwidget
-                self.ils_dockwidget.closingPlugin.connect(self.onCloseILSDockWidget)
-                # show the dockwidget
-                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.ils_dockwidget)
-            
-            # Asegurarse de que el dock widget sea visible
-            self.ils_dockwidget.show()
-            self.ils_dockwidget.raise_()
-            self.ils_dockwidget.activateWindow()
-            
-            # Mensaje de confirmación
-            self.iface.messageBar().pushMessage("QPANSOPY", "ILS Dock Widget mostrado correctamente", level=Qgis.Success)
-        except Exception as e:
-            # Mostrar error si algo falla
-            self.iface.messageBar().pushMessage("Error", f"Error al mostrar ILS Dock Widget: {str(e)}", level=Qgis.Critical)
-            import traceback
-            print(traceback.format_exc())
-
-    def run(self):
-        """Legacy run method for backward compatibility"""
-        self.run_vss()
+            # Close VSS dock if it's open
+            if self.vss_dock:
+                self.iface.removeDockWidget(self.vss_dock)
+                self.vss_dock = None
+        else:
+            # If the dock widget exists, remove it
+            self.iface.removeDockWidget(self.ils_dock)
+            self.ils_dock = None
+    
+    def on_vss_dock_closed(self):
+        """Handle VSS dock widget closing"""
+        self.vss_dock = None
+    
+    def on_ils_dock_closed(self):
+        """Handle ILS dock widget closing"""
+        self.ils_dock = None

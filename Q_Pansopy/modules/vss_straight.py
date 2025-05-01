@@ -1,90 +1,78 @@
 # -*- coding: utf-8 -*-
 """
-/***************************************************************************
- VSS Straight In NPA Module
-                              -------------------
-        begin                : 2023-04-29
-        copyright            : (C) 2023 by Your Name
-        email                : your.email@example.com
- ***************************************************************************/
-
-/***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
+Straight In NPA Surface Generator
 """
-
-import os
 from qgis.core import (
-    QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsPoint, 
-    QgsLineString, QgsPolygon, QgsField, QgsCoordinateReferenceSystem,
-    QgsVectorFileWriter, Qgis
+    QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, 
+    QgsCoordinateReferenceSystem, QgsCoordinateTransform,
+    QgsPointXY, QgsWkbTypes, QgsField, QgsFields, QgsPoint,
+    QgsLineString, QgsPolygon, QgsVectorFileWriter
 )
 from qgis.PyQt.QtCore import QVariant
-from PyQt5.QtGui import QColor
-from math import *
+from qgis.PyQt.QtGui import QColor
+from qgis.core import Qgis
+from qgis.utils import iface
+import math
+import os
+import datetime
 
 def calculate_vss_straight(iface, point_layer, runway_layer, params):
     """
-    Calculate VSS Straight In NPA
+    Create Straight In NPA Surface
     
     :param iface: QGIS interface
-    :param point_layer: Threshold point layer
-    :param runway_layer: Runway line layer
-    :param params: Dictionary of parameters
+    :param point_layer: Point layer with the reference point (WGS84)
+    :param runway_layer: Runway layer (projected CRS)
+    :param params: Dictionary with calculation parameters
     :return: Dictionary with results
     """
-    
     # Extract parameters
-    rwy_width = params.get('rwy_width', 45.0)
-    thr_elev = params.get('thr_elev', 22.0)
-    strip_width = params.get('strip_width', 280.0)
-    och = params.get('OCH', 140.21)
-    rdh = params.get('RDH', 15.0)
-    vpa = params.get('VPA', 3.0)
+    rwy_width = params.get('rwy_width', 45)
+    thr_elev = params.get('thr_elev', 0)
+    strip_width = params.get('strip_width', 140)
+    OCH = params.get('OCH', 100)
+    RDH = params.get('RDH', 15)
+    VPA = params.get('VPA', 3.0)
     export_kml = params.get('export_kml', True)
-    output_dir = params.get('output_dir', None)
-    output_vss = params.get('output_vss', None)
-    output_ocs = params.get('output_ocs', None)
+    output_dir = params.get('output_dir', os.path.expanduser('~'))
     
-    # Get the map CRS
+    # Check if layers exist
+    if not point_layer or not runway_layer:
+        iface.messageBar().pushMessage("Error", "Point or runway layer not provided", level=Qgis.Critical)
+        return None
+    
+    # Check if layers have features
+    if point_layer.featureCount() == 0:
+        iface.messageBar().pushMessage("Error", "Point layer has no features", level=Qgis.Critical)
+        return None
+    
+    if runway_layer.featureCount() == 0:
+        iface.messageBar().pushMessage("Error", "Runway layer has no features", level=Qgis.Critical)
+        return None
+    
+    # Get the reference point (in WGS84)
+    point_feature = next(point_layer.getFeatures())
+    point_geom = point_feature.geometry().asPoint()
+    
+    # Get the runway line (in projected system)
+    runway_feature = next(runway_layer.getFeatures())
+    runway_geom = runway_feature.geometry().asPolyline()
+    
+    # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
     
-    # Get the threshold point
-    if point_layer.selectedFeatureCount() > 0:
-        for feat in point_layer.selectedFeatures():
-            thr_geom = feat.geometry().asPoint()
-            break
-    else:
-        # If no feature is selected, use the first feature
-        for feat in point_layer.getFeatures():
-            thr_geom = feat.geometry().asPoint()
-            break
+    # Transform the point to projected CRS
+    source_crs = QgsCoordinateReferenceSystem("EPSG:4326")  # WGS84
+    dest_crs = runway_layer.crs()
+    transform = QgsCoordinateTransform(source_crs, dest_crs, QgsProject.instance())
     
-    # Get the runway line
-    if runway_layer.selectedFeatureCount() > 0:
-        for feat in runway_layer.selectedFeatures():
-            geom = feat.geometry().asPolyline()
-            start_point = QgsPoint(geom[0])
-            end_point = QgsPoint(geom[1])
-            angle0 = start_point.azimuth(end_point)
-            break
-    else:
-        # If no feature is selected, use the first feature
-        for feat in runway_layer.getFeatures():
-            geom = feat.geometry().asPolyline()
-            start_point = QgsPoint(geom[0])
-            end_point = QgsPoint(geom[1])
-            angle0 = start_point.azimuth(end_point)
-            break
+    new_geom = transform.transform(point_geom)
     
-    # Set azimuth and back azimuth
-    azimuth = angle0
-    back_azimuth = azimuth - 180
+    # Calculate azimuth
+    start_point = QgsPoint(runway_geom[-1])
+    end_point = QgsPoint(runway_geom[0])
+    angle0 = start_point.azimuth(end_point) + 180
+    azimuth = angle0 - 180
     
     # Function to convert from PointXY and add Z value
     def pz(point, z):
@@ -94,124 +82,166 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
         return cPoint
     
     # Calculate VSS parameters
-    vss_length = 1.12 * (och - rdh) / tan(radians(vpa))
-    vss_inner_width = rwy_width
-    vss_outer_width = vss_inner_width + 2 * vss_length * 0.15
+    D_VSS = OCH / math.tan(math.radians(VPA - 1.12))
     
-    # Calculate VSS points
-    vss_center_start = thr_geom
-    vss_center_end = vss_center_start.project(vss_length, azimuth)
-    
-    vss_left_start = vss_center_start.project(vss_inner_width/2, azimuth-90)
-    vss_right_start = vss_center_start.project(vss_inner_width/2, azimuth+90)
-    
-    vss_left_end = vss_center_end.project(vss_outer_width/2, azimuth-90)
-    vss_right_end = vss_center_end.project(vss_outer_width/2, azimuth+90)
-    
-    # Calculate OCS parameters
-    ocs_inner_width = strip_width
-    ocs_outer_width = ocs_inner_width + 2 * vss_length * 0.15
-    
-    # Calculate OCS points
-    ocs_left_start = vss_center_start.project(ocs_inner_width/2, azimuth-90)
-    ocs_right_start = vss_center_start.project(ocs_inner_width/2, azimuth+90)
-    
-    ocs_left_end = vss_center_end.project(ocs_outer_width/2, azimuth-90)
-    ocs_right_end = vss_center_end.project(ocs_outer_width/2, azimuth+90)
+    # VSS point definition
+    VSS_s = new_geom.project(60, azimuth)
+    VSS_a = VSS_s.project(strip_width/2, azimuth-90)
+    VSS_e = VSS_s.project(D_VSS, azimuth)
+    VSS_b = VSS_e.project(D_VSS*0.15+strip_width/2, azimuth-90)
+    VSS_c = VSS_e.project(D_VSS*0.15+strip_width/2, azimuth+90)
+    VSS_d = VSS_s.project(strip_width/2, azimuth+90)
     
     # Create VSS layer
-    vss_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "VSS_Straight_In_NPA", "memory")
-    vss_pr = vss_layer.dataProvider()
-    vss_pr.addAttributes([QgsField('name', QVariant.String)])
+    vss_layer = QgsVectorLayer("PolygonZ?crs=" + map_srid, "Straight In - VSS area", "memory")
+    vss_provider = vss_layer.dataProvider()
+    
+    # Add fields
+    vss_provider.addAttributes([
+        QgsField('id', QVariant.Int),
+        QgsField('description', QVariant.String)
+    ])
     vss_layer.updateFields()
     
-    # Add VSS feature
-    vss_feat = QgsFeature()
-    vss_exterior_ring = [
-        pz(vss_left_start, thr_elev),
-        pz(vss_left_end, thr_elev + och),
-        pz(vss_right_end, thr_elev + och),
-        pz(vss_right_start, thr_elev)
+    # Create VSS feature
+    vss_base = [
+        pz(VSS_a, thr_elev),
+        pz(VSS_b, (thr_elev + D_VSS * math.tan(math.radians(VPA - 1.12)))),
+        pz(VSS_c, (thr_elev + D_VSS * math.tan(math.radians(VPA - 1.12)))),
+        pz(VSS_d, thr_elev)
     ]
-    vss_feat.setGeometry(QgsPolygon(QgsLineString(vss_exterior_ring), rings=[]))
-    vss_feat.setAttributes(['VSS'])
-    vss_pr.addFeatures([vss_feat])
+    vss_feature = QgsFeature()
+    vss_feature.setGeometry(QgsPolygon(QgsLineString(vss_base)))
+    vss_feature.setAttributes([1, 'VSS area'])
+    vss_provider.addFeatures([vss_feature])
+    
+    # Style VSS layer
+    vss_layer.renderer().symbol().setColor(QColor(200, 0, 255, 50))  # RGBA
+    vss_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor(200, 0, 255))
+    vss_layer.renderer().symbol().symbolLayer(0).setStrokeWidth(0.7)
+    vss_layer.triggerRepaint()
+    
+    # Calculate OCS parameters
+    OCS_length = (OCH - RDH) / math.tan(math.radians(VPA))
+    OCS_E_width = OCS_length * math.tan(math.radians(2)) + 120
+    
+    # OCS point definition
+    OCS_a = new_geom.project(30 + rwy_width/2, azimuth-90)
+    OCS_e = new_geom.project(OCS_length, azimuth)
+    OCS_b = OCS_e.project(OCS_E_width, azimuth-90)
+    OCS_c = OCS_e.project(OCS_E_width, azimuth+90)
+    OCS_d = new_geom.project(30 + rwy_width/2, azimuth+90)
     
     # Create OCS layer
-    ocs_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "OCS_Straight_In_NPA", "memory")
-    ocs_pr = ocs_layer.dataProvider()
-    ocs_pr.addAttributes([QgsField('name', QVariant.String)])
+    ocs_layer = QgsVectorLayer("PolygonZ?crs=" + map_srid, "Straight In - OCS area", "memory")
+    ocs_provider = ocs_layer.dataProvider()
+    
+    # Add fields
+    ocs_provider.addAttributes([
+        QgsField('id', QVariant.Int),
+        QgsField('description', QVariant.String)
+    ])
     ocs_layer.updateFields()
     
-    # Add OCS feature
-    ocs_feat = QgsFeature()
-    ocs_exterior_ring = [
-        pz(ocs_left_start, thr_elev),
-        pz(ocs_left_end, thr_elev + och),
-        pz(vss_left_end, thr_elev + och),
-        pz(vss_left_start, thr_elev),
-        pz(vss_right_start, thr_elev),
-        pz(vss_right_end, thr_elev + och),
-        pz(ocs_right_end, thr_elev + och),
-        pz(ocs_right_start, thr_elev)
+    # Create OCS feature
+    ocs_base = [
+        pz(OCS_a, thr_elev),
+        pz(OCS_b, (thr_elev + OCS_length * math.tan(math.radians(VPA - 1)))),
+        pz(OCS_c, (thr_elev + OCS_length * math.tan(math.radians(VPA - 1)))),
+        pz(OCS_d, thr_elev)
     ]
-    ocs_feat.setGeometry(QgsPolygon(QgsLineString(ocs_exterior_ring), rings=[]))
-    ocs_feat.setAttributes(['OCS'])
-    ocs_pr.addFeatures([ocs_feat])
+    ocs_feature = QgsFeature()
+    ocs_feature.setGeometry(QgsPolygon(QgsLineString(ocs_base)))
+    ocs_feature.setAttributes([1, 'OCS area'])
+    ocs_provider.addFeatures([ocs_feature])
     
-    # Update layers and add to project
-    vss_layer.updateExtents()
-    ocs_layer.updateExtents()
+    # Style OCS layer
+    ocs_layer.renderer().symbol().setColor(QColor(255, 146, 0, 50))  # RGBA
+    ocs_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor(255, 146, 0))
+    ocs_layer.renderer().symbol().symbolLayer(0).setStrokeWidth(0.7)
+    ocs_layer.triggerRepaint()
+    
+    # Add layers to the project
     QgsProject.instance().addMapLayers([vss_layer, ocs_layer])
     
     # Export to KML if requested
-    vss_path = None
-    ocs_path = None
-    if export_kml and output_dir:
-        # Define file paths
-        vss_path = os.path.join(output_dir, 'vss_straight_layer.kml')
-        ocs_path = os.path.join(output_dir, 'ocs_straight_layer.kml')
+    result = {
+        'vss_layer': vss_layer,
+        'ocs_layer': ocs_layer
+    }
+    
+    if export_kml:
+        # Get current timestamp for unique filenames
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Define KML export paths
+        vss_export_path = os.path.join(output_dir, f'vss_layer_{timestamp}.kml')
+        ocs_export_path = os.path.join(output_dir, f'ocs_layer_{timestamp}.kml')
         
         # Export to KML
         crs = QgsCoordinateReferenceSystem("EPSG:4326")
         
+        # Export VSS layer
         vss_error = QgsVectorFileWriter.writeAsVectorFormat(
             vss_layer,
-            vss_path,
+            vss_export_path,
             'utf-8',
             crs,
             'KML',
-            layerOptions=['MODE=2']  # Ensure Z values are included
+            layerOptions=['MODE=2']
         )
         
+        # Export OCS layer
         ocs_error = QgsVectorFileWriter.writeAsVectorFormat(
             ocs_layer,
-            ocs_path,
+            ocs_export_path,
             'utf-8',
             crs,
             'KML',
-            layerOptions=['MODE=2']  # Ensure Z values are included
+            layerOptions=['MODE=2']
         )
         
-        # Check for errors
-        if vss_error[0] != QgsVectorFileWriter.NoError:
-            iface.messageBar().pushMessage(
-                "Error", 
-                f"Error exporting VSS layer: {vss_error[1]}", 
-                level=Qgis.Critical
-            )
+        # Correct KML structure for better visualization
+        def correct_kml_structure(kml_file_path):
+            with open(kml_file_path, 'r') as file:
+                kml_content = file.read()
+            
+            # Add altitude mode
+            kml_content = kml_content.replace('<Polygon>', '<Polygon>\n  <altitudeMode>absolute</altitudeMode>')
+            
+            # Add style
+            style_kml = '''
+            <Style id="style1">
+                <LineStyle>
+                    <color>ff0000ff</color>
+                    <width>2</width>
+                </LineStyle>
+                <PolyStyle>
+                    <fill>1</fill>
+                    <color>ff00007F</color>
+                </PolyStyle>
+            </Style>
+            '''
+            
+            kml_content = kml_content.replace('<Document>', f'<Document>{style_kml}')
+            kml_content = kml_content.replace('<styleUrl>#</styleUrl>', '<styleUrl>#style1</styleUrl>')
+            
+            with open(kml_file_path, 'w') as file:
+                file.write(kml_content)
         
-        if ocs_error[0] != QgsVectorFileWriter.NoError:
-            iface.messageBar().pushMessage(
-                "Error", 
-                f"Error exporting OCS layer: {ocs_error[1]}", 
-                level=Qgis.Critical
-            )
+        # Apply corrections to KML files
+        if vss_error[0] == QgsVectorFileWriter.NoError:
+            correct_kml_structure(vss_export_path)
+            result['vss_path'] = vss_export_path
+        
+        if ocs_error[0] == QgsVectorFileWriter.NoError:
+            correct_kml_structure(ocs_export_path)
+            result['ocs_path'] = ocs_export_path
     
-    # Return results
-    return {
-        'vss_layer': vss_layer,
-        'ocs_layer': ocs_layer,
-        'vss_path': vss_path,
-        'ocs_path': ocs_path
-    }
+    # Zoom to appropriate scale
+    sc = iface.mapCanvas().scale()
+    if sc < 20000:
+        sc = 20000
+    iface.mapCanvas().zoomScale(sc)
+    
+    return result

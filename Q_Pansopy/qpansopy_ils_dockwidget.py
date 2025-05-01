@@ -26,8 +26,9 @@ from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.utils import iface
+from qgis.core import Qgis
 
-# Usar __file__ para obtener la ruta actual del script
+# Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'qpansopy_ils_dockwidget.ui'))
 
@@ -43,12 +44,12 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
         
-        # Configurar el dock widget para que sea redimensionable
+        # Configure the dock widget to be resizable
         self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
                          QtWidgets.QDockWidget.DockWidgetFloatable |
                          QtWidgets.QDockWidget.DockWidgetClosable)
         
-        # Establecer tamaños mínimo y máximo
+        # Set minimum and maximum sizes
         self.setMinimumHeight(300)
         self.setMaximumHeight(600)
         
@@ -59,7 +60,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
         
-        # Filter layers in comboboxes - MODIFICADO PARA USAR QgsMapLayerProxyModel
+        # Filter layers in comboboxes
         self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
         self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
         
@@ -114,7 +115,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Check if runway layer is in a projected CRS
         runway_layer = self.runwayLayerComboBox.currentLayer()
-        if not runway_layer.crs().isGeographic():
+        if runway_layer.crs().isGeographic():
             self.log("Warning: Runway layer should be in a projected coordinate system")
             # Continue anyway, but warn the user
         
