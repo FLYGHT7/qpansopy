@@ -42,6 +42,12 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         super(QPANSOPYVSSDockWidget, self).__init__(iface.mainWindow())
         # Set up the user interface from Designer.
         self.setupUi(self)
+        
+        # Configure the threshold elevation spinbox to accept unlimited decimal places
+        self.thrElevSpinBox.setDecimals(20)  # Set to extremely high value (effectively unlimited)
+        self.thrElevSpinBox.setSingleStep(0.0001)  # Smaller step size for more precision
+        self.thrElevSpinBox.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)  # Adaptive step based on value
+        
         self.iface = iface
         
         # Configure the dock widget to be resizable

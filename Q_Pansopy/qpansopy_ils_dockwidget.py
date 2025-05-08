@@ -44,6 +44,11 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
         
+        # Configure the threshold elevation spinbox to accept unlimited decimal places
+        self.thrElevSpinBox.setDecimals(20)  # Set to extremely high value (effectively unlimited)
+        self.thrElevSpinBox.setSingleStep(0.0001)  # Smaller step size for more precision
+        self.thrElevSpinBox.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)  # Adaptive step based on value
+        
         # Configure the dock widget to be resizable
         self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
                          QtWidgets.QDockWidget.DockWidgetFloatable |
