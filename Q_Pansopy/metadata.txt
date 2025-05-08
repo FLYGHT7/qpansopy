@@ -1,0 +1,38 @@
+# This file contains metadata for your plugin.
+
+[general]
+name=QPANSOPY
+qgisMinimumVersion=3.0
+description=QPANSOPY Plugin for QGIS - Procedure Analysis and Obstacle Protection Surfaces
+version=0.2
+author=Your Name
+email=your.email@example.com
+
+about=QPANSOPY Plugin for QGIS to create aviation surfaces including VSS, OCS, and ILS protection surfaces according to ICAO standards.
+
+tracker=http://github.com/yourusername/qpansopy/issues
+repository=http://github.com/yourusername/qpansopy
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+# Uncomment the following line and add your changelog:
+changelog=Version 0.2
+    - Fixed inputs to accept decimal values
+    - Improved panel management (only one panel shown at a time)
+    - All feedback messages in English
+    - Fixed Basic ILS surface styling (green with 50% opacity)
+    - Prevented KML overwriting by using timestamps in filenames
+    - Improved UI layout and responsiveness
+
+tags=python, aviation, aeronautical, navigation, surfaces, VSS, OCS, ILS
+
+homepage=http://github.com/yourusername/qpansopy
+category=Plugins
+icon=icons/qpansopy_icon.png
+# experimental flag
+experimental=False
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
