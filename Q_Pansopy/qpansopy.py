@@ -30,75 +30,66 @@ class Qpansopy:
         
         # Create actions
         self.actions = []
-        self.menu = "QPANSOPY"
+        self.menu = None  # Será inicializado en initGui
         
         # Initialize dock widgets to None
         self.vss_dock = None
         self.ils_dock = None
 
-    def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
-        """Add a toolbar icon to the toolbar."""
-
-        icon = QIcon(icon_path)
-        action = QAction(icon, text, parent)
-        action.triggered.connect(callback)
-        action.setEnabled(enabled_flag)
-
-        if status_tip is not None:
-            action.setStatusTip(status_tip)
-
-        if whats_this is not None:
-            action.setWhatsThis(whats_this)
-
-        if add_to_toolbar:
-            # Añadir a la barra de herramientas principal de QGIS
-            self.iface.addToolBarIcon(action)
-
-        if add_to_menu:
-            self.iface.addPluginToMenu(
-                self.menu,
-                action)
-
-        self.actions.append(action)
-
-        return action
-
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
         
-        # Create action for VSS tool
-        self.add_action(
-            os.path.join(self.plugin_dir, 'icons', 'vss_icon.png'),
-            text="QPANSOPY VSS Tool",
-            callback=self.toggle_vss_dock,
-            parent=self.iface.mainWindow())
-            
-        # Create action for ILS tool
-        self.add_action(
-            os.path.join(self.plugin_dir, 'icons', 'ils_icon.png'),
-            text="QPANSOPY ILS Tool",
-            callback=self.toggle_ils_dock,
-            parent=self.iface.mainWindow())
+        # Crear el menú QPANSOPY antes del menú de Ayuda
+        menuBar = self.iface.mainWindow().menuBar()
+        helpMenu = None
+        
+        # Buscar el menú de Ayuda
+        for action in menuBar.actions():
+            if action.text() == "Help" or action.text() == "Ayuda":
+                helpMenu = action
+                break
+        
+        # Crear nuestro menú
+        self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
+        
+        # Insertar antes del menú de Ayuda si se encuentra, de lo contrario añadir al final
+        if helpMenu:
+            menuBar.insertMenu(helpMenu, self.menu)
+        else:
+            menuBar.addMenu(self.menu)
+        
+        # Crear acción para la herramienta VSS
+        vss_action = QAction(
+            QIcon(os.path.join(self.plugin_dir, 'icons', 'vss_icon.png')),
+            "QPANSOPY VSS Tool", 
+            self.iface.mainWindow())
+        vss_action.triggered.connect(self.toggle_vss_dock)
+        self.menu.addAction(vss_action)
+        self.iface.addToolBarIcon(vss_action)
+        self.actions.append(vss_action)
+        
+        # Crear acción para la herramienta ILS
+        ils_action = QAction(
+            QIcon(os.path.join(self.plugin_dir, 'icons', 'ils_icon.png')),
+            "QPANSOPY ILS Tool", 
+            self.iface.mainWindow())
+        ils_action.triggered.connect(self.toggle_ils_dock)
+        self.menu.addAction(ils_action)
+        self.iface.addToolBarIcon(ils_action)
+        self.actions.append(ils_action)
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
+        # Eliminar el menú
+        if self.menu:
+            menuBar = self.iface.mainWindow().menuBar()
+            menuBar.removeAction(self.menu.menuAction())
+        
+        # Eliminar iconos de la barra de herramientas
         for action in self.actions:
-            self.iface.removePluginMenu(
-                "QPANSOPY",
-                action)
             self.iface.removeToolBarIcon(action)
         
-        # Close dock widgets if they exist
+        # Cerrar widgets si existen
         if self.vss_dock:
             self.iface.removeDockWidget(self.vss_dock)
             self.vss_dock = None
