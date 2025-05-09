@@ -22,11 +22,14 @@
  This script initializes the plugin, making it known to QGIS.
 """
 
-def classFactory(iface):
-    """Load Qpansopy class from file qpansopy.py.
+
+# noinspection PyPep8Naming
+def classFactory(iface):  # pylint: disable=invalid-name
+    """Load QPANSOPY class from file QPANSOPY.
 
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
+    #
     from .qpansopy import Qpansopy
     return Qpansopy(iface)
