@@ -107,7 +107,7 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # Add fields
     provider.addAttributes([
         QgsField('ILS_surface', QVariant.String),
-        QgsField('parameters', QVariant.String)  # New field for parameters
+        QgsField('parameters', QVariant.String)  # Renamed from 'constants' to 'parameters'
     ])
     v_layer.updateFields()
     

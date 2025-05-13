@@ -105,49 +105,6 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     angle0 = start_point.azimuth(end_point) + 180
     azimuth = angle0 - 180
     
-    # Verificar si hay desplazamiento entre la pista de aproximación y la línea central de la pista
-    runway_line = QgsGeometry.fromPolylineXY(runway_geom)
-    point_geom_proj = QgsGeometry.fromPointXY(new_geom)
-    
-    # Encontrar el punto más cercano en la pista al punto umbral
-    closest_point_geom = runway_line.nearestPoint(point_geom_proj)
-    closest_point = closest_point_geom.asPoint()
-    
-    # Calcular la distancia y dirección del desplazamiento
-    offset_distance = new_geom.distance(closest_point)
-    
-    # Determinar si existe un desplazamiento (usando un pequeño umbral para tener en cuenta la precisión)
-    has_offset = offset_distance > 0.1  # umbral de 10cm
-    offset_direction = 0
-    
-    # Si existe un desplazamiento, ajustar los cálculos
-    if has_offset:
-        # Calcular la dirección perpendicular desde la pista hasta el punto
-        # Esto nos da la dirección del desplazamiento
-        perp_angle1 = azimuth - 90
-        perp_angle2 = azimuth + 90
-        
-        # Probar qué dirección perpendicular apunta hacia el umbral
-        test_point1 = closest_point.project(1, perp_angle1)
-        test_point2 = closest_point.project(1, perp_angle2)
-        
-        if test_point1.distance(new_geom) < test_point2.distance(new_geom):
-            offset_direction = perp_angle1
-        else:
-            offset_direction = perp_angle2
-            
-        # Registrar la información del desplazamiento
-        iface.messageBar().pushMessage(
-            "Info", 
-            f"Desplazamiento de pista detectado: {offset_distance:.2f}m", 
-            level=Qgis.Info
-        )
-        
-        # Add offset information to parameters
-        parameters_dict['has_offset'] = 'True'
-        parameters_dict['offset_distance'] = f"{offset_distance:.2f}"
-        parameters_json = json.dumps(parameters_dict)
-    
     # Function to convert from PointXY and add Z value
     def pz(point, z):
         cPoint = QgsPoint(point)
@@ -158,15 +115,8 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     # Calculate VSS parameters
     D_VSS = OCH / math.tan(math.radians(VPA - 1.12))
     
-    # VSS point definition - adjusted for offset if needed
+    # VSS point definition
     VSS_s = new_geom.project(60, azimuth)
-    
-    if has_offset:
-        # Ajustar el punto de inicio de VSS para tener en cuenta el desplazamiento
-        # Mover perpendicular a la pista por la cantidad de desplazamiento
-        VSS_s = closest_point.project(60, azimuth)
-        VSS_s = VSS_s.project(offset_distance, offset_direction)
-    
     VSS_a = VSS_s.project(strip_width/2, azimuth-90)
     VSS_e = VSS_s.project(D_VSS, azimuth)
     VSS_b = VSS_e.project(D_VSS*0.15+strip_width/2, azimuth-90)
@@ -207,13 +157,8 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     OCS_length = (OCH - RDH) / math.tan(math.radians(VPA))
     OCS_E_width = OCS_length * math.tan(math.radians(2)) + 120
     
-    # OCS point definition - adjusted for offset if needed
+    # OCS point definition
     OCS_start = new_geom
-    
-    if has_offset:
-        # Ajustar el punto de inicio de OCS para tener en cuenta el desplazamiento
-        OCS_start = closest_point.project(offset_distance, offset_direction)
-    
     OCS_a = OCS_start.project(30 + rwy_width/2, azimuth-90)
     OCS_e = OCS_start.project(OCS_length, azimuth)
     OCS_b = OCS_e.project(OCS_E_width, azimuth-90)
