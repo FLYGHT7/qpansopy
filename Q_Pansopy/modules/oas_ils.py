@@ -16,6 +16,32 @@ import math
 import os
 import datetime
 import json
+import numpy as np
+
+def solve_plane_intersection(plane1, plane2, target_height):
+    """
+    Solve the intersection of two planes at a given height
+    
+    :param plane1: First plane constants (A, B, C)
+    :param plane2: Second plane constants (A, B, C)
+    :param target_height: Target height for intersection
+    :return: Intersection point (X, Y, Z) or None if no intersection
+    """
+    A1, B1, C1 = plane1
+    A2, B2, C2 = plane2
+    if (A1==0 and B1==0) or (A2==0 and B2==0):
+        return None
+    rhs1 = target_height - C1
+    rhs2 = target_height - C2
+    matrix = np.array([[A1, B1], [A2, B2]])
+    rhs = np.array([rhs1, rhs2])
+    try:
+        solution = np.linalg.solve(matrix, rhs)
+        X = round(solution[0], 12)
+        Y = round(solution[1], 12)
+        return (X, Y, target_height)
+    except np.linalg.LinAlgError:
+        return None
 
 def calculate_oas_ils(iface, point_layer, runway_layer, params):
     """
@@ -30,13 +56,24 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     # Extract parameters
     THR_elev = float(params.get('THR_elev', 0))
     delta = float(params.get('delta', 0))
+    FAP_elev = float(params.get('FAP_elev', 2000))
+    MOC_intermediate = float(params.get('MOC_intermediate', 150))
+    oas_type = params.get('oas_type', 'Both')
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
+    
+    # Calculate derived values
+    FAP_height = FAP_elev * 0.3048 - THR_elev  # Convert ft to m and calculate height above threshold
+    ILS_extension_height = FAP_height - MOC_intermediate
     
     # Create a parameters dictionary for JSON storage
     parameters_dict = {
         'THR_elev': str(THR_elev),
         'delta': str(delta),
+        'FAP_elev': str(FAP_elev),
+        'MOC_intermediate': str(MOC_intermediate),
+        'FAP_height': str(FAP_height),
+        'ILS_extension_height': str(ILS_extension_height),
         'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'calculation_type': 'OAS ILS CAT I'
     }
@@ -44,26 +81,54 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     # Convert parameters to JSON string
     parameters_json = json.dumps(parameters_dict)
     
-    # OAS constants for CAT I
-    OASconstants = {
-        "C": (264.912280701755, 51.5006231718033, 0),
-        "D": (-314.787533274559, 139.427992202075, 0),
-        "E": (-900, 206.14654526464, 0),
-        "C'": (16260.701754386, 23.2302945102742, 455.88),
-        "D'": (8383.82771078259, 1217.97418460436, 455.88),
-        "E'": (-12900, 2936.60225698781, 300)
+    # Define plane constants for OAS surfaces
+    # Format: (A, B, C) where Ax + By + C = z
+    OAS_W = [0.0267, 0, 0]
+    OAS_X = [0.026, 0.026, 0]
+    OAS_Y = [-0.026, 0.026, 0]
+    OAS_Z = [0, 0.026, 0]
+    
+    # Calculate OAS template intersections
+    OAS_template = {
+        "C": solve_plane_intersection(OAS_W, OAS_X, 0),
+        "D": solve_plane_intersection(OAS_X, OAS_Y, 0),
+        "E": solve_plane_intersection(OAS_Y, OAS_Z, 0),
+        "C'": solve_plane_intersection(OAS_W, OAS_X, 300),
+        "D'": solve_plane_intersection(OAS_X, OAS_Y, 300),
+        "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)
     }
     
-    # Create mirrored constants
-    OASconstants2 = {}
-    for m in OASconstants.keys():
-        val = OASconstants[m]
-        lst1 = list(val)
-        lst1[1] = -val[1]
-        OASconstants2[m + "mirror"] = lst1
+    # Calculate OAS extended intersections
+    OAS_extended_to_FAP = {
+        "C": OAS_template["C"],
+        "D": OAS_template["D"],
+        "E": OAS_template["E"],
+        "C'": solve_plane_intersection(OAS_W, OAS_X, ILS_extension_height),
+        "D'": solve_plane_intersection(OAS_X, OAS_Y, ILS_extension_height),
+        "E'": OAS_template["E'"]  # E' is always at 300m
+    }
     
-    # Combine original and mirrored constants
-    OASconstants3 = {**OASconstants, **OASconstants2}
+    # If any of the calculated intersections is None, fall back to hardcoded values
+    if None in OAS_template.values() or None in OAS_extended_to_FAP.values():
+        # OAS constants for CAT I (hardcoded)
+        OAS_template = {
+            "C": (264.912280701755, 51.5006231718033, 0),
+            "D": (-314.787533274559, 139.427992202075, 0),
+            "E": (-900, 206.14654526464, 0),
+            "C'": (16260.701754386, 23.2302945102742, 300),
+            "D'": (8383.82771078259, 1217.97418460436, 300),
+            "E'": (-12900, 2936.60225698781, 300)
+        }
+        
+        # For extended, use the same values but adjust C' and D' heights
+        OAS_extended_to_FAP = {
+            "C": OAS_template["C"],
+            "D": OAS_template["D"],
+            "E": OAS_template["E"],
+            "C'": (16260.701754386, 23.2302945102742, ILS_extension_height),
+            "D'": (8383.82771078259, 1217.97418460436, ILS_extension_height),
+            "E'": OAS_template["E'"]
+        }
     
     # Log start
     iface.messageBar().pushMessage("QPANSOPY:", "Executing OAS CAT I", level=Qgis.Info)
@@ -105,144 +170,192 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         iface.messageBar().pushMessage("Error", "Point layer not provided or empty", level=Qgis.Critical)
         return None
     
-    # Create memory layer for OAS surfaces
-    v_layer = QgsVectorLayer("PolygonZ?crs=" + map_srid, "OAS ILS CAT I", "memory")
-    myField = QgsField('ILS_surface', QVariant.String)
-    myField2 = QgsField('parameters', QVariant.String)
-    v_layer.dataProvider().addAttributes([myField, myField2])
-    v_layer.updateFields()
+    # Determine which OAS options to process
+    layer_options = {}
+    if oas_type == "Template Only":
+        layer_options["Template"] = OAS_template
+    elif oas_type == "Extended Only":
+        layer_options["Extended"] = OAS_extended_to_FAP
+    elif oas_type == "Both":
+        layer_options["Template"] = OAS_template
+        layer_options["Extended"] = OAS_extended_to_FAP
     
-    # Calculate OAS points
-    OASconstants4 = {}
-    for m in OASconstants3.keys():
-        val = OASconstants3[m]
+    # Helper function to build mirrored points
+    def build_mirrors(intersect_dict):
+        d = {}
+        for k, v in intersect_dict.items():
+            d[k] = v
+            d[k + "mirror"] = (v[0], -v[1], v[2])
+        return d
+    
+    # Helper function to compute geometry
+    def compute_geom(intersections, new_geom, angle0, THR_elev):
+        geom_dict = {}
+        for m, v in intersections.items():
+            OffsetAngle = math.atan(abs(v[1] / v[0]))
+            DistanceOAS = math.sqrt(v[0]**2 + v[1]**2)
+            Z_val = v[2] + THR_elev
+            if v[0] > 0 and v[1] > 0:
+                dY = -math.cos(OffsetAngle + math.radians(angle0)) * DistanceOAS
+                dX = -math.sin(OffsetAngle + math.radians(angle0)) * DistanceOAS
+            elif v[0] > 0 and v[1] < 0:
+                dY = -math.cos(-OffsetAngle + math.radians(angle0)) * DistanceOAS
+                dX = -math.sin(-OffsetAngle + math.radians(angle0)) * DistanceOAS
+            elif v[0] < 0 and v[1] > 0:
+                dY = math.cos(OffsetAngle + math.radians(angle0)) * DistanceOAS
+                dX = math.sin(OffsetAngle + math.radians(angle0)) * DistanceOAS
+            elif v[0] < 0 and v[1] < 0:
+                dY = math.cos(-OffsetAngle + math.radians(angle0)) * DistanceOAS
+                dX = math.sin(-OffsetAngle + math.radians(angle0)) * DistanceOAS
+            geom_dict[m] = QgsPoint(new_geom[0] + dX, new_geom[1] + dY, Z_val)
+        return geom_dict
+    
+    # Results dictionary
+    result = {}
+    
+    # Process each OAS option
+    for key, constants in layer_options.items():
+        # Create mirrored points
+        mirrored_constants = build_mirrors(constants)
         
-        # Calculate offset angle and distance
-        OffsetAngle = math.atan(abs(val[1]/val[0]))
-        DistanceOAS = (math.sqrt(abs(val[0]**2+val[1]**2)))
-        Z = val[2] + THR_elev
+        # Compute geometry
+        geometry_dict = compute_geom(mirrored_constants, new_geom, angle0, THR_elev)
         
-        # Calculate deltas based on quadrant
-        if val[0] > 0 and val[1] > 0:
-            delY = -math.cos(OffsetAngle + math.radians(angle0)) * DistanceOAS
-            delX = -math.sin(OffsetAngle + math.radians(angle0)) * DistanceOAS
-        elif val[0] > 0 and val[1] < 0:
-            delY = -math.cos(-OffsetAngle + math.radians(angle0)) * DistanceOAS
-            delX = -math.sin(-OffsetAngle + math.radians(angle0)) * DistanceOAS
-        elif val[0] < 0 and val[1] > 0:
-            delY = math.cos(OffsetAngle + math.radians(angle0)) * DistanceOAS
-            delX = math.sin(OffsetAngle + math.radians(angle0)) * DistanceOAS
-        elif val[0] < 0 and val[1] < 0:
-            delY = math.cos(-OffsetAngle + math.radians(angle0)) * DistanceOAS
-            delX = math.sin(-OffsetAngle + math.radians(angle0)) * DistanceOAS
+        # Create memory layer
+        layer_name = f"OAS ILS CAT I - {key}"
+        v_layer = QgsVectorLayer("PolygonZ?crs=" + map_srid, layer_name, "memory")
         
-        # Calculate point coordinates
-        drawX, drawY = (new_geom[0] + delX, new_geom[1] + delY)
-        line_start = QgsPoint(drawX, drawY, Z)
-        OASconstants4[m] = line_start
-    
-    # Create provider for adding features
-    pr = v_layer.dataProvider()
-    
-    # Add Y Surface Left
-    line_start = [OASconstants4["Dmirror"], OASconstants4["Emirror"], OASconstants4["E'mirror"], OASconstants4["D'"]]
-    seg = QgsFeature()
-    seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
-    seg.setAttributes(['Surface Y - Left', parameters_json])
-    pr.addFeatures([seg])
-    
-    # Add Y Surface Right
-    line_start = [OASconstants4["D"], OASconstants4["D'mirror"], OASconstants4["E'"], OASconstants4["E"]]
-    seg = QgsFeature()
-    seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
-    seg.setAttributes(['Surface Y - Right', parameters_json])
-    pr.addFeatures([seg])
-    
-    # Add X Surface Left
-    line_start = [OASconstants4["C'"], OASconstants4["D'"], OASconstants4["Dmirror"], OASconstants4["C"]]
-    seg = QgsFeature()
-    seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
-    seg.setAttributes(['Surface X - Left', parameters_json])
-    pr.addFeatures([seg])
-    
-    # Add X Surface Right
-    line_start = [OASconstants4["C'mirror"], OASconstants4["D'mirror"], OASconstants4["D"], OASconstants4["Cmirror"]]
-    seg = QgsFeature()
-    seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
-    seg.setAttributes(['Surface X - Right', parameters_json])
-    pr.addFeatures([seg])
-    
-    # Add W Surface
-    line_start = [OASconstants4["C'"], OASconstants4["C'mirror"], OASconstants4["Cmirror"], OASconstants4["C"]]
-    seg = QgsFeature()
-    seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
-    seg.setAttributes(['Surface W', parameters_json])
-    pr.addFeatures([seg])
-    
-    # Add Z Surface
-    line_start = [OASconstants4["E"], OASconstants4["Emirror"], OASconstants4["E'mirror"], OASconstants4["E'"]]
-    seg = QgsFeature()
-    seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
-    seg.setAttributes(['Surface Z', parameters_json])
-    pr.addFeatures([seg])
-    
-    # Add Ground
-    line_start = [OASconstants4["Cmirror"], OASconstants4["C"], OASconstants4["Dmirror"], 
-                 OASconstants4["Emirror"], OASconstants4["E"], OASconstants4["D"]]
-    seg = QgsFeature()
-    seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
-    seg.setAttributes(['Ground', parameters_json])
-    pr.addFeatures([seg])
-    
-    # Update layer extents
-    v_layer.updateExtents()
-    
-    # Add layer to the project
-    QgsProject.instance().addMapLayer(v_layer)
-    
-    # Zoom to layer
-    v_layer.selectAll()
-    canvas = iface.mapCanvas()
-    canvas.zoomToSelected(v_layer)
-    v_layer.removeSelection()
-    
-    # Adjust scale
-    sc = canvas.scale()
-    if sc < 20000:
-        sc = 20000
-    canvas.zoomScale(sc)
-    
-    # Apply style (note: this will need to be handled differently in the plugin)
-    # v_layer.loadNamedStyle('path/to/style.qml')
-    
-    # Export to KML if requested
-    result = {
-        'oas_layer': v_layer
-    }
-    
-    if export_kml:
-        # Get current timestamp for unique filenames
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Add fields
+        pr = v_layer.dataProvider()
+        fields = [
+            QgsField('id', QVariant.Int),
+            QgsField('ILS_surface', QVariant.String),
+            QgsField('parameters', QVariant.String)
+        ]
+        pr.addAttributes(fields)
+        v_layer.updateFields()
         
-        # Define KML export path
-        oas_export_path = os.path.join(output_dir, f'oas_ils_cat_i_{timestamp}.kml')
+        # Add features
+        features = []
         
-        # Export to KML
-        crs = QgsCoordinateReferenceSystem("EPSG:4326")
+        # Y Surface Left
+        seg = QgsFeature()
+        line_start = [geometry_dict["Dmirror"], geometry_dict["Emirror"], 
+                      geometry_dict["E'mirror"], geometry_dict["D'"]]
+        seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
+        seg.setAttributes([1, 'Surface Y - Left', parameters_json])
+        features.append(seg)
         
-        # Export OAS layer
-        oas_error = QgsVectorFileWriter.writeAsVectorFormat(
-            v_layer,
-            oas_export_path,
-            'utf-8',
-            crs,
-            'KML',
-            layerOptions=['MODE=2']
-        )
+        # Y Surface Right
+        seg = QgsFeature()
+        line_start = [geometry_dict["D"], geometry_dict["D'mirror"], 
+                      geometry_dict["E'"], geometry_dict["E"]]
+        seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
+        seg.setAttributes([2, 'Surface Y - Right', parameters_json])
+        features.append(seg)
         
-        # Apply corrections to KML file
-        if oas_error[0] == QgsVectorFileWriter.NoError:
-            result['oas_path'] = oas_export_path
+        # X Surface Left
+        seg = QgsFeature()
+        line_start = [geometry_dict["C'"], geometry_dict["D'"], 
+                      geometry_dict["Dmirror"], geometry_dict["C"]]
+        seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
+        seg.setAttributes([3, 'Surface X - Left', parameters_json])
+        features.append(seg)
+        
+        # X Surface Right
+        seg = QgsFeature()
+        line_start = [geometry_dict["C'mirror"], geometry_dict["D'mirror"], 
+                      geometry_dict["D"], geometry_dict["Cmirror"]]
+        seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
+        seg.setAttributes([4, 'Surface X - Right', parameters_json])
+        features.append(seg)
+        
+        # W Surface
+        seg = QgsFeature()
+        line_start = [geometry_dict["C'"], geometry_dict["C'mirror"], 
+                      geometry_dict["Cmirror"], geometry_dict["C"]]
+        seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
+        seg.setAttributes([5, 'Surface W', parameters_json])
+        features.append(seg)
+        
+        # Z Surface
+        seg = QgsFeature()
+        line_start = [geometry_dict["E"], geometry_dict["Emirror"], 
+                      geometry_dict["E'mirror"], geometry_dict["E'"]]
+        seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
+        seg.setAttributes([6, 'Surface Z', parameters_json])
+        features.append(seg)
+        
+        # Ground
+        seg = QgsFeature()
+        line_start = [geometry_dict["Cmirror"], geometry_dict["C"], 
+                      geometry_dict["Dmirror"], geometry_dict["Emirror"], 
+                      geometry_dict["E"], geometry_dict["D"]]
+        seg.setGeometry(QgsPolygon(QgsLineString(line_start), rings=[]))
+        seg.setAttributes([7, 'Ground', parameters_json])
+        features.append(seg)
+        
+        # Add all features
+        pr.addFeatures(features)
+        
+        # Set layer style
+        symbol = v_layer.renderer().symbol()
+        if key == "Extended":
+            symbol.setColor(QColor(0, 255, 0, 127))
+            symbol.symbolLayer(0).setStrokeColor(QColor(0, 255, 0))
+        else:
+            symbol.setColor(QColor(255, 0, 0, 127))
+            symbol.symbolLayer(0).setStrokeColor(QColor(255, 0, 0))
+        symbol.symbolLayer(0).setStrokeWidth(0.5)
+        
+        # Update layer extents
+        v_layer.updateExtents()
+        
+        # Add layer to the project
+        QgsProject.instance().addMapLayer(v_layer)
+        
+        # Store in results
+        result[f'oas_layer_{key.lower()}'] = v_layer
+        
+        # Export to KML if requested
+        if export_kml:
+            # Get current timestamp for unique filenames
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Define KML export path
+            oas_export_path = os.path.join(output_dir, f'oas_ils_cat_i_{key.lower()}_{timestamp}.kml')
+            
+            # Export to KML
+            crs = QgsCoordinateReferenceSystem("EPSG:4326")
+            
+            # Export OAS layer
+            oas_error = QgsVectorFileWriter.writeAsVectorFormat(
+                v_layer,
+                oas_export_path,
+                'utf-8',
+                crs,
+                'KML',
+                layerOptions=['MODE=2']
+            )
+            
+            # Apply corrections to KML file
+            if oas_error[0] == QgsVectorFileWriter.NoError:
+                result[f'oas_path_{key.lower()}'] = oas_export_path
+    
+    # Zoom to the first layer
+    if result:
+        first_layer = next(iter(result.values()))
+        if isinstance(first_layer, QgsVectorLayer):
+            first_layer.selectAll()
+            canvas = iface.mapCanvas()
+            canvas.zoomToSelected(first_layer)
+            first_layer.removeSelection()
+            
+            # Adjust scale
+            sc = canvas.scale()
+            if sc < 20000:
+                sc = 20000
+            canvas.zoomScale(sc)
     
     # Show success message
     iface.messageBar().pushMessage("QPANSOPY:", "Finished OAS CAT I", level=Qgis.Success)
