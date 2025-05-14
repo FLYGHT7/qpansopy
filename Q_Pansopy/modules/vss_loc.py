@@ -15,6 +15,7 @@ from qgis.utils import iface
 import math
 import os
 import datetime
+import json
 
 def calculate_vss_loc(iface, point_layer, runway_layer, params):
     """
@@ -26,15 +27,45 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     :param params: Dictionary with calculation parameters
     :return: Dictionary with results
     """
-    # Extract parameters
-    rwy_width = params.get('rwy_width', 45)
-    thr_elev = params.get('thr_elev', 0)
-    strip_width = params.get('strip_width', 140)
-    OCH = params.get('OCH', 100)
-    RDH = params.get('RDH', 15)
-    VPA = params.get('VPA', 3.0)
+    # Extract parameters - convert string values to float for calculations
+    rwy_width = float(params.get('rwy_width', 45))
+    thr_elev = float(params.get('thr_elev', 0))
+    strip_width = float(params.get('strip_width', 140))
+    OCH = float(params.get('OCH', 100))
+    RDH = float(params.get('RDH', 15))
+    VPA = float(params.get('VPA', 3.0))
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
+    
+    # Get units
+    thr_elev_unit = params.get('thr_elev_unit', 'm')
+    OCH_unit = params.get('OCH_unit', 'm')
+    RDH_unit = params.get('RDH_unit', 'm')
+    
+    # Create a parameters dictionary for JSON storage
+    parameters_dict = {
+        'rwy_width': str(rwy_width),
+        'thr_elev': str(thr_elev),
+        'strip_width': str(strip_width),
+        'OCH': str(OCH),
+        'RDH': str(RDH),
+        'VPA': str(VPA),
+        'thr_elev_unit': thr_elev_unit,
+        'OCH_unit': OCH_unit,
+        'RDH_unit': RDH_unit,
+        'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'calculation_type': 'ILS LOC APV'
+    }
+    
+    # Convert parameters to JSON string
+    parameters_json = json.dumps(parameters_dict)
+    
+    # Log the units being used
+    iface.messageBar().pushMessage(
+        "Info", 
+        f"Using units - Threshold Elevation: {thr_elev_unit}, OCH: {OCH_unit}, RDH: {RDH_unit}", 
+        level=Qgis.Info
+    )
     
     # Check if layers exist
     if not point_layer or not runway_layer:
@@ -99,7 +130,8 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     # Add fields
     vss_provider.addAttributes([
         QgsField('id', QVariant.Int),
-        QgsField('description', QVariant.String)
+        QgsField('description', QVariant.String),
+        QgsField('parameters', QVariant.String)  # New field for parameters
     ])
     vss_layer.updateFields()
     
@@ -112,7 +144,7 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     ]
     vss_feature = QgsFeature()
     vss_feature.setGeometry(QgsPolygon(QgsLineString(vss_base)))
-    vss_feature.setAttributes([1, 'VSS area'])
+    vss_feature.setAttributes([1, 'VSS area', parameters_json])  # Include parameters JSON
     vss_provider.addFeatures([vss_feature])
     
     # Style VSS layer
@@ -126,11 +158,12 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     OCS_E_width = 120/2
     
     # OCS point definition
-    OCS_a = new_geom.project(30 + rwy_width/2, azimuth-90)
-    OCS_e = new_geom.project(OCS_length, azimuth)
+    OCS_start = new_geom
+    OCS_a = OCS_start.project(30 + rwy_width/2, azimuth-90)
+    OCS_e = OCS_start.project(OCS_length, azimuth)
     OCS_b = OCS_e.project(OCS_E_width, azimuth-90)
     OCS_c = OCS_e.project(OCS_E_width, azimuth+90)
-    OCS_d = new_geom.project(30 + rwy_width/2, azimuth+90)
+    OCS_d = OCS_start.project(30 + rwy_width/2, azimuth+90)
     
     # Create OCS layer
     ocs_layer = QgsVectorLayer("PolygonZ?crs=" + map_srid, "LOC - OCS area", "memory")
@@ -139,7 +172,8 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     # Add fields
     ocs_provider.addAttributes([
         QgsField('id', QVariant.Int),
-        QgsField('description', QVariant.String)
+        QgsField('description', QVariant.String),
+        QgsField('parameters', QVariant.String)  # New field for parameters
     ])
     ocs_layer.updateFields()
     
@@ -154,7 +188,7 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     ]
     ocs_feature = QgsFeature()
     ocs_feature.setGeometry(QgsPolygon(QgsLineString(ocs_base)))
-    ocs_feature.setAttributes([1, 'OCS area'])
+    ocs_feature.setAttributes([1, 'OCS area', parameters_json])  # Include parameters JSON
     ocs_provider.addFeatures([ocs_feature])
     
     # Style OCS layer
