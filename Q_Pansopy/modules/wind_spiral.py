@@ -269,7 +269,7 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     iface.messageBar().pushMessage("QPANSOPY:", "Wind Spiral created successfully", level=Qgis.Success)
     
     return result
-=======
+
 '''
 Wind Spiral Construction
 '''

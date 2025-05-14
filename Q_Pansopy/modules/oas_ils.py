@@ -141,7 +141,7 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
     
     # Setup coordinate transformations
-=======
+
 '''
 ILS OAS CAT I
 '''
@@ -644,7 +644,7 @@ def main_process(thr, fap, moc, runway_layer, thr_layer, oas_selection):
     iface.messageBar().pushMessage("QPANSOPY:", "Finished OAS CAT I", level=Qgis.Success)
     
     return result
-=======
+
     selection_thr = thr_layer.selectedFeatures()
     new_geom = None
     for feat in selection_thr:
