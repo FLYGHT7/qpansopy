@@ -2,13 +2,13 @@
 """
 /***************************************************************************
 QPANSOPYVSSDockWidget
-                                A QGIS plugin
+                            A QGIS plugin
 Procedure Analysis and Obstacle Protection Surfaces - VSS Module
-                            -------------------
-       begin                : 2023-04-29
-       git sha              : $Format:%H$
-       copyright            : (C) 2023 by Your Name
-       email                : your.email@example.com
+                        -------------------
+   begin                : 2023-04-29
+   git sha              : $Format:%H$
+   copyright            : (C) 2023 by Your Name
+   email                : your.email@example.com
 ***************************************************************************/
 
 /***************************************************************************
@@ -32,7 +32,7 @@ import json
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'qpansopy_vss_dockwidget.ui'))
+os.path.dirname(__file__), 'qpansopy_vss_dockwidget.ui'))
 
 
 class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -61,8 +61,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                          QtWidgets.QDockWidget.DockWidgetClosable)
         
         # Set minimum and maximum sizes
-        self.setMinimumHeight(300)
-        self.setMaximumHeight(600)
+        self.setMinimumHeight(600)
+        self.setMaximumHeight(800)
         
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
@@ -83,7 +83,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
-    
+
     def setup_copy_button(self):
         """Configurar el botón para copiar parámetros al portapapeles"""
         self.copyParamsButton = QtWidgets.QPushButton("Copy Parameters to Clipboard", self)
@@ -91,7 +91,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Añadir el botón al layout existente
         self.verticalLayout.addWidget(self.copyParamsButton)
-    
+
     def copy_parameters_to_clipboard(self):
         """Copiar los parámetros de las capas seleccionadas al portapapeles"""
         # Obtener todas las capas del proyecto
@@ -148,7 +148,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Mostrar mensaje de éxito
         self.log("Parameters copied to clipboard. You can now paste them into Word or another application.")
         self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard", level=Qgis.Success)
-    
+
     def setup_lineedits(self):
         """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
         # Crear un validador para números decimales
@@ -175,12 +175,12 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         thrElevLayout.addWidget(self.thrElevUnitCombo)
         
         # Reemplazar el widget en el formulario
-        self.replace_widget_in_form(self.thrElevSpinBox, thrElevContainer)
+        self.replace_widget_in_form(self.thrElevSpinBox, thrElevContainer, 1)
         
         # OCH con selector de unidades
         self.OCHLineEdit = QtWidgets.QLineEdit(self)
         self.OCHLineEdit.setValidator(validator)
-        self.OCHLineEdit.setText(str(self.ochSpinBox.value()))  # Corregido: ochSpinBox en lugar de OCHSpinBox
+        self.OCHLineEdit.setText(str(self.ochSpinBox.value()))
         self.OCHLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('OCH', text))
         
@@ -197,12 +197,12 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         OCHLayout.addWidget(self.OCHUnitCombo)
         
         # Reemplazar el widget en el formulario
-        self.replace_widget_in_form(self.ochSpinBox, OCHContainer)  # Corregido: ochSpinBox en lugar de OCHSpinBox
+        self.replace_widget_in_form(self.ochSpinBox, OCHContainer, 3)
         
         # RDH con selector de unidades
         self.RDHLineEdit = QtWidgets.QLineEdit(self)
         self.RDHLineEdit.setValidator(validator)
-        self.RDHLineEdit.setText(str(self.rdhSpinBox.value()))  # Corregido: rdhSpinBox en lugar de RDHSpinBox
+        self.RDHLineEdit.setText(str(self.rdhSpinBox.value()))
         self.RDHLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('RDH', text))
         
@@ -219,7 +219,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         RDHLayout.addWidget(self.RDHUnitCombo)
         
         # Reemplazar el widget en el formulario
-        self.replace_widget_in_form(self.rdhSpinBox, RDHContainer)  # Corregido: rdhSpinBox en lugar de RDHSpinBox
+        self.replace_widget_in_form(self.rdhSpinBox, RDHContainer, 4)
         
         # Otros campos sin unidades
         self.rwyWidthLineEdit = QtWidgets.QLineEdit(self)
@@ -227,45 +227,38 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.rwyWidthLineEdit.setText(str(self.rwyWidthSpinBox.value()))
         self.rwyWidthLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('rwy_width', text))
-        self.replace_widget_in_form(self.rwyWidthSpinBox, self.rwyWidthLineEdit)
+        self.replace_widget_in_form(self.rwyWidthSpinBox, self.rwyWidthLineEdit, 0)
         
         self.stripWidthLineEdit = QtWidgets.QLineEdit(self)
         self.stripWidthLineEdit.setValidator(validator)
         self.stripWidthLineEdit.setText(str(self.stripWidthSpinBox.value()))
         self.stripWidthLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('strip_width', text))
-        self.replace_widget_in_form(self.stripWidthSpinBox, self.stripWidthLineEdit)
+        self.replace_widget_in_form(self.stripWidthSpinBox, self.stripWidthLineEdit, 2)
         
         self.VPALineEdit = QtWidgets.QLineEdit(self)
         self.VPALineEdit.setValidator(validator)
-        self.VPALineEdit.setText(str(self.vpaSpinBox.value()))  # Corregido: vpaSpinBox en lugar de VPASpinBox
+        self.VPALineEdit.setText(str(self.vpaSpinBox.value()))
         self.VPALineEdit.textChanged.connect(
             lambda text: self.store_exact_value('VPA', text))
-        self.replace_widget_in_form(self.vpaSpinBox, self.VPALineEdit)  # Corregido: vpaSpinBox en lugar de VPASpinBox
-    
+        self.replace_widget_in_form(self.vpaSpinBox, self.VPALineEdit, 5)
+
     def update_unit(self, param_name, unit):
         """Actualizar la unidad seleccionada para un parámetro"""
         self.units[param_name] = unit
-    
-    def replace_widget_in_form(self, old_widget, new_widget):
-        """Reemplazar un widget en un QFormLayout"""
-        parent = old_widget.parent()
-        form_layout = parent.layout()
+
+    def replace_widget_in_form(self, old_widget, new_widget, row):
+        """Reemplazar un widget en el layout de parámetros"""
+        # Obtener el layout de parámetros
+        layout = self.parametersFormLayout
         
-        # Encontrar la fila donde está el widget
-        for i in range(form_layout.rowCount()):
-            if form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole) and form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole).widget() == old_widget:
-                # Obtener la etiqueta
-                label_item = form_layout.itemAt(i, QtWidgets.QFormLayout.LabelRole)
-                
-                # Eliminar el widget antiguo
-                form_layout.removeWidget(old_widget)
-                old_widget.hide()
-                
-                # Añadir el nuevo widget
-                form_layout.setWidget(i, QtWidgets.QFormLayout.FieldRole, new_widget)
-                break
-    
+        # Eliminar el widget antiguo
+        layout.removeWidget(old_widget)
+        old_widget.hide()
+        
+        # Añadir el nuevo widget
+        layout.setWidget(row, QtWidgets.QFormLayout.FieldRole, new_widget)
+
     def store_exact_value(self, param_name, text):
         """Almacenar el valor exacto ingresado por el usuario"""
         try:
@@ -276,11 +269,11 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         except ValueError:
             # Si no es un número válido, no hacer nada
             pass
-    
+
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
-    
+
     def get_desktop_path(self):
         """Get the path to the desktop"""
         if os.name == 'nt':  # Windows
@@ -289,7 +282,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return os.path.join(os.path.expanduser('~'), 'Desktop')
         else:
             return os.path.expanduser('~')
-    
+
     def browse_output_folder(self):
         """Open a folder browser dialog"""
         folder = QtWidgets.QFileDialog.getExistingDirectory(
@@ -299,13 +292,13 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         )
         if folder:
             self.outputFolderLineEdit.setText(folder)
-    
+
     def log(self, message):
         """Add a message to the log"""
         self.logTextEdit.append(message)
         # Ensure the latest message is visible
         self.logTextEdit.ensureCursorVisible()
-    
+
     def validate_inputs(self):
         """Validate user inputs"""
         # Check if layers are selected
@@ -340,7 +333,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 return False
         
         return True
-    
+
     def calculate(self):
         """Run the calculation"""
         self.log("Starting calculation...")
@@ -385,7 +378,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         try:
             # Run calculation for selected type
-            if self.straightRadioButton.isChecked():
+            # CORRECCIÓN: Usar straightInNPARadioButton en lugar de straightRadioButton
+            if self.straightInNPARadioButton.isChecked():
                 self.log("Running Straight In calculation...")
                 # Import here to avoid circular imports
                 from .modules.vss_straight import calculate_vss_straight

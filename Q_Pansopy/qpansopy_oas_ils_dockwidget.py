@@ -47,6 +47,9 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.setupUi(self)
        self.iface = iface
        
+       # Variable para almacenar la ruta del archivo CSV cargado
+       self.csv_path = None
+       
        # Diccionario para almacenar los valores exactos ingresados
        self.exact_values = {}
        # Diccionario para almacenar las unidades seleccionadas
@@ -72,6 +75,10 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.calculateButton.clicked.connect(self.calculate)
        self.browseButton.clicked.connect(self.browse_output_folder)
        
+       # Conectar el botón de carga de CSV si existe
+       if hasattr(self, 'loadCsvButton'):
+           self.loadCsvButton.clicked.connect(self.load_csv)
+       
        # Set default output folder
        self.outputFolderLineEdit.setText(self.get_desktop_path())
        
@@ -85,8 +92,28 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Añadir botón para copiar parámetros
        self.setup_copy_button()
        
+       # Limitar el tamaño del área de log
+       if hasattr(self, 'logTextEdit'):
+           self.logTextEdit.setMaximumHeight(120)
+       
        # Log message
        self.log("QPANSOPY OAS ILS plugin loaded. Select layers and parameters, then click Calculate.")
+   
+   def load_csv(self):
+       """Cargar un archivo CSV con constantes OAS"""
+       from PyQt5.QtWidgets import QFileDialog
+       
+       csv_path, _ = QFileDialog.getOpenFileName(
+           self,
+           "Select CSV File with OAS Constants",
+           "",
+           "CSV Files (*.csv);;All Files (*)"
+       )
+       
+       if csv_path:
+           self.csv_path = csv_path
+           self.log(f"CSV file loaded: {os.path.basename(csv_path)}")
+           self.iface.messageBar().pushMessage("QPANSOPY", f"CSV file loaded: {os.path.basename(csv_path)}", level=Qgis.Info)
    
    def setup_copy_button(self):
        """Configurar el botón para copiar parámetros al portapapeles en formato JSON"""
@@ -368,7 +395,9 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            'export_kml': export_kml,
            'output_dir': output_dir,
            # Añadir información de unidades
-           'THR_elev_unit': self.units.get('THR_elev', 'm')
+           'THR_elev_unit': self.units.get('THR_elev', 'm'),
+           # Añadir ruta del CSV si está disponible
+           'csv_path': self.csv_path
        }
        
        # Registrar las unidades utilizadas
