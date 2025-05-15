@@ -447,32 +447,32 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         reference_layer = self.referenceLayerComboBox.currentLayer()
         
         # Usar valores exactos si están disponibles, de lo contrario usar los valores de los QLineEdit
-        ad_elev = self.exact_values.get('adElev', self.adElevLineEdit.text())
-        temp_ref = self.exact_values.get('tempRef', self.tempRefLineEdit.text())
-        ias = self.exact_values.get('IAS', self.IASLineEdit.text())
+        adElev = self.exact_values.get('adElev', self.adElevLineEdit.text())
+        tempRef = self.exact_values.get('tempRef', self.tempRefLineEdit.text())
+        IAS = self.exact_values.get('IAS', self.IASLineEdit.text())
         altitude = self.exact_values.get('altitude', self.altitudeLineEdit.text())
-        bank_angle = self.exact_values.get('bankAngle', self.bankAngleLineEdit.text())
-        wind_speed = self.exact_values.get('w', self.windSpeedLineEdit.text())
+        bankAngle = self.exact_values.get('bankAngle', self.bankAngleLineEdit.text())
+        w = self.exact_values.get('w', self.windSpeedLineEdit.text())
         turn_direction = self.turnDirectionCombo.currentText()
         show_points = self.showPointsCheckBox.isChecked()
         
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
         
-        # Prepare parameters
+        # Prepare parameters - asegurarse de que los nombres coincidan con los esperados en calculate_wind_spiral
         params = {
-            'ad_elev': ad_elev,
-            'temp_ref': temp_ref,
-            'ias': ias,
+            'adElev': adElev,
+            'tempRef': tempRef,
+            'IAS': IAS,
             'altitude': altitude,
-            'bank_angle': bank_angle,
-            'w': wind_speed,
+            'bankAngle': bankAngle,
+            'w': w,
             'turn_direction': turn_direction,
             'show_points': show_points,
             'export_kml': export_kml,
             'output_dir': output_dir,
             # Añadir información de unidades
-            'ad_elev_unit': self.units.get('adElev', 'ft'),
+            'adElev_unit': self.units.get('adElev', 'ft'),
             'altitude_unit': self.units.get('altitude', 'ft')
         }
         
@@ -487,7 +487,8 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Log results
             if result:
                 if export_kml:
-                    self.log(f"Wind Spiral KML exported to: {result.get('kml_path', 'N/A')}")
+                    # Corregido: usar 'spiral_path' en lugar de 'kml_path'
+                    self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
                 self.log("Calculation completed successfully!")
                 self.log("You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
             else:
