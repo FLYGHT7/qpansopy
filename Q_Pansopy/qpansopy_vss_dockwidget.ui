@@ -96,7 +96,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="rwyWidthLabel">
          <property name="text">
-          <string>Runway Width:</string>
+          <string>Runway Width (m):</string>
          </property>
         </widget>
        </item>
@@ -133,7 +133,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="stripWidthLabel">
          <property name="text">
-          <string>Strip Width:</string>
+          <string>Strip Width (m):</string>
          </property>
         </widget>
        </item>

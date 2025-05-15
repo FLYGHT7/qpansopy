@@ -19,6 +19,7 @@ import datetime
 import json
 import numpy as np
 import re
+from ..utils import get_selected_feature
 
 # Global variables to store computed values
 OAS_template = None
@@ -342,6 +343,23 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     # Log start
     iface.messageBar().pushMessage("QPANSOPY:", "Executing OAS CAT I", level=Qgis.Info)
     
+    # Check if layers exist
+    if not point_layer or not runway_layer:
+        iface.messageBar().pushMessage("Error", "Point or runway layer not provided", level=Qgis.Critical)
+        return None
+    
+    # Usar la función auxiliar para obtener las features
+    def show_error(message):
+        iface.messageBar().pushMessage("Error", message, level=Qgis.Critical)
+    
+    point_feature = get_selected_feature(point_layer, show_error)
+    if not point_feature:
+        return None
+    
+    runway_feature = get_selected_feature(runway_layer, show_error)
+    if not runway_feature:
+        return None
+    
     # Set start point (0 for start, -1 for end)
     s = 0
     s2 = 180 if s == 0 else 0
@@ -349,19 +367,7 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
     
-    # Check for selected features in runway layer
-    runway_features = []
-    if runway_layer.selectedFeatureCount() > 0:
-        runway_features = runway_layer.selectedFeatures()
-    else:
-        runway_features = list(runway_layer.getFeatures())
-    
-    if not runway_features:
-        iface.messageBar().pushMessage("Error", "No runway features found", level=Qgis.Critical)
-        return None
-    
-    # Get runway geometry from the first feature
-    runway_feature = runway_features[0]
+    # Get runway geometry
     geom = runway_feature.geometry().asPolyline()
     if not geom:
         iface.messageBar().pushMessage("Error", "Invalid runway geometry", level=Qgis.Critical)
@@ -374,19 +380,7 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     # Initial true azimuth data
     azimuth = angle0 + s2
     
-    # Check for selected features in point layer
-    point_features = []
-    if point_layer.selectedFeatureCount() > 0:
-        point_features = point_layer.selectedFeatures()
-    else:
-        point_features = list(point_layer.getFeatures())
-    
-    if not point_features:
-        iface.messageBar().pushMessage("Error", "No threshold points found", level=Qgis.Critical)
-        return None
-    
-    # Get threshold point from the first feature
-    point_feature = point_features[0]
+    # Get threshold point
     new_geom = point_feature.geometry().asPoint()
     
     # Determine which OAS options to process

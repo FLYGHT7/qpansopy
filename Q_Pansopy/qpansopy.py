@@ -8,11 +8,15 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform
 
-# Import the dock widgets
-from .qpansopy_vss_dockwidget import QPANSOPYVSSDockWidget
-from .qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
-from .qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
-from .qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
+# Importar los dock widgets con manejo de errores
+try:
+    from .qpansopy_vss_dockwidget import QPANSOPYVSSDockWidget
+    from .qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
+    from .qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
+    from .qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
+except ImportError as e:
+    # No lanzamos el error aquí, lo manejaremos en initGui
+    pass
 
 class Qpansopy:
     """QPANSOPY Plugin Implementation"""
@@ -38,205 +42,281 @@ class Qpansopy:
         self.vss_dock = None
         self.ils_dock = None
         self.wind_spiral_dock = None
-        self.oas_ils_dock = None  # Añadir nuevo dock widget para OAS ILS
+        self.oas_ils_dock = None
+        
+        # Initialize toolbars to None
+        self.toolbars = {
+            'CONV': None,
+            'ILS': None,
+            'PBN': None,
+            'UTILITIES': None
+        }
+        
+        # Verificar que exista la carpeta de iconos
+        self.icons_dir = os.path.join(self.plugin_dir, 'icons')
+        if not os.path.exists(self.icons_dir):
+            try:
+                os.makedirs(self.icons_dir)
+            except Exception:
+                # Si no podemos crear la carpeta, usaremos iconos por defecto
+                pass
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
-        
-        # Crear el menú QPANSOPY antes del menú de Ayuda
-        menuBar = self.iface.mainWindow().menuBar()
-        helpMenu = None
-        
-        # Buscar el menú de Ayuda
-        for action in menuBar.actions():
-            if action.text() == "Help" or action.text() == "Ayuda":
-                helpMenu = action
-                break
-        
-        # Crear nuestro menú
-        self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
-        
-        # Insertar antes del menú de Ayuda si se encuentra, de lo contrario añadir al final
-        if helpMenu:
-            menuBar.insertMenu(helpMenu, self.menu)
-        else:
+        try:
+            # Verificar que los módulos necesarios estén disponibles
+            if 'QPANSOPYVSSDockWidget' not in globals():
+                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Warning", 
+                                   "Some modules could not be imported. The plugin may not work correctly.")
+            
+            # Crear el menú QPANSOPY
+            menuBar = self.iface.mainWindow().menuBar()
+            self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
             menuBar.addMenu(self.menu)
-        
-        # Crear acción para la herramienta VSS
-        vss_action = QAction(
-            QIcon(os.path.join(self.plugin_dir, 'icons', 'vss_icon.png')),
-            "QPANSOPY VSS Tool", 
-            self.iface.mainWindow())
-        vss_action.triggered.connect(self.toggle_vss_dock)
-        self.menu.addAction(vss_action)
-        self.iface.addToolBarIcon(vss_action)
-        self.actions.append(vss_action)
-        
-        # Crear acción para la herramienta ILS
-        ils_action = QAction(
-            QIcon(os.path.join(self.plugin_dir, 'icons', 'ils_icon.png')),
-            "QPANSOPY ILS Tool", 
-            self.iface.mainWindow())
-        ils_action.triggered.connect(self.toggle_ils_dock)
-        self.menu.addAction(ils_action)
-        self.iface.addToolBarIcon(ils_action)
-        self.actions.append(ils_action)
-        
-        # Crear acción para la herramienta Wind Spiral
-        wind_spiral_action = QAction(
-            QIcon(os.path.join(self.plugin_dir, 'icons', 'wind_spiral.png')),
-            "QPANSOPY Wind Spiral Tool", 
-            self.iface.mainWindow())
-        wind_spiral_action.triggered.connect(self.toggle_wind_spiral_dock)
-        self.menu.addAction(wind_spiral_action)
-        self.iface.addToolBarIcon(wind_spiral_action)
-        self.actions.append(wind_spiral_action)
-        
-        # Crear acción para la herramienta OAS ILS
-        oas_ils_action = QAction(
-            QIcon(os.path.join(self.plugin_dir, 'icons', 'oas_ils.png')),
-            "QPANSOPY OAS ILS Tool", 
-            self.iface.mainWindow())
-        oas_ils_action.triggered.connect(self.toggle_oas_ils_dock)
-        self.menu.addAction(oas_ils_action)
-        self.iface.addToolBarIcon(oas_ils_action)
-        self.actions.append(oas_ils_action)
+            
+            # Crear las barras de herramientas temáticas
+            self.toolbars['CONV'] = self.iface.addToolBar("QPANSOPY - CONV")
+            self.toolbars['CONV'].setObjectName("QPANSOPYCONVToolBar")
+            
+            self.toolbars['ILS'] = self.iface.addToolBar("QPANSOPY - ILS")
+            self.toolbars['ILS'].setObjectName("QPANSOPYILSToolBar")
+            
+            self.toolbars['PBN'] = self.iface.addToolBar("QPANSOPY - PBN")
+            self.toolbars['PBN'].setObjectName("QPANSOPYPBNToolBar")
+            
+            self.toolbars['UTILITIES'] = self.iface.addToolBar("QPANSOPY - UTILITIES")
+            self.toolbars['UTILITIES'].setObjectName("QPANSOPYUTILITIESToolBar")
+            
+            # Crear submenús para cada categoría
+            self.conv_menu = QMenu("CONV", self.menu)
+            self.ils_menu = QMenu("ILS", self.menu)
+            self.pbn_menu = QMenu("PBN", self.menu)
+            self.utilities_menu = QMenu("UTILITIES", self.menu)
+            
+            # Añadir submenús al menú principal
+            self.menu.addMenu(self.conv_menu)
+            self.menu.addMenu(self.ils_menu)
+            self.menu.addMenu(self.pbn_menu)
+            self.menu.addMenu(self.utilities_menu)
+            
+            # Crear acción para la herramienta VSS (en UTILITIES)
+            vss_icon_path = os.path.join(self.icons_dir, 'vss_icon.png')
+            if os.path.exists(vss_icon_path):
+                vss_action = QAction(QIcon(vss_icon_path), "VSS Tool", self.iface.mainWindow())
+            else:
+                # Usar un icono por defecto si no existe el personalizado
+                vss_action = QAction(QIcon(":/images/themes/default/mActionAddRasterLayer.svg"), "VSS Tool", self.iface.mainWindow())
+            
+            vss_action.setToolTip("Visual Segment Surface Tool - Analyze obstacle clearance for visual segments")
+            vss_action.triggered.connect(self.toggle_vss_dock)
+            self.utilities_menu.addAction(vss_action)
+            self.toolbars['UTILITIES'].addAction(vss_action)
+            self.actions.append(vss_action)
+            
+            # Crear acción para la herramienta ILS (en ILS)
+            ils_icon_path = os.path.join(self.icons_dir, 'ils_icon.png')
+            if os.path.exists(ils_icon_path):
+                ils_action = QAction(QIcon(ils_icon_path), "Basic ILS Tool", self.iface.mainWindow())
+            else:
+                ils_action = QAction(QIcon(":/images/themes/default/mActionAddOgrLayer.svg"), "Basic ILS Tool", self.iface.mainWindow())
+            
+            ils_action.setToolTip("Basic ILS Tool - Create standard ILS surfaces")
+            ils_action.triggered.connect(self.toggle_ils_dock)
+            self.ils_menu.addAction(ils_action)
+            self.toolbars['ILS'].addAction(ils_action)
+            self.actions.append(ils_action)
+            
+            # Crear acción para la herramienta Wind Spiral (en UTILITIES)
+            wind_spiral_icon_path = os.path.join(self.icons_dir, 'wind_spiral.png')
+            if os.path.exists(wind_spiral_icon_path):
+                wind_spiral_action = QAction(QIcon(wind_spiral_icon_path), "Wind Spiral Tool", self.iface.mainWindow())
+            else:
+                wind_spiral_action = QAction(QIcon(":/images/themes/default/mActionAddCircle.svg"), "Wind Spiral Tool", self.iface.mainWindow())
+            
+            wind_spiral_action.setToolTip("Wind Spiral Tool - Calculate and visualize wind spirals for procedure design")
+            wind_spiral_action.triggered.connect(self.toggle_wind_spiral_dock)
+            self.utilities_menu.addAction(wind_spiral_action)
+            self.toolbars['UTILITIES'].addAction(wind_spiral_action)
+            self.actions.append(wind_spiral_action)
+            
+            # Crear acción para la herramienta OAS ILS (en ILS)
+            oas_ils_icon_path = os.path.join(self.icons_dir, 'oas_ils.png')
+            if os.path.exists(oas_ils_icon_path):
+                oas_ils_action = QAction(QIcon(oas_ils_icon_path), "OAS ILS Tool", self.iface.mainWindow())
+            else:
+                oas_ils_action = QAction(QIcon(":/images/themes/default/mActionAddPolygon.svg"), "OAS ILS Tool", self.iface.mainWindow())
+            
+            oas_ils_action.setToolTip("OAS ILS Tool - Create Obstacle Assessment Surfaces for ILS approaches")
+            oas_ils_action.triggered.connect(self.toggle_oas_ils_dock)
+            self.ils_menu.addAction(oas_ils_action)
+            self.toolbars['ILS'].addAction(oas_ils_action)
+            self.actions.append(oas_ils_action)
+            
+            # Añadir separadores en las barras de herramientas
+            self.toolbars['ILS'].addSeparator()
+            self.toolbars['UTILITIES'].addSeparator()
+            
+        except Exception as e:
+            QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", 
+                               f"Error initializing plugin: {str(e)}")
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
-        # Eliminar el menú
-        if self.menu:
-            menuBar = self.iface.mainWindow().menuBar()
-            menuBar.removeAction(self.menu.menuAction())
-        
-        # Eliminar iconos de la barra de herramientas
-        for action in self.actions:
-            self.iface.removeToolBarIcon(action)
-        
-        # Cerrar widgets si existen
-        if self.vss_dock:
-            self.iface.removeDockWidget(self.vss_dock)
-            self.vss_dock = None
+        try:
+            # Eliminar el menú
+            if self.menu:
+                menuBar = self.iface.mainWindow().menuBar()
+                menuBar.removeAction(self.menu.menuAction())
             
-        if self.ils_dock:
-            self.iface.removeDockWidget(self.ils_dock)
-            self.ils_dock = None
+            # Eliminar barras de herramientas
+            for toolbar_name, toolbar in self.toolbars.items():
+                if toolbar:
+                    self.iface.mainWindow().removeToolBar(toolbar)
+                    toolbar.deleteLater()
             
-        if self.wind_spiral_dock:
-            self.iface.removeDockWidget(self.wind_spiral_dock)
-            self.wind_spiral_dock = None
-            
-        if self.oas_ils_dock:
-            self.iface.removeDockWidget(self.oas_ils_dock)
-            self.oas_ils_dock = None
+            # Cerrar widgets si existen
+            if self.vss_dock:
+                self.iface.removeDockWidget(self.vss_dock)
+                self.vss_dock = None
+                
+            if self.ils_dock:
+                self.iface.removeDockWidget(self.ils_dock)
+                self.ils_dock = None
+                
+            if self.wind_spiral_dock:
+                self.iface.removeDockWidget(self.wind_spiral_dock)
+                self.wind_spiral_dock = None
+                
+            if self.oas_ils_dock:
+                self.iface.removeDockWidget(self.oas_ils_dock)
+                self.oas_ils_dock = None
+        except Exception as e:
+            QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", 
+                               f"Error unloading plugin: {str(e)}")
 
     def toggle_vss_dock(self):
         """Toggle the VSS dock widget"""
-        if self.vss_dock is None:
-            # Create the dock widget
-            self.vss_dock = QPANSOPYVSSDockWidget(self.iface)
-            # Connect the closing signal
-            self.vss_dock.closingPlugin.connect(self.on_vss_dock_closed)
-            # Add the dock widget to the interface
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.vss_dock)
-            
-            # Close other docks if they're open
-            if self.ils_dock:
-                self.iface.removeDockWidget(self.ils_dock)
-                self.ils_dock = None
+        try:
+            if self.vss_dock is None:
+                # Create the dock widget
+                self.vss_dock = QPANSOPYVSSDockWidget(self.iface)
+                # Connect the closing signal
+                self.vss_dock.closingPlugin.connect(self.on_vss_dock_closed)
+                # Add the dock widget to the interface
+                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.vss_dock)
                 
-            if self.wind_spiral_dock:
-                self.iface.removeDockWidget(self.wind_spiral_dock)
-                self.wind_spiral_dock = None
-                
-            if self.oas_ils_dock:
-                self.iface.removeDockWidget(self.oas_ils_dock)
-                self.oas_ils_dock = None
-        else:
-            # If the dock widget exists, remove it
-            self.iface.removeDockWidget(self.vss_dock)
-            self.vss_dock = None
+                # Close other docks if they're open
+                if self.ils_dock:
+                    self.iface.removeDockWidget(self.ils_dock)
+                    self.ils_dock = None
+                    
+                if self.wind_spiral_dock:
+                    self.iface.removeDockWidget(self.wind_spiral_dock)
+                    self.wind_spiral_dock = None
+                    
+                if self.oas_ils_dock:
+                    self.iface.removeDockWidget(self.oas_ils_dock)
+                    self.oas_ils_dock = None
+            else:
+                # If the dock widget exists, remove it
+                self.iface.removeDockWidget(self.vss_dock)
+                self.vss_dock = None
+        except Exception as e:
+            QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", 
+                               f"Error toggling VSS dock: {str(e)}")
     
     def toggle_ils_dock(self):
         """Toggle the ILS dock widget"""
-        if self.ils_dock is None:
-            # Create the dock widget
-            self.ils_dock = QPANSOPYILSDockWidget(self.iface)
-            # Connect the closing signal
-            self.ils_dock.closingPlugin.connect(self.on_ils_dock_closed)
-            # Add the dock widget to the interface
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.ils_dock)
-            
-            # Close other docks if they're open
-            if self.vss_dock:
-                self.iface.removeDockWidget(self.vss_dock)
-                self.vss_dock = None
+        try:
+            if self.ils_dock is None:
+                # Create the dock widget
+                self.ils_dock = QPANSOPYILSDockWidget(self.iface)
+                # Connect the closing signal
+                self.ils_dock.closingPlugin.connect(self.on_ils_dock_closed)
+                # Add the dock widget to the interface
+                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.ils_dock)
                 
-            if self.wind_spiral_dock:
-                self.iface.removeDockWidget(self.wind_spiral_dock)
-                self.wind_spiral_dock = None
-                
-            if self.oas_ils_dock:
-                self.iface.removeDockWidget(self.oas_ils_dock)
-                self.oas_ils_dock = None
-        else:
-            # If the dock widget exists, remove it
-            self.iface.removeDockWidget(self.ils_dock)
-            self.ils_dock = None
+                # Close other docks if they're open
+                if self.vss_dock:
+                    self.iface.removeDockWidget(self.vss_dock)
+                    self.vss_dock = None
+                    
+                if self.wind_spiral_dock:
+                    self.iface.removeDockWidget(self.wind_spiral_dock)
+                    self.wind_spiral_dock = None
+                    
+                if self.oas_ils_dock:
+                    self.iface.removeDockWidget(self.oas_ils_dock)
+                    self.oas_ils_dock = None
+            else:
+                # If the dock widget exists, remove it
+                self.iface.removeDockWidget(self.ils_dock)
+                self.ils_dock = None
+        except Exception as e:
+            QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", 
+                               f"Error toggling ILS dock: {str(e)}")
     
     def toggle_wind_spiral_dock(self):
         """Toggle the Wind Spiral dock widget"""
-        if self.wind_spiral_dock is None:
-            # Create the dock widget
-            self.wind_spiral_dock = QPANSOPYWindSpiralDockWidget(self.iface)
-            # Connect the closing signal
-            self.wind_spiral_dock.closingPlugin.connect(self.on_wind_spiral_dock_closed)
-            # Add the dock widget to the interface
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.wind_spiral_dock)
-            
-            # Close other docks if they're open
-            if self.vss_dock:
-                self.iface.removeDockWidget(self.vss_dock)
-                self.vss_dock = None
+        try:
+            if self.wind_spiral_dock is None:
+                # Create the dock widget
+                self.wind_spiral_dock = QPANSOPYWindSpiralDockWidget(self.iface)
+                # Connect the closing signal
+                self.wind_spiral_dock.closingPlugin.connect(self.on_wind_spiral_dock_closed)
+                # Add the dock widget to the interface
+                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.wind_spiral_dock)
                 
-            if self.ils_dock:
-                self.iface.removeDockWidget(self.ils_dock)
-                self.ils_dock = None
-                
-            if self.oas_ils_dock:
-                self.iface.removeDockWidget(self.oas_ils_dock)
-                self.oas_ils_dock = None
-        else:
-            # If the dock widget exists, remove it
-            self.iface.removeDockWidget(self.wind_spiral_dock)
-            self.wind_spiral_dock = None
+                # Close other docks if they're open
+                if self.vss_dock:
+                    self.iface.removeDockWidget(self.vss_dock)
+                    self.vss_dock = None
+                    
+                if self.ils_dock:
+                    self.iface.removeDockWidget(self.ils_dock)
+                    self.ils_dock = None
+                    
+                if self.oas_ils_dock:
+                    self.iface.removeDockWidget(self.oas_ils_dock)
+                    self.oas_ils_dock = None
+            else:
+                # If the dock widget exists, remove it
+                self.iface.removeDockWidget(self.wind_spiral_dock)
+                self.wind_spiral_dock = None
+        except Exception as e:
+            QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", 
+                               f"Error toggling Wind Spiral dock: {str(e)}")
     
     def toggle_oas_ils_dock(self):
         """Toggle the OAS ILS dock widget"""
-        if self.oas_ils_dock is None:
-            # Create the dock widget
-            self.oas_ils_dock = QPANSOPYOASILSDockWidget(self.iface)
-            # Connect the closing signal
-            self.oas_ils_dock.closingPlugin.connect(self.on_oas_ils_dock_closed)
-            # Add the dock widget to the interface
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.oas_ils_dock)
-            
-            # Close other docks if they're open
-            if self.vss_dock:
-                self.iface.removeDockWidget(self.vss_dock)
-                self.vss_dock = None
+        try:
+            if self.oas_ils_dock is None:
+                # Create the dock widget
+                self.oas_ils_dock = QPANSOPYOASILSDockWidget(self.iface)
+                # Connect the closing signal
+                self.oas_ils_dock.closingPlugin.connect(self.on_oas_ils_dock_closed)
+                # Add the dock widget to the interface
+                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.oas_ils_dock)
                 
-            if self.ils_dock:
-                self.iface.removeDockWidget(self.ils_dock)
-                self.ils_dock = None
-                
-            if self.wind_spiral_dock:
-                self.iface.removeDockWidget(self.wind_spiral_dock)
-                self.wind_spiral_dock = None
-        else:
-            # If the dock widget exists, remove it
-            self.iface.removeDockWidget(self.oas_ils_dock)
-            self.oas_ils_dock = None
+                # Close other docks if they're open
+                if self.vss_dock:
+                    self.iface.removeDockWidget(self.vss_dock)
+                    self.vss_dock = None
+                    
+                if self.ils_dock:
+                    self.iface.removeDockWidget(self.ils_dock)
+                    self.ils_dock = None
+                    
+                if self.wind_spiral_dock:
+                    self.iface.removeDockWidget(self.wind_spiral_dock)
+                    self.wind_spiral_dock = None
+            else:
+                # If the dock widget exists, remove it
+                self.iface.removeDockWidget(self.oas_ils_dock)
+                self.oas_ils_dock = None
+        except Exception as e:
+            QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", 
+                               f"Error toggling OAS ILS dock: {str(e)}")
     
     def on_vss_dock_closed(self):
         """Handle VSS dock widget closing"""

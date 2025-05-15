@@ -16,6 +16,7 @@ import math
 import os
 import datetime
 import json
+from ..utils import get_selected_feature
 
 def calculate_vss_loc(iface, point_layer, runway_layer, params):
     """
@@ -29,10 +30,10 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     """
     # Extract parameters - convert string values to float for calculations
     rwy_width = float(params.get('rwy_width', 45))
-    thr_elev = float(params.get('thr_elev', 0))
+    thr_elev_raw = float(params.get('thr_elev', 0))
     strip_width = float(params.get('strip_width', 140))
-    OCH = float(params.get('OCH', 100))
-    RDH = float(params.get('RDH', 15))
+    OCH_raw = float(params.get('OCH', 100))
+    RDH_raw = float(params.get('RDH', 15))
     VPA = float(params.get('VPA', 3.0))
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
@@ -42,13 +43,18 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     OCH_unit = params.get('OCH_unit', 'm')
     RDH_unit = params.get('RDH_unit', 'm')
     
-    # Create a parameters dictionary for JSON storage
+    # Convert units to meters if needed
+    thr_elev = thr_elev_raw if thr_elev_unit == 'm' else thr_elev_raw * 0.3048
+    OCH = OCH_raw if OCH_unit == 'm' else OCH_raw * 0.3048
+    RDH = RDH_raw if RDH_unit == 'm' else RDH_raw * 0.3048
+    
+    # Create a parameters dictionary for JSON storage - store original values
     parameters_dict = {
         'rwy_width': str(rwy_width),
-        'thr_elev': str(thr_elev),
+        'thr_elev': str(thr_elev_raw),
         'strip_width': str(strip_width),
-        'OCH': str(OCH),
-        'RDH': str(RDH),
+        'OCH': str(OCH_raw),
+        'RDH': str(RDH_raw),
         'VPA': str(VPA),
         'thr_elev_unit': thr_elev_unit,
         'OCH_unit': OCH_unit,
@@ -72,21 +78,22 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
         iface.messageBar().pushMessage("Error", "Point or runway layer not provided", level=Qgis.Critical)
         return None
     
-    # Check if layers have features
-    if point_layer.featureCount() == 0:
-        iface.messageBar().pushMessage("Error", "Point layer has no features", level=Qgis.Critical)
+    # Usar la función auxiliar para obtener las features
+    def show_error(message):
+        iface.messageBar().pushMessage("Error", message, level=Qgis.Critical)
+    
+    point_feature = get_selected_feature(point_layer, show_error)
+    if not point_feature:
         return None
     
-    if runway_layer.featureCount() == 0:
-        iface.messageBar().pushMessage("Error", "Runway layer has no features", level=Qgis.Critical)
+    runway_feature = get_selected_feature(runway_layer, show_error)
+    if not runway_feature:
         return None
     
     # Get the reference point (in WGS84)
-    point_feature = next(point_layer.getFeatures())
     point_geom = point_feature.geometry().asPoint()
     
     # Get the runway line (in projected system)
-    runway_feature = next(runway_layer.getFeatures())
     runway_geom = runway_feature.geometry().asPolyline()
     
     # Get map CRS

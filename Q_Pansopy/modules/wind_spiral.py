@@ -16,6 +16,7 @@ import math
 import os
 import datetime
 import json
+from ..utils import get_selected_feature
 
 def ISA_temperature(adElev, tempRef):
     """Calculate ISA temperature and deviation"""
@@ -111,27 +112,34 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
     
-    # Get reference line geometry
-    if reference_layer and reference_layer.featureCount() > 0:
-        reference_feature = next(reference_layer.getFeatures())
-        geom = reference_feature.geometry().asPolyline()
-        start_point = QgsPoint(geom[-1])
-        end_point = QgsPoint(geom[0])
-        angle0 = start_point.azimuth(end_point) + 180
-    else:
-        iface.messageBar().pushMessage("Error", "Reference layer not provided or empty", level=Qgis.Critical)
+    # Check if layers exist
+    if not point_layer or not reference_layer:
+        iface.messageBar().pushMessage("Error", "Point or reference layer not provided", level=Qgis.Critical)
         return None
+    
+    # Usar la función auxiliar para obtener las features
+    def show_error(message):
+        iface.messageBar().pushMessage("Error", message, level=Qgis.Critical)
+    
+    point_feature = get_selected_feature(point_layer, show_error)
+    if not point_feature:
+        return None
+    
+    reference_feature = get_selected_feature(reference_layer, show_error)
+    if not reference_feature:
+        return None
+    
+    # Get reference line geometry
+    geom = reference_feature.geometry().asPolyline()
+    start_point = QgsPoint(geom[-1])
+    end_point = QgsPoint(geom[0])
+    angle0 = start_point.azimuth(end_point) + 180
     
     # Initial true azimuth data
     azimuth = angle0
     
     # Get point geometry
-    if point_layer and point_layer.featureCount() > 0:
-        point_feature = next(point_layer.getFeatures())
-        p_geom = point_feature.geometry().asPoint()
-    else:
-        iface.messageBar().pushMessage("Error", "Point layer not provided or empty", level=Qgis.Critical)
-        return None
+    p_geom = point_feature.geometry().asPoint()
     
     # Initialize points list for circular string
     u = []
