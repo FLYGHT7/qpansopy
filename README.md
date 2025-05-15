@@ -8,6 +8,8 @@ All computations are done in meters and KTS thus conversions are done when neede
 PANS OPS has "equivalences" that are not really equivalent like 50 ft = 15 m so you would expect some differences due to this.
 
 ## Currently in implementation
+***main initial focus is area creation, evaluation to be added at later stage***
+
 ### Utilities 
 - VSS NPA
 - Wind Spiral Utility
@@ -21,3 +23,9 @@ PANS OPS has "equivalences" that are not really equivalent like 50 ft = 15 m so 
 - PBN LNAV (straight to runway)
 - PBN intermediate (aligned)
 - PBN initial (without automatic connection to the intermediate)
+
+## Roadmap
+- Initial focus in correct area creation
+- Ability to export tables to Word for creating reports
+- Add evaluation of straight segments
+- Add logic for evaluation of curves/offsets
