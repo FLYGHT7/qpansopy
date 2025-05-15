@@ -16,6 +16,8 @@ PANS OPS has "equivalences" that are not really equivalent like 50 ft = 15 m so 
 - ILS OAS CAT I
 
 ## Next Steps 
+- CONV VOR Template
+- CONV NDB Template
 - PBN LNAV (straight to runway)
 - PBN intermediate (aligned)
 - PBN initial (without automatic connection to the intermediate)
