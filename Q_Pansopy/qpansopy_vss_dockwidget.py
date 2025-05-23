@@ -81,6 +81,15 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Añadir botón para copiar parámetros
         self.setup_copy_button()
         
+        # Asegura que el log se puede ocultar sin error
+        if hasattr(self, "logTextEdit") and self.logTextEdit is not None:
+            self.logTextEdit.setVisible(True)
+        # Asegura que el checkbox de KML existe
+        if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
+            self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
+            self.exportKmlCheckBox.setChecked(True)
+            self.verticalLayout.addWidget(self.exportKmlCheckBox)
+        
         # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
 
