@@ -29,6 +29,7 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateRefe
 from qgis.utils import iface
 from qgis.core import Qgis
 import json
+import datetime
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -94,69 +95,90 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
 
     def setup_copy_button(self):
-        """Configurar el botón para copiar parámetros al portapapeles"""
-        self.copyParamsButton = QtWidgets.QPushButton("Copy Parameters to Clipboard", self)
-        self.copyParamsButton.clicked.connect(self.copy_parameters_to_clipboard)
-        
-        # Añadir el botón al layout existente
-        self.verticalLayout.addWidget(self.copyParamsButton)
+        """Configurar botones para copiar parámetros al portapapeles"""
+        buttons_layout = QtWidgets.QHBoxLayout()
+        self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
+        self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+        self.copyParamsWordButton.setMinimumHeight(30)
+        self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
+        self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
+        self.copyParamsJsonButton.setMinimumHeight(30)
+        buttons_layout.addWidget(self.copyParamsWordButton)
+        buttons_layout.addWidget(self.copyParamsJsonButton)
+        buttons_widget = QtWidgets.QWidget(self)
+        buttons_widget.setLayout(buttons_layout)
+        self.verticalLayout.addWidget(buttons_widget)
 
-    def copy_parameters_to_clipboard(self):
-        """Copiar los parámetros de las capas seleccionadas al portapapeles"""
-        # Obtener todas las capas del proyecto
-        layers = QgsProject.instance().mapLayers().values()
-        
-        # Filtrar solo las capas vectoriales que podrían contener nuestros parámetros
-        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-        
-        # Buscar capas que tengan el campo 'parameters'
-        params_text = "QPANSOPY Parameters Report\n"
-        params_text += "========================\n\n"
-        
-        found_params = False
-        
-        for layer in vector_layers:
-            if 'parameters' in [field.name() for field in layer.fields()]:
-                params_text += f"Layer: {layer.name()}\n"
-                params_text += "------------------------\n"
-                
-                # Obtener los parámetros de cada feature
-                for feature in layer.getFeatures():
-                    params_json = feature.attribute('parameters')
-                    if params_json:
-                        found_params = True
-                        try:
-                            params_dict = json.loads(params_json)
-                            
-                            # Añadir descripción si está disponible
-                            if 'description' in [field.name() for field in layer.fields()]:
-                                desc = feature.attribute('description')
-                                if desc:
-                                    params_text += f"Surface: {desc}\n"
-                            
-                            # Formatear los parámetros
-                            params_text += "Parameters:\n"
-                            for key, value in params_dict.items():
-                                # Formatear mejor las claves
-                                formatted_key = key.replace('_', ' ').title()
-                                params_text += f"  - {formatted_key}: {value}\n"
-                            
-                            params_text += "\n"
-                        except json.JSONDecodeError:
-                            params_text += f"  Error: Could not parse parameters JSON\n\n"
-                
-                params_text += "\n"
-        
-        if not found_params:
-            params_text += "No parameters found in any layer. Please run a calculation first.\n"
-        
-        # Copiar al portapapeles
+    def copy_parameters_for_word(self):
+        """Copiar los parámetros VSS en formato tabla para Word"""
+        params_text = "QPANSOPY VSS CALCULATION PARAMETERS\n"
+        params_text += "=" * 50 + "\n\n"
+        params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
+        params_text += "-" * 50 + "\n"
+        param_names = {
+            'rwy_width': 'Runway Width',
+            'thr_elev': 'Threshold Elevation',
+            'strip_width': 'Strip Width',
+            'OCH': 'OCH',
+            'RDH': 'RDH',
+            'VPA': 'VPA'
+        }
+        params = {
+            'rwy_width': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()),
+            'thr_elev': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()),
+            'thr_elev_unit': self.units.get('thr_elev', 'm'),
+            'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
+            'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
+            'OCH_unit': self.units.get('OCH', 'm'),
+            'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
+            'RDH_unit': self.units.get('RDH', 'm'),
+            'VPA': self.exact_values.get('VPA', self.VPALineEdit.text())
+        }
+        for key in ['rwy_width', 'thr_elev', 'strip_width', 'OCH', 'RDH', 'VPA']:
+            display_name = param_names.get(key, key.replace('_', ' ').title())
+            value = params[key]
+            unit = ""
+            if key == 'thr_elev':
+                unit = params['thr_elev_unit']
+            elif key == 'OCH':
+                unit = params['OCH_unit']
+            elif key == 'RDH':
+                unit = params['RDH_unit']
+            elif key == 'rwy_width' or key == 'strip_width':
+                unit = "m"
+            elif key == 'VPA':
+                unit = "°"
+            params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_text)
-        
-        # Mostrar mensaje de éxito
-        self.log("Parameters copied to clipboard. You can now paste them into Word or another application.")
-        self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard", level=Qgis.Success)
+        self.log("VSS parameters copied to clipboard in Word format. You can now paste them into Word.")
+        self.iface.messageBar().pushMessage("QPANSOPY", "VSS parameters copied to clipboard in Word format", level=Qgis.Success)
+
+    def copy_parameters_as_json(self):
+        """Copiar los parámetros actuales al portapapeles en formato JSON"""
+        params_dict = {
+            "metadata": {
+                "plugin": "QPANSOPY VSS",
+                "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "version": "1.0"
+            },
+            "parameters": {
+                'rwy_width': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()),
+                'thr_elev': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()),
+                'thr_elev_unit': self.units.get('thr_elev', 'm'),
+                'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
+                'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
+                'OCH_unit': self.units.get('OCH', 'm'),
+                'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
+                'RDH_unit': self.units.get('RDH', 'm'),
+                'VPA': self.exact_values.get('VPA', self.VPALineEdit.text())
+            }
+        }
+        params_json = json.dumps(params_dict, indent=2)
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(params_json)
+        self.log("VSS parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
+        self.iface.messageBar().pushMessage("QPANSOPY", "VSS parameters copied to clipboard as JSON", level=Qgis.Success)
 
     def setup_lineedits(self):
         """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
