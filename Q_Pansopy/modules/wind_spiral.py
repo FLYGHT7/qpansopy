@@ -50,44 +50,54 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     :param params: Dictionary with calculation parameters
     :return: Dictionary with results
     """
-    # Extract parameters
-    adElev = float(params.get('adElev', 0))
-    tempRef = float(params.get('tempRef', 15))
+    # Extraer parámetros
     IAS = float(params.get('IAS', 205))
     altitude = float(params.get('altitude', 800))
+    altitude_unit = params.get('altitude_unit', 'ft')
+    if altitude_unit == 'm':
+        altitude = altitude * 3.28084
     bankAngle = float(params.get('bankAngle', 15))
     w = float(params.get('w', 30))
+    isa_var = float(params.get('isa_var', 0))
     turn_direction = params.get('turn_direction', 'R')
     show_points = params.get('show_points', True)
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
+
+    # --- UNIT CONVERSION PATCH ---
+    # Convert adElev to feet if needed (for logging/ISA dialog only)
+    adElev = float(params.get('adElev', 0))
+    adElev_unit = params.get('adElev_unit', 'ft')
+    if adElev_unit == 'm':
+        adElev = adElev * 3.28084
+    tempRef = float(params.get('tempRef', 15))
+    # --- END PATCH ---
     
     # Create a parameters dictionary for JSON storage
     parameters_dict = {
         'adElev': str(adElev),
+        'adElev_unit': adElev_unit,
         'tempRef': str(tempRef),
         'IAS': str(IAS),
         'altitude': str(altitude),
+        'altitude_unit': altitude_unit,
         'bankAngle': str(bankAngle),
         'w': str(w),
+        'isa_var': str(isa_var),
         'turn_direction': turn_direction,
         'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'calculation_type': 'Wind Spiral'
     }
-    
-    # Convert parameters to JSON string
     parameters_json = json.dumps(parameters_dict)
-    
-    # Calculate ISA temperature
+
+    # Log ISA deviation (for info only, not used in calculation)
     valueISA = ISA_temperature(adElev, tempRef)
-    
-    # Log ISA deviation
     iface.messageBar().pushMessage(
         "Info", 
-        f"ISA + {valueISA[3]}", 
+        f"ISA + {isa_var} (Calculated: {round(valueISA[3],2)})", 
         level=Qgis.Info
     )
-    
+
     # Set turn direction
     if turn_direction == "L":
         side = 90
@@ -95,9 +105,9 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     else:  # Default to right turn
         side = -90
         d = (-30, -60, -90, -120, -150, -180, -210, -240, -270, -300, -330)  # NM
-    
-    # Calculate TAS and turn parameters - Usar el valor de w pasado como parámetro
-    values = tas_calculation(IAS, altitude, valueISA[3], bankAngle, w)
+
+    # Calculate TAS and turn parameters using isa_var directly
+    values = tas_calculation(IAS, altitude, isa_var, bankAngle, w)
     r_turn = values[3]
     
     # Calculate drift angle

@@ -110,12 +110,21 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Crear el grupo de log
         self.create_log_group()
         
-        # Añadir el botón para copiar parámetros
-        self.copyParamsButton = QtWidgets.QPushButton("Copy Parameters as JSON", self)
-        self.copyParamsButton.setObjectName("copyParamsButton")
-        self.copyParamsButton.clicked.connect(self.copy_parameters_to_clipboard)
-        self.copyParamsButton.setMinimumHeight(30)
-        self.verticalLayout.addWidget(self.copyParamsButton)
+        # Añadir el botón para copiar parámetros (Word y JSON)
+        buttons_layout = QtWidgets.QHBoxLayout()
+        self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
+        self.copyParamsWordButton.setObjectName("copyParamsWordButton")
+        self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+        self.copyParamsWordButton.setMinimumHeight(30)
+        self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
+        self.copyParamsJsonButton.setObjectName("copyParamsJsonButton")
+        self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
+        self.copyParamsJsonButton.setMinimumHeight(30)
+        buttons_layout.addWidget(self.copyParamsWordButton)
+        buttons_layout.addWidget(self.copyParamsJsonButton)
+        buttons_widget = QtWidgets.QWidget(self)
+        buttons_widget.setLayout(buttons_layout)
+        self.verticalLayout.addWidget(buttons_widget)
         
         # Añadir un espaciador al final para que todo se alinee hacia arriba
         spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
@@ -154,43 +163,51 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegExpValidator(regex)
         
-        # Aerodrome Elevation con selector de unidades
+        # Aerodrome Elevation y Temperature Reference (ocultos por defecto)
         self.adElevLineEdit = QtWidgets.QLineEdit(self)
         self.adElevLineEdit.setValidator(validator)
         self.adElevLineEdit.setText("0")
-        self.adElevLineEdit.textChanged.connect(
-            lambda text: self.store_exact_value('adElev', text))
         self.adElevLineEdit.setMinimumHeight(28)
-        
         self.adElevUnitCombo = QtWidgets.QComboBox(self)
         self.adElevUnitCombo.addItems(['ft', 'm'])
-        self.adElevUnitCombo.currentTextChanged.connect(
-            lambda text: self.update_unit('adElev', text))
         self.adElevUnitCombo.setMinimumHeight(28)
         self.adElevUnitCombo.setFixedWidth(45)
-        
-        # Crear un widget contenedor para el campo y el selector de unidades
         adElevContainer = QtWidgets.QWidget(self)
         adElevLayout = QtWidgets.QHBoxLayout(adElevContainer)
         adElevLayout.setContentsMargins(0, 0, 0, 0)
         adElevLayout.setSpacing(5)
         adElevLayout.addWidget(self.adElevLineEdit)
         adElevLayout.addWidget(self.adElevUnitCombo)
-        
-        # Añadir el widget al formulario
         self.formLayout.addRow("Aerodrome Elevation:", adElevContainer)
-        
-        # Temperature Reference
+        adElevContainer.hide()
+        self.adElevContainer = adElevContainer
+
         self.tempRefLineEdit = QtWidgets.QLineEdit(self)
         self.tempRefLineEdit.setValidator(validator)
         self.tempRefLineEdit.setText("15")
-        self.tempRefLineEdit.textChanged.connect(
-            lambda text: self.store_exact_value('tempRef', text))
         self.tempRefLineEdit.setMinimumHeight(28)
-        
-        # Añadir el widget al formulario
         self.formLayout.addRow("Temperature Reference (°C):", self.tempRefLineEdit)
-        
+        self.tempRefLineEdit.hide()
+
+        # ISA Variation (°C) input (visible por defecto)
+        self.isaVarLineEdit = QtWidgets.QLineEdit(self)
+        self.isaVarLineEdit.setValidator(validator)
+        self.isaVarLineEdit.setText("0")
+        self.isaVarLineEdit.setMinimumHeight(28)
+        # Botón para calcular ISA
+        self.isaCalcButton = QtWidgets.QToolButton(self)
+        self.isaCalcButton.setText("🧮")
+        self.isaCalcButton.setToolTip("Calculate ISA Variation")
+        self.isaCalcButton.setFixedWidth(28)
+        self.isaCalcButton.clicked.connect(self.show_isa_calc_dialog)
+        isaVarContainer = QtWidgets.QWidget(self)
+        isaVarLayout = QtWidgets.QHBoxLayout(isaVarContainer)
+        isaVarLayout.setContentsMargins(0, 0, 0, 0)
+        isaVarLayout.setSpacing(5)
+        isaVarLayout.addWidget(self.isaVarLineEdit)
+        isaVarLayout.addWidget(self.isaCalcButton)
+        self.formLayout.addRow("ISA Variation (°C):", isaVarContainer)
+
         # IAS
         self.IASLineEdit = QtWidgets.QLineEdit(self)
         self.IASLineEdit.setValidator(validator)
@@ -328,11 +345,106 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Añadir el grupo al layout principal sin espaciador
         self.verticalLayout.addWidget(log_group)
-        
 
-    def copy_parameters_to_clipboard(self):
-        """Copiar los parámetros al portapapeles en formato JSON"""
-        # Crear un diccionario con los parámetros actuales
+    def show_isa_calc_dialog(self):
+        """Mostrar diálogo para calcular ISA Variation"""
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle("Calculate ISA Variation")
+        layout = QtWidgets.QFormLayout(dlg)
+        # Aerodrome Elevation
+        adElevEdit = QtWidgets.QLineEdit(self.adElevLineEdit.text())
+        adElevEdit.setValidator(self.adElevLineEdit.validator())
+        adElevUnitCombo = QtWidgets.QComboBox()
+        adElevUnitCombo.addItems(['ft', 'm'])
+        adElevUnitCombo.setCurrentText(self.adElevUnitCombo.currentText())
+        adElevContainer = QtWidgets.QWidget()
+        adElevLayout = QtWidgets.QHBoxLayout(adElevContainer)
+        adElevLayout.setContentsMargins(0, 0, 0, 0)
+        adElevLayout.setSpacing(5)
+        adElevLayout.addWidget(adElevEdit)
+        adElevLayout.addWidget(adElevUnitCombo)
+        layout.addRow("Aerodrome Elevation:", adElevContainer)
+        # Temperature Reference
+        tempRefEdit = QtWidgets.QLineEdit(self.tempRefLineEdit.text())
+        tempRefEdit.setValidator(self.tempRefLineEdit.validator())
+        layout.addRow("Temperature Reference (°C):", tempRefEdit)
+        # Botones
+        btnBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        layout.addWidget(btnBox)
+        btnBox.accepted.connect(dlg.accept)
+        btnBox.rejected.connect(dlg.reject)
+        if dlg.exec_():
+            try:
+                adElev = float(adElevEdit.text())
+                adElev_unit = adElevUnitCombo.currentText()
+                if adElev_unit == 'm':
+                    adElev_ft = adElev * 3.28084
+                else:
+                    adElev_ft = adElev
+                tempRef = float(tempRefEdit.text())
+                tempISA = 15 - 0.00198 * adElev_ft
+                isa_var = tempRef - tempISA
+                self.isaVarLineEdit.setText(str(round(isa_var, 2)))
+                # También actualizar los campos ocultos
+                self.adElevLineEdit.setText(str(adElev))
+                self.adElevUnitCombo.setCurrentText(adElev_unit)
+                self.tempRefLineEdit.setText(str(tempRef))
+            except Exception as e:
+                QtWidgets.QMessageBox.warning(self, "Error", f"Invalid input: {e}")
+
+    def copy_parameters_for_word(self):
+        """Copiar los parámetros en formato tabla para Word"""
+        params_text = "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n"
+        params_text += "=" * 50 + "\n\n"
+        params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
+        params_text += "-" * 50 + "\n"
+        param_names = {
+            'adElev': 'Aerodrome Elevation',
+            'tempRef': 'Temperature Reference',
+            'IAS': 'IAS',
+            'altitude': 'Altitude',
+            'bankAngle': 'Bank Angle',
+            'w': 'Wind Speed',
+            'turn_direction': 'Turn Direction',
+            'show_points': 'Show Construction Points'
+        }
+        # Usar valores actuales
+        params = {
+            'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
+            'adElev_unit': self.units.get('adElev', 'ft'),
+            'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+            'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
+            'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
+            'altitude_unit': self.units.get('altitude', 'ft'),
+            'bankAngle': self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()),
+            'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
+            'turn_direction': self.turnDirectionCombo.currentText(),
+            'show_points': self.showPointsCheckBox.isChecked()
+        }
+        for key in ['adElev', 'tempRef', 'IAS', 'altitude', 'bankAngle', 'w', 'turn_direction', 'show_points']:
+            display_name = param_names.get(key, key.replace('_', ' ').title())
+            value = params[key]
+            unit = ""
+            if key == 'adElev':
+                unit = params['adElev_unit']
+            elif key == 'altitude':
+                unit = params['altitude_unit']
+            elif key == 'tempRef':
+                unit = "°C"
+            elif key == 'IAS':
+                unit = "kt"
+            elif key == 'bankAngle':
+                unit = "°"
+            elif key == 'w':
+                unit = "kt"
+            params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(params_text)
+        self.log("Wind Spiral parameters copied to clipboard in Word format. You can now paste them into Word.")
+        self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied to clipboard in Word format", level=Qgis.Success)
+
+    def copy_parameters_as_json(self):
+        """Copiar los parámetros actuales al portapapeles en formato JSON"""
         params_dict = {
             "metadata": {
                 "plugin": "QPANSOPY Wind Spiral",
@@ -352,17 +464,11 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'showPoints': self.showPointsCheckBox.isChecked()
             }
         }
-        
-        # Convertir a JSON para el portapapeles
         params_json = json.dumps(params_dict, indent=2)
-        
-        # Copiar al portapapeles
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_json)
-        
-        # Mostrar mensaje de éxito
-        self.log("Parameters copied to clipboard in JSON format.")
-        self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard in JSON format", level=Qgis.Success)
+        self.log("Wind Spiral parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
+        self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied to clipboard as JSON", level=Qgis.Success)
 
     def update_unit(self, param_name, unit):
         """Actualizar la unidad seleccionada para un parámetro"""
@@ -451,38 +557,36 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.validate_inputs():
             return
         
+        # Usar el valor de ISA Variation directamente
+        try:
+            isa_var = float(self.isaVarLineEdit.text())
+        except Exception:
+            isa_var = 0
         # Get parameters
         point_layer = self.pointLayerComboBox.currentLayer()
         reference_layer = self.referenceLayerComboBox.currentLayer()
-        
-        # Usar valores exactos si están disponibles, de lo contrario usar los valores de los QLineEdit
-        adElev = self.exact_values.get('adElev', self.adElevLineEdit.text())
-        tempRef = self.exact_values.get('tempRef', self.tempRefLineEdit.text())
         IAS = self.exact_values.get('IAS', self.IASLineEdit.text())
         altitude = self.exact_values.get('altitude', self.altitudeLineEdit.text())
         bankAngle = self.exact_values.get('bankAngle', self.bankAngleLineEdit.text())
         w = self.exact_values.get('w', self.windSpeedLineEdit.text())
         turn_direction = self.turnDirectionCombo.currentText()
         show_points = self.showPointsCheckBox.isChecked()
-        
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
-        
-        # Prepare parameters - asegurarse de que los nombres coincidan con los esperados en calculate_wind_spiral
+        # Unidades
+        altitude_unit = self.units.get('altitude', 'ft')
+        # Prepare parameters
         params = {
-            'adElev': adElev,
-            'tempRef': tempRef,
             'IAS': IAS,
             'altitude': altitude,
+            'altitude_unit': altitude_unit,
             'bankAngle': bankAngle,
             'w': w,
             'turn_direction': turn_direction,
             'show_points': show_points,
             'export_kml': export_kml,
             'output_dir': output_dir,
-            # Añadir información de unidades
-            'adElev_unit': self.units.get('adElev', 'ft'),
-            'altitude_unit': self.units.get('altitude', 'ft')
+            'isa_var': isa_var
         }
         
         # Registrar las unidades utilizadas

@@ -23,46 +23,31 @@ Procedure Analysis and Obstacle Protection Surfaces
 
 from qgis.core import Qgis
 
-def get_selected_feature(layer, error_callback=None):
+def get_selected_feature(layer, show_error):
     """
-    Obtiene la feature a utilizar según las reglas de selección:
-    1. Si no hay features seleccionadas y solo hay una feature, usa esa feature
-    2. Si hay features seleccionadas y solo una está seleccionada, usa esa feature
-    3. Si hay múltiples features seleccionadas, muestra un error
-    
-    :param layer: Capa de entrada (QgsVectorLayer)
-    :param error_callback: Función para mostrar mensajes de error (opcional)
-    :return: QgsFeature o None si hay un error
+    Selecciona la feature a usar según la lógica:
+    - Si hay exactamente una seleccionada, usarla.
+    - Si hay más de una seleccionada, error.
+    - Si ninguna seleccionada y solo hay una en la capa, usarla.
+    - Si ninguna seleccionada y hay varias, error.
     """
     if not layer:
-        if error_callback:
-            error_callback("No layer provided")
+        show_error("No layer provided")
         return None
-    
-    # Verificar si hay features seleccionadas
-    selected_count = layer.selectedFeatureCount()
-    
-    if selected_count == 0:
-        # No hay features seleccionadas
-        feature_count = layer.featureCount()
-        if feature_count == 0:
-            # No hay features en la capa
-            if error_callback:
-                error_callback("No features found in the layer")
-            return None
-        elif feature_count == 1:
-            # Solo hay una feature en la capa, usarla
-            return next(layer.getFeatures())
-        else:
-            # Hay múltiples features, mostrar error
-            if error_callback:
-                error_callback("Multiple features found but none selected. Please select one feature.")
-            return None
-    elif selected_count == 1:
-        # Hay exactamente una feature seleccionada, usarla
-        return next(layer.selectedFeatures())
+
+    selected = layer.selectedFeatures()
+    if len(selected) == 1:
+        return selected[0]
+    elif len(selected) > 1:
+        show_error("More than one feature is selected. Please select only one feature.")
+        return None
     else:
-        # Hay múltiples features seleccionadas, mostrar error
-        if error_callback:
-            error_callback("Multiple features selected. Please select only one feature.")
-        return None
+        all_features = list(layer.getFeatures())
+        if len(all_features) == 1:
+            return all_features[0]
+        elif len(all_features) == 0:
+            show_error("No features found in the layer")
+            return None
+        else:
+            show_error("Multiple features found but none selected. Please select one feature.")
+            return None
