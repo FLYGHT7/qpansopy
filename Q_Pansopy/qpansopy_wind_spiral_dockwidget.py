@@ -75,6 +75,15 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Reconstruir completamente el layout para evitar problemas de superposición
         self.rebuild_layout()
         
+        # Asegura que el log se puede ocultar sin error
+        if hasattr(self, "logTextEdit") and self.logTextEdit is not None:
+            self.logTextEdit.setVisible(True)  # El valor real lo pone qpansopy.py
+        # Asegura que el checkbox de KML existe
+        if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
+            self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
+            self.exportKmlCheckBox.setChecked(True)
+            self.verticalLayout.addWidget(self.exportKmlCheckBox)
+        
         # Log message
         self.log("QPANSOPY Wind Spiral plugin loaded. Select layers and parameters, then click Calculate.")
 

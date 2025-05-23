@@ -14,6 +14,7 @@ try:
     from .qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
     from .qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
     from .qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
+    from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui
     pass
@@ -60,6 +61,13 @@ class Qpansopy:
             except Exception:
                 # Si no podemos crear la carpeta, usaremos iconos por defecto
                 pass
+
+        # Initialize settings
+        self.settings = QSettings()
+        self.settings_values = {
+            "enable_kml": self.settings.value("qpansopy/enable_kml", False, type=bool),
+            "show_log": self.settings.value("qpansopy/show_log", True, type=bool)
+        }
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
@@ -155,6 +163,16 @@ class Qpansopy:
             # Añadir separadores en las barras de herramientas
             self.toolbars['ILS'].addSeparator()
             self.toolbars['UTILITIES'].addSeparator()
+
+            # Añadir menú contextual "About" y "Settings"
+            self.menu.setTearOffEnabled(True)
+            self.menu.addSeparator()
+            about_action = QAction("About", self.iface.mainWindow())
+            about_action.triggered.connect(self.show_about_dialog)
+            self.menu.addAction(about_action)
+            settings_action = QAction("Settings", self.iface.mainWindow())
+            settings_action.triggered.connect(self.show_settings_dialog)
+            self.menu.addAction(settings_action)
             
         except Exception as e:
             QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", 
@@ -200,6 +218,10 @@ class Qpansopy:
             if self.vss_dock is None:
                 # Create the dock widget
                 self.vss_dock = QPANSOPYVSSDockWidget(self.iface)
+                # Aplicar configuración
+                self.vss_dock.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                if hasattr(self.vss_dock, "logTextEdit"):
+                    self.vss_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 # Connect the closing signal
                 self.vss_dock.closingPlugin.connect(self.on_vss_dock_closed)
                 # Add the dock widget to the interface
@@ -231,6 +253,10 @@ class Qpansopy:
             if self.ils_dock is None:
                 # Create the dock widget
                 self.ils_dock = QPANSOPYILSDockWidget(self.iface)
+                # Aplicar configuración
+                self.ils_dock.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                if hasattr(self.ils_dock, "logTextEdit"):
+                    self.ils_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 # Connect the closing signal
                 self.ils_dock.closingPlugin.connect(self.on_ils_dock_closed)
                 # Add the dock widget to the interface
@@ -262,6 +288,10 @@ class Qpansopy:
             if self.wind_spiral_dock is None:
                 # Create the dock widget
                 self.wind_spiral_dock = QPANSOPYWindSpiralDockWidget(self.iface)
+                # Aplicar configuración
+                self.wind_spiral_dock.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                if hasattr(self.wind_spiral_dock, "logTextEdit"):
+                    self.wind_spiral_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 # Connect the closing signal
                 self.wind_spiral_dock.closingPlugin.connect(self.on_wind_spiral_dock_closed)
                 # Add the dock widget to the interface
@@ -293,6 +323,10 @@ class Qpansopy:
             if self.oas_ils_dock is None:
                 # Create the dock widget
                 self.oas_ils_dock = QPANSOPYOASILSDockWidget(self.iface)
+                # Aplicar configuración
+                self.oas_ils_dock.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                if hasattr(self.oas_ils_dock, "logTextEdit"):
+                    self.oas_ils_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 # Connect the closing signal
                 self.oas_ils_dock.closingPlugin.connect(self.on_oas_ils_dock_closed)
                 # Add the dock widget to the interface
@@ -333,3 +367,34 @@ class Qpansopy:
     def on_oas_ils_dock_closed(self):
         """Handle OAS ILS dock widget closing"""
         self.oas_ils_dock = None
+
+    def show_about_dialog(self):
+        """Show the About dialog"""
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QHBoxLayout
+        from PyQt5.QtGui import QPixmap
+        dlg = QDialog()
+        dlg.setWindowTitle("About QPANSOPY")
+        layout = QVBoxLayout(dlg)
+        hbox = QHBoxLayout()
+        logo_path = os.path.join(self.plugin_dir, "icons", "flyght7_logo.png")
+        if os.path.exists(logo_path):
+            pix = QPixmap(logo_path)
+            logo = QLabel()
+            logo.setPixmap(pix.scaledToHeight(48))
+            hbox.addWidget(logo)
+        hbox.addWidget(QLabel("<b>QPANSOPY by FLYGHT7</b>"))
+        layout.addLayout(hbox)
+        github_label = QLabel("Aviation surfaces plugin for QGIS.<br>Developed by FLYGHT7.<br><a href='https://github.com/FLYGHT7/qpansopy'>https://github.com/FLYGHT7/qpansopy</a>")
+        github_label.setOpenExternalLinks(True)
+        layout.addWidget(github_label)
+        dlg.exec_()
+
+    def show_settings_dialog(self):
+        """Show the Settings dialog"""
+        # Usar None como parent para evitar errores de QWidget
+        dlg = SettingsDialog(None, self.settings)
+        if dlg.exec_():
+            vals = dlg.get_values()
+            self.settings.setValue("qpansopy/enable_kml", vals["enable_kml"])
+            self.settings.setValue("qpansopy/show_log", vals["show_log"])
+            self.settings_values = vals

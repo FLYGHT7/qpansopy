@@ -29,6 +29,7 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateRefe
 from qgis.utils import iface
 from qgis.core import Qgis
 import json
+import datetime
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -79,16 +80,43 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Añadir botón para copiar parámetros
        self.setup_copy_button()
        
+       # Asegurar que el log se puede ocultar sin error
+       if hasattr(self, "logTextEdit") and self.logTextEdit is not None:
+           self.logTextEdit.setVisible(True)
+       # Asegura que el checkbox de KML existe
+       if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
+           self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
+           self.exportKmlCheckBox.setChecked(True)
+           self.verticalLayout.addWidget(self.exportKmlCheckBox)
+       
        # Log message
        self.log("QPANSOPY ILS plugin loaded. Select layers and parameters, then click Calculate.")
    
    def setup_copy_button(self):
-       """Configurar el botón para copiar parámetros al portapapeles"""
-       self.copyParamsButton = QtWidgets.QPushButton("Copy Parameters to Clipboard", self)
-       self.copyParamsButton.clicked.connect(self.copy_parameters_to_clipboard)
+       """Configurar botones para copiar parámetros al portapapeles"""
+       # Crear un layout horizontal para los botones
+       buttons_layout = QtWidgets.QHBoxLayout()
        
-       # Añadir el botón al layout existente
-       self.verticalLayout.addWidget(self.copyParamsButton)
+       # Botón para copiar como texto formateado (Word)
+       self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
+       self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+       self.copyParamsWordButton.setMinimumHeight(30)
+       
+       # Botón para copiar como JSON
+       self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
+       self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
+       self.copyParamsJsonButton.setMinimumHeight(30)
+       
+       buttons_layout.addWidget(self.copyParamsWordButton)
+       buttons_layout.addWidget(self.copyParamsJsonButton)
+       
+       # Crear un widget contenedor para el layout
+       buttons_widget = QtWidgets.QWidget(self)
+       buttons_widget.setLayout(buttons_layout)
+       
+       # Añadir el widget al layout existente
+       self.verticalLayout.addWidget(buttons_widget)
+
    
    def copy_parameters_to_clipboard(self):
        """Copiar los parámetros de las capas seleccionadas al portapapeles"""
@@ -146,6 +174,184 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Mostrar mensaje de éxito
        self.log("Parameters copied to clipboard. You can now paste them into Word or another application.")
        self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard", level=Qgis.Success)
+   
+   def copy_parameters_for_word(self):
+       """Copiar los parámetros en formato tabla para Word"""
+       # Obtener todas las capas del proyecto
+       layers = QgsProject.instance().mapLayers().values()
+       
+       # Filtrar solo las capas vectoriales que podrían contener nuestros parámetros
+       vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
+       
+       # Buscar capas que tengan el campo 'parameters' y sean de tipo ILS
+       params_text = "QPANSOPY BASIC ILS CALCULATION PARAMETERS\n"
+       params_text += "=" * 50 + "\n\n"
+       
+       found_params = False
+       
+       for layer in vector_layers:
+           if 'parameters' in [field.name() for field in layer.fields()]:
+               # Verificar si es una capa ILS
+               has_ils_params = False
+               for feature in layer.getFeatures():
+                   params_json = feature.attribute('parameters')
+                   if params_json:
+                       try:
+                           params_dict = json.loads(params_json)
+                           if 'calculation_type' in params_dict and 'Basic ILS' in params_dict['calculation_type']:
+                               has_ils_params = True
+                               break
+                       except json.JSONDecodeError:
+                           pass
+        
+           if has_ils_params:
+               params_text += f"LAYER: {layer.name()}\n"
+               params_text += "-" * 30 + "\n\n"
+               
+               # Obtener los parámetros de la primera feature (todos deberían tener los mismos parámetros)
+               for feature in layer.getFeatures():
+                   params_json = feature.attribute('parameters')
+                   if params_json:
+                       found_params = True
+                       try:
+                           params_dict = json.loads(params_json)
+                           
+                           # Crear tabla formateada
+                           params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
+                           params_text += "-" * 50 + "\n"
+                           
+                           # Mapear parámetros a nombres más legibles
+                           param_names = {
+                               'thr_elev': 'Threshold Elevation',
+                               'calculation_type': 'Calculation Type',
+                               'calculation_date': 'Calculation Date',
+                               'thr_elev_unit': 'Threshold Elevation Unit'
+                           }
+                           
+                           # Formatear parámetros en tabla
+                           for key, value in params_dict.items():
+                               if key.endswith('_unit'):
+                                   continue  # Skip unit fields, they'll be handled with their main parameter
+                                
+                               display_name = param_names.get(key, key.replace('_', ' ').title())
+                               unit = ""
+                               
+                               # Obtener unidad si existe
+                               unit_key = key + '_unit'
+                               if unit_key in params_dict:
+                                   unit = params_dict[unit_key]
+                               
+                               # Formatear la línea
+                               params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+                           
+                           # Añadir información de la superficie si está disponible
+                           if 'ILS_surface' in [field.name() for field in layer.fields()]:
+                               surface_type = feature.attribute('ILS_surface')
+                               if surface_type:
+                                   params_text += f"\nSurface Type: {surface_type}\n"
+                           
+                           params_text += "\n"
+                           break  # Solo necesitamos los parámetros de una feature
+                       except json.JSONDecodeError:
+                           params_text += "Error: Could not parse parameters JSON\n\n"
+                
+               params_text += "\n"
+    
+       if not found_params:
+           params_text += "No Basic ILS parameters found in any layer. Please run a calculation first.\n"
+    
+       # Copiar al portapapeles
+       clipboard = QtWidgets.QApplication.clipboard()
+       clipboard.setText(params_text)
+    
+       # Mostrar mensaje de éxito
+       self.log("Parameters copied to clipboard in Word format. You can now paste them into Word.")
+       self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard in Word format", level=Qgis.Success)
+
+   def copy_parameters_as_json(self):
+       """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""
+       # Obtener todas las capas del proyecto
+       layers = QgsProject.instance().mapLayers().values()
+    
+       # Filtrar solo las capas vectoriales que podrían contener nuestros parámetros
+       vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
+    
+       # Estructura para almacenar los parámetros
+       all_params = {
+           "metadata": {
+               "plugin": "QPANSOPY Basic ILS",
+               "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+               "version": "1.0"
+           },
+           "layers": []
+       }
+    
+       found_params = False
+       ils_layers = []
+    
+       # Primero identificar las capas ILS
+       for layer in vector_layers:
+           if 'parameters' in [field.name() for field in layer.fields()]:
+               # Verificar si es una capa ILS
+               for feature in layer.getFeatures():
+                   params_json = feature.attribute('parameters')
+                   if params_json:
+                       try:
+                           params_dict = json.loads(params_json)
+                           if 'calculation_type' in params_dict and 'Basic ILS' in params_dict['calculation_type']:
+                               if layer not in ils_layers:
+                                   ils_layers.append(layer)
+                               found_params = True
+                       except json.JSONDecodeError:
+                           pass
+    
+       # Procesar las capas identificadas
+       for layer in ils_layers:
+           layer_data = {
+               "name": layer.name(),
+               "features": []
+           }
+        
+           for feature in layer.getFeatures():
+               params_json = feature.attribute('parameters')
+               if params_json:
+                   try:
+                       params_dict = json.loads(params_json)
+                    
+                       # Obtener el tipo de superficie
+                       surface_type = "Unknown"
+                       if 'ILS_surface' in [field.name() for field in layer.fields()]:
+                           surface_type = feature.attribute('ILS_surface')
+                    
+                       # Añadir a la estructura
+                       feature_data = {
+                           "id": feature.id(),
+                           "surface_type": surface_type,
+                           "parameters": params_dict
+                       }
+                    
+                       layer_data["features"].append(feature_data)
+                       found_params = True
+                   except json.JSONDecodeError:
+                       continue
+        
+           # Añadir la capa solo si tiene features con parámetros
+           if layer_data["features"]:
+               all_params["layers"].append(layer_data)
+    
+       if not found_params:
+           all_params["error"] = "No Basic ILS parameters found in any layer. Please run a calculation first."
+    
+       # Convertir a JSON con formato bonito
+       json_text = json.dumps(all_params, indent=2)
+    
+       # Copiar al portapapeles
+       clipboard = QtWidgets.QApplication.clipboard()
+       clipboard.setText(json_text)
+    
+       # Mostrar mensaje de éxito
+       self.log("Basic ILS parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
+       self.iface.messageBar().pushMessage("QPANSOPY", "Basic ILS parameters copied to clipboard as JSON", level=Qgis.Success)
    
    def setup_lineedits(self):
        """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""

@@ -11,14 +11,14 @@ Procedure Analysis and Obstacle Protection Surfaces - OAS ILS Module
        email                : your.email@example.com
 ***************************************************************************/
 
-/***************************************************************************
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-***************************************************************************/
+ /***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
 """
 
 import os
@@ -93,8 +93,15 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.setup_copy_button()
        
        # Limitar el tamaño del área de log
-       if hasattr(self, 'logTextEdit'):
+       if hasattr(self, 'logTextEdit') and self.logTextEdit is not None:
            self.logTextEdit.setMaximumHeight(120)
+           self.logTextEdit.setVisible(True)  # El valor real lo pone qpansopy.py
+       
+       # Asegura que el checkbox de KML existe
+       if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
+           self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
+           self.exportKmlCheckBox.setChecked(True)
+           self.verticalLayout.addWidget(self.exportKmlCheckBox)
        
        # Log message
        self.log("QPANSOPY OAS ILS plugin loaded. Select layers and parameters, then click Calculate.")
