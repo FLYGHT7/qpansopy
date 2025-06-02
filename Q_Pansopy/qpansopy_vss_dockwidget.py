@@ -2,13 +2,13 @@
 """
 /***************************************************************************
 QPANSOPYVSSDockWidget
-                                A QGIS plugin
+                            A QGIS plugin
 Procedure Analysis and Obstacle Protection Surfaces - VSS Module
-                            -------------------
-       begin                : 2023-04-29
-       git sha              : $Format:%H$
-       copyright            : (C) 2023 by Your Name
-       email                : your.email@example.com
+                        -------------------
+   begin                : 2023-04-29
+   git sha              : $Format:%H$
+   copyright            : (C) 2023 by Your Name
+   email                : your.email@example.com
 ***************************************************************************/
 
 /***************************************************************************
@@ -29,10 +29,11 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateRefe
 from qgis.utils import iface
 from qgis.core import Qgis
 import json
+import datetime
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'qpansopy_vss_dockwidget.ui'))
+os.path.dirname(__file__), 'qpansopy_vss_dockwidget.ui'))
 
 
 class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -61,8 +62,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                          QtWidgets.QDockWidget.DockWidgetClosable)
         
         # Set minimum and maximum sizes
-        self.setMinimumHeight(300)
-        self.setMaximumHeight(600)
+        self.setMinimumHeight(600)
+        self.setMaximumHeight(800)
         
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
@@ -81,74 +82,104 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Añadir botón para copiar parámetros
         self.setup_copy_button()
         
+        # Asegura que el log se puede ocultar sin error
+        if hasattr(self, "logTextEdit") and self.logTextEdit is not None:
+            self.logTextEdit.setVisible(True)
+        # Asegura que el checkbox de KML existe
+        if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
+            self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
+            self.exportKmlCheckBox.setChecked(True)
+            self.verticalLayout.addWidget(self.exportKmlCheckBox)
+        
         # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
-    
+
     def setup_copy_button(self):
-        """Configurar el botón para copiar parámetros al portapapeles"""
-        self.copyParamsButton = QtWidgets.QPushButton("Copy Parameters to Clipboard", self)
-        self.copyParamsButton.clicked.connect(self.copy_parameters_to_clipboard)
-        
-        # Añadir el botón al layout existente
-        self.verticalLayout.addWidget(self.copyParamsButton)
-    
-    def copy_parameters_to_clipboard(self):
-        """Copiar los parámetros de las capas seleccionadas al portapapeles"""
-        # Obtener todas las capas del proyecto
-        layers = QgsProject.instance().mapLayers().values()
-        
-        # Filtrar solo las capas vectoriales que podrían contener nuestros parámetros
-        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-        
-        # Buscar capas que tengan el campo 'parameters'
-        params_text = "QPANSOPY Parameters Report\n"
-        params_text += "========================\n\n"
-        
-        found_params = False
-        
-        for layer in vector_layers:
-            if 'parameters' in [field.name() for field in layer.fields()]:
-                params_text += f"Layer: {layer.name()}\n"
-                params_text += "------------------------\n"
-                
-                # Obtener los parámetros de cada feature
-                for feature in layer.getFeatures():
-                    params_json = feature.attribute('parameters')
-                    if params_json:
-                        found_params = True
-                        try:
-                            params_dict = json.loads(params_json)
-                            
-                            # Añadir descripción si está disponible
-                            if 'description' in [field.name() for field in layer.fields()]:
-                                desc = feature.attribute('description')
-                                if desc:
-                                    params_text += f"Surface: {desc}\n"
-                            
-                            # Formatear los parámetros
-                            params_text += "Parameters:\n"
-                            for key, value in params_dict.items():
-                                # Formatear mejor las claves
-                                formatted_key = key.replace('_', ' ').title()
-                                params_text += f"  - {formatted_key}: {value}\n"
-                            
-                            params_text += "\n"
-                        except json.JSONDecodeError:
-                            params_text += f"  Error: Could not parse parameters JSON\n\n"
-                
-                params_text += "\n"
-        
-        if not found_params:
-            params_text += "No parameters found in any layer. Please run a calculation first.\n"
-        
-        # Copiar al portapapeles
+        """Configurar botones para copiar parámetros al portapapeles"""
+        buttons_layout = QtWidgets.QHBoxLayout()
+        self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
+        self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+        self.copyParamsWordButton.setMinimumHeight(30)
+        self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
+        self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
+        self.copyParamsJsonButton.setMinimumHeight(30)
+        buttons_layout.addWidget(self.copyParamsWordButton)
+        buttons_layout.addWidget(self.copyParamsJsonButton)
+        buttons_widget = QtWidgets.QWidget(self)
+        buttons_widget.setLayout(buttons_layout)
+        self.verticalLayout.addWidget(buttons_widget)
+
+    def copy_parameters_for_word(self):
+        """Copiar los parámetros VSS en formato tabla para Word"""
+        params_text = "QPANSOPY VSS CALCULATION PARAMETERS\n"
+        params_text += "=" * 50 + "\n\n"
+        params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
+        params_text += "-" * 50 + "\n"
+        param_names = {
+            'rwy_width': 'Runway Width',
+            'thr_elev': 'Threshold Elevation',
+            'strip_width': 'Strip Width',
+            'OCH': 'OCH',
+            'RDH': 'RDH',
+            'VPA': 'VPA'
+        }
+        params = {
+            'rwy_width': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()),
+            'thr_elev': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()),
+            'thr_elev_unit': self.units.get('thr_elev', 'm'),
+            'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
+            'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
+            'OCH_unit': self.units.get('OCH', 'm'),
+            'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
+            'RDH_unit': self.units.get('RDH', 'm'),
+            'VPA': self.exact_values.get('VPA', self.VPALineEdit.text())
+        }
+        for key in ['rwy_width', 'thr_elev', 'strip_width', 'OCH', 'RDH', 'VPA']:
+            display_name = param_names.get(key, key.replace('_', ' ').title())
+            value = params[key]
+            unit = ""
+            if key == 'thr_elev':
+                unit = params['thr_elev_unit']
+            elif key == 'OCH':
+                unit = params['OCH_unit']
+            elif key == 'RDH':
+                unit = params['RDH_unit']
+            elif key == 'rwy_width' or key == 'strip_width':
+                unit = "m"
+            elif key == 'VPA':
+                unit = "°"
+            params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_text)
-        
-        # Mostrar mensaje de éxito
-        self.log("Parameters copied to clipboard. You can now paste them into Word or another application.")
-        self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard", level=Qgis.Success)
-    
+        self.log("VSS parameters copied to clipboard in Word format. You can now paste them into Word.")
+        self.iface.messageBar().pushMessage("QPANSOPY", "VSS parameters copied to clipboard in Word format", level=Qgis.Success)
+
+    def copy_parameters_as_json(self):
+        """Copiar los parámetros actuales al portapapeles en formato JSON"""
+        params_dict = {
+            "metadata": {
+                "plugin": "QPANSOPY VSS",
+                "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "version": "1.0"
+            },
+            "parameters": {
+                'rwy_width': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()),
+                'thr_elev': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()),
+                'thr_elev_unit': self.units.get('thr_elev', 'm'),
+                'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
+                'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
+                'OCH_unit': self.units.get('OCH', 'm'),
+                'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
+                'RDH_unit': self.units.get('RDH', 'm'),
+                'VPA': self.exact_values.get('VPA', self.VPALineEdit.text())
+            }
+        }
+        params_json = json.dumps(params_dict, indent=2)
+        clipboard = QtWidgets.QApplication.clipboard()
+        clipboard.setText(params_json)
+        self.log("VSS parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
+        self.iface.messageBar().pushMessage("QPANSOPY", "VSS parameters copied to clipboard as JSON", level=Qgis.Success)
+
     def setup_lineedits(self):
         """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
         # Crear un validador para números decimales
@@ -175,12 +206,12 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         thrElevLayout.addWidget(self.thrElevUnitCombo)
         
         # Reemplazar el widget en el formulario
-        self.replace_widget_in_form(self.thrElevSpinBox, thrElevContainer)
+        self.replace_widget_in_form(self.thrElevSpinBox, thrElevContainer, 1)
         
         # OCH con selector de unidades
         self.OCHLineEdit = QtWidgets.QLineEdit(self)
         self.OCHLineEdit.setValidator(validator)
-        self.OCHLineEdit.setText(str(self.ochSpinBox.value()))  # Corregido: ochSpinBox en lugar de OCHSpinBox
+        self.OCHLineEdit.setText(str(self.ochSpinBox.value()))
         self.OCHLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('OCH', text))
         
@@ -197,12 +228,12 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         OCHLayout.addWidget(self.OCHUnitCombo)
         
         # Reemplazar el widget en el formulario
-        self.replace_widget_in_form(self.ochSpinBox, OCHContainer)  # Corregido: ochSpinBox en lugar de OCHSpinBox
+        self.replace_widget_in_form(self.ochSpinBox, OCHContainer, 3)
         
         # RDH con selector de unidades
         self.RDHLineEdit = QtWidgets.QLineEdit(self)
         self.RDHLineEdit.setValidator(validator)
-        self.RDHLineEdit.setText(str(self.rdhSpinBox.value()))  # Corregido: rdhSpinBox en lugar de RDHSpinBox
+        self.RDHLineEdit.setText(str(self.rdhSpinBox.value()))
         self.RDHLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('RDH', text))
         
@@ -219,7 +250,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         RDHLayout.addWidget(self.RDHUnitCombo)
         
         # Reemplazar el widget en el formulario
-        self.replace_widget_in_form(self.rdhSpinBox, RDHContainer)  # Corregido: rdhSpinBox en lugar de RDHSpinBox
+        self.replace_widget_in_form(self.rdhSpinBox, RDHContainer, 4)
         
         # Otros campos sin unidades
         self.rwyWidthLineEdit = QtWidgets.QLineEdit(self)
@@ -227,45 +258,38 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.rwyWidthLineEdit.setText(str(self.rwyWidthSpinBox.value()))
         self.rwyWidthLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('rwy_width', text))
-        self.replace_widget_in_form(self.rwyWidthSpinBox, self.rwyWidthLineEdit)
+        self.replace_widget_in_form(self.rwyWidthSpinBox, self.rwyWidthLineEdit, 0)
         
         self.stripWidthLineEdit = QtWidgets.QLineEdit(self)
         self.stripWidthLineEdit.setValidator(validator)
         self.stripWidthLineEdit.setText(str(self.stripWidthSpinBox.value()))
         self.stripWidthLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('strip_width', text))
-        self.replace_widget_in_form(self.stripWidthSpinBox, self.stripWidthLineEdit)
+        self.replace_widget_in_form(self.stripWidthSpinBox, self.stripWidthLineEdit, 2)
         
         self.VPALineEdit = QtWidgets.QLineEdit(self)
         self.VPALineEdit.setValidator(validator)
-        self.VPALineEdit.setText(str(self.vpaSpinBox.value()))  # Corregido: vpaSpinBox en lugar de VPASpinBox
+        self.VPALineEdit.setText(str(self.vpaSpinBox.value()))
         self.VPALineEdit.textChanged.connect(
             lambda text: self.store_exact_value('VPA', text))
-        self.replace_widget_in_form(self.vpaSpinBox, self.VPALineEdit)  # Corregido: vpaSpinBox en lugar de VPASpinBox
-    
+        self.replace_widget_in_form(self.vpaSpinBox, self.VPALineEdit, 5)
+
     def update_unit(self, param_name, unit):
         """Actualizar la unidad seleccionada para un parámetro"""
         self.units[param_name] = unit
-    
-    def replace_widget_in_form(self, old_widget, new_widget):
-        """Reemplazar un widget en un QFormLayout"""
-        parent = old_widget.parent()
-        form_layout = parent.layout()
+
+    def replace_widget_in_form(self, old_widget, new_widget, row):
+        """Reemplazar un widget en el layout de parámetros"""
+        # Obtener el layout de parámetros
+        layout = self.parametersFormLayout
         
-        # Encontrar la fila donde está el widget
-        for i in range(form_layout.rowCount()):
-            if form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole) and form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole).widget() == old_widget:
-                # Obtener la etiqueta
-                label_item = form_layout.itemAt(i, QtWidgets.QFormLayout.LabelRole)
-                
-                # Eliminar el widget antiguo
-                form_layout.removeWidget(old_widget)
-                old_widget.hide()
-                
-                # Añadir el nuevo widget
-                form_layout.setWidget(i, QtWidgets.QFormLayout.FieldRole, new_widget)
-                break
-    
+        # Eliminar el widget antiguo
+        layout.removeWidget(old_widget)
+        old_widget.hide()
+        
+        # Añadir el nuevo widget
+        layout.setWidget(row, QtWidgets.QFormLayout.FieldRole, new_widget)
+
     def store_exact_value(self, param_name, text):
         """Almacenar el valor exacto ingresado por el usuario"""
         try:
@@ -276,11 +300,11 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         except ValueError:
             # Si no es un número válido, no hacer nada
             pass
-    
+
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
-    
+
     def get_desktop_path(self):
         """Get the path to the desktop"""
         if os.name == 'nt':  # Windows
@@ -289,7 +313,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return os.path.join(os.path.expanduser('~'), 'Desktop')
         else:
             return os.path.expanduser('~')
-    
+
     def browse_output_folder(self):
         """Open a folder browser dialog"""
         folder = QtWidgets.QFileDialog.getExistingDirectory(
@@ -299,13 +323,13 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         )
         if folder:
             self.outputFolderLineEdit.setText(folder)
-    
+
     def log(self, message):
         """Add a message to the log"""
         self.logTextEdit.append(message)
         # Ensure the latest message is visible
         self.logTextEdit.ensureCursorVisible()
-    
+
     def validate_inputs(self):
         """Validate user inputs"""
         # Check if layers are selected
@@ -340,7 +364,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 return False
         
         return True
-    
+
     def calculate(self):
         """Run the calculation"""
         self.log("Starting calculation...")
@@ -385,7 +409,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         try:
             # Run calculation for selected type
-            if self.straightRadioButton.isChecked():
+            # CORRECCIÓN: Usar straightInNPARadioButton en lugar de straightRadioButton
+            if self.straightInNPARadioButton.isChecked():
                 self.log("Running Straight In calculation...")
                 # Import here to avoid circular imports
                 from .modules.vss_straight import calculate_vss_straight

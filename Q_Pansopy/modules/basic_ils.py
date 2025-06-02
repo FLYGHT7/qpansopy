@@ -16,6 +16,7 @@ import math
 import os
 import datetime
 import json
+from ..utils import get_selected_feature
 
 def calculate_basic_ils(iface, point_layer, runway_layer, params):
     """
@@ -58,21 +59,22 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
         iface.messageBar().pushMessage("Error", "Point or runway layer not provided", level=Qgis.Critical)
         return None
     
-    # Check if layers have features
-    if point_layer.featureCount() == 0:
-        iface.messageBar().pushMessage("Error", "Point layer has no features", level=Qgis.Critical)
+    # Usar la función auxiliar para obtener las features
+    def show_error(message):
+        iface.messageBar().pushMessage("Error", message, level=Qgis.Critical)
+    
+    point_feature = get_selected_feature(point_layer, show_error)
+    if not point_feature:
         return None
     
-    if runway_layer.featureCount() == 0:
-        iface.messageBar().pushMessage("Error", "Runway layer has no features", level=Qgis.Critical)
+    runway_feature = get_selected_feature(runway_layer, show_error)
+    if not runway_feature:
         return None
     
     # Get the reference point
-    point_feature = next(point_layer.getFeatures())
     thr_geom = point_feature.geometry().asPoint()
     
     # Get the runway line
-    runway_feature = next(runway_layer.getFeatures())
     runway_geom = runway_feature.geometry().asPolyline()
     
     # Get map CRS

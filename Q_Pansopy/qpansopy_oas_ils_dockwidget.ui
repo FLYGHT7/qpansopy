@@ -228,6 +228,20 @@
          </property>
         </widget>
        </item>
+       <!-- Añadir botón para cargar CSV -->
+       <item>
+        <widget class="QPushButton" name="loadCsvButton">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>25</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Load Constants from CSV</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
@@ -256,6 +270,12 @@
       <property name="title">
        <string>Log</string>
       </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>150</height>
+       </size>
+      </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <property name="spacing">
         <number>8</number>
@@ -274,6 +294,12 @@
        </property>
        <item>
         <widget class="QTextEdit" name="logTextEdit">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>120</height>
+          </size>
+         </property>
          <property name="readOnly">
           <bool>true</bool>
          </property>

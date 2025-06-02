@@ -11,14 +11,14 @@ Procedure Analysis and Obstacle Protection Surfaces - OAS ILS Module
        email                : your.email@example.com
 ***************************************************************************/
 
-/***************************************************************************
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-***************************************************************************/
+ /***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
 """
 
 import os
@@ -47,6 +47,9 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.setupUi(self)
        self.iface = iface
        
+       # Variable para almacenar la ruta del archivo CSV cargado
+       self.csv_path = None
+       
        # Diccionario para almacenar los valores exactos ingresados
        self.exact_values = {}
        # Diccionario para almacenar las unidades seleccionadas
@@ -72,6 +75,10 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.calculateButton.clicked.connect(self.calculate)
        self.browseButton.clicked.connect(self.browse_output_folder)
        
+       # Conectar el botón de carga de CSV si existe
+       if hasattr(self, 'loadCsvButton'):
+           self.loadCsvButton.clicked.connect(self.load_csv)
+       
        # Set default output folder
        self.outputFolderLineEdit.setText(self.get_desktop_path())
        
@@ -85,27 +92,121 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Añadir botón para copiar parámetros
        self.setup_copy_button()
        
+       # Limitar el tamaño del área de log
+       if hasattr(self, 'logTextEdit') and self.logTextEdit is not None:
+           self.logTextEdit.setMaximumHeight(120)
+           self.logTextEdit.setVisible(True)  # El valor real lo pone qpansopy.py
+       
+       # Asegura que el checkbox de KML existe
+       if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
+           self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
+           self.exportKmlCheckBox.setChecked(True)
+           self.verticalLayout.addWidget(self.exportKmlCheckBox)
+       
        # Log message
        self.log("QPANSOPY OAS ILS plugin loaded. Select layers and parameters, then click Calculate.")
    
-   def setup_copy_button(self):
-       """Configurar el botón para copiar parámetros al portapapeles en formato JSON"""
-       self.copyParamsButton = QtWidgets.QPushButton("Copy Parameters to Clipboard (JSON)", self)
-       self.copyParamsButton.clicked.connect(self.copy_parameters_to_clipboard)
-       self.copyParamsButton.setMinimumHeight(30)
+   def load_csv(self):
+       """Cargar un archivo CSV con constantes OAS"""
+       from PyQt5.QtWidgets import QFileDialog
        
-       # Añadir el botón al layout existente
-       self.verticalLayout.addWidget(self.copyParamsButton)
+       csv_path, _ = QFileDialog.getOpenFileName(
+           self,
+           "Select CSV File with OAS Constants",
+           "",
+           "CSV Files (*.csv);;All Files (*)"
+       )
+       
+       if csv_path:
+           self.csv_path = csv_path
+           self.log(f"CSV file loaded: {os.path.basename(csv_path)}")
+           self.iface.messageBar().pushMessage("QPANSOPY", f"CSV file loaded: {os.path.basename(csv_path)}", level=Qgis.Info)
    
-   def copy_parameters_to_clipboard(self):
-       """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""
-       # Obtener todas las capas del proyecto
+   def setup_copy_button(self):
+       """Configurar botones para copiar parámetros al portapapeles"""
+       # Crear un layout horizontal para los botones
+       buttons_layout = QtWidgets.QHBoxLayout()
+       
+       # Botón para copiar como texto formateado (Word)
+       self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
+       self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+       self.copyParamsWordButton.setMinimumHeight(30)
+       
+       # Botón para copiar como JSON
+       self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
+       self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
+       self.copyParamsJsonButton.setMinimumHeight(30)
+       
+       buttons_layout.addWidget(self.copyParamsWordButton)
+       buttons_layout.addWidget(self.copyParamsJsonButton)
+       
+       # Crear un widget contenedor para el layout
+       buttons_widget = QtWidgets.QWidget(self)
+       buttons_widget.setLayout(buttons_layout)
+       
+       # Añadir el widget al layout existente
+       self.verticalLayout.addWidget(buttons_widget)
+
+   def copy_parameters_for_word(self):
+       """Copiar los parámetros OAS ILS en formato tabla para Word"""
        layers = QgsProject.instance().mapLayers().values()
-       
-       # Filtrar solo las capas vectoriales que podrían contener nuestros parámetros
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-       
-       # Estructura para almacenar los parámetros
+       params_text = "QPANSOPY OAS ILS CALCULATION PARAMETERS\n"
+       params_text += "=" * 50 + "\n\n"
+       found_params = False
+       for layer in vector_layers:
+           if 'parameters' in [field.name() for field in layer.fields()]:
+               has_oas_params = False
+               for feature in layer.getFeatures():
+                   params_json = feature.attribute('parameters')
+                   if params_json:
+                       try:
+                           params_dict = json.loads(params_json)
+                           if 'calculation_type' in params_dict and 'OAS ILS' in params_dict['calculation_type']:
+                               has_oas_params = True
+                               break
+                       except Exception:
+                           pass
+           if has_oas_params:
+               params_text += f"LAYER: {layer.name()}\n"
+               params_text += "-" * 30 + "\n\n"
+               for feature in layer.getFeatures():
+                   params_json = feature.attribute('parameters')
+                   if params_json:
+                       found_params = True
+                       try:
+                           params_dict = json.loads(params_json)
+                           params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
+                           params_text += "-" * 50 + "\n"
+                           for key, value in params_dict.items():
+                               if key.endswith('_unit'):
+                                   continue
+                               display_name = key.replace('_', ' ').title()
+                               unit = ""
+                               unit_key = key + '_unit'
+                               if unit_key in params_dict:
+                                   unit = params_dict[unit_key]
+                               params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+                           if 'ILS_surface' in [field.name() for field in layer.fields()]:
+                               surface_type = feature.attribute('ILS_surface')
+                               if surface_type:
+                                   params_text += f"\nSurface Type: {surface_type}\n"
+                           params_text += "\n"
+                           break
+                       except Exception:
+                           params_text += "Error: Could not parse parameters JSON\n\n"
+               params_text += "\n"
+       if not found_params:
+           params_text += "No OAS ILS parameters found in any layer. Please run a calculation first.\n"
+       clipboard = QtWidgets.QApplication.clipboard()
+       clipboard.setText(params_text)
+       self.log("OAS ILS parameters copied to clipboard in Word format. You can now paste them into Word.")
+       self.iface.messageBar().pushMessage("QPANSOPY", "OAS ILS parameters copied to clipboard in Word format", level=Qgis.Success)
+
+   def copy_parameters_as_json(self):
+       """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""
+       layers = QgsProject.instance().mapLayers().values()
+       vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
        all_params = {
            "metadata": {
                "plugin": "QPANSOPY OAS ILS",
@@ -114,14 +215,10 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            },
            "layers": []
        }
-       
        found_params = False
        oas_layers = []
-       
-       # Primero identificar las capas OAS ILS
        for layer in vector_layers:
            if 'parameters' in [field.name() for field in layer.fields()]:
-               # Verificar si es una capa OAS ILS
                for feature in layer.getFeatures():
                    params_json = feature.attribute('parameters')
                    if params_json:
@@ -131,63 +228,41 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                                if layer not in oas_layers:
                                    oas_layers.append(layer)
                                found_params = True
-                       except json.JSONDecodeError:
+                       except Exception:
                            pass
-       
-       # Si no hay capas OAS ILS, buscar cualquier capa con parámetros
        if not oas_layers:
            for layer in vector_layers:
                if 'parameters' in [field.name() for field in layer.fields()]:
                    oas_layers.append(layer)
-       
-       # Procesar las capas identificadas
        for layer in oas_layers:
            layer_data = {
                "name": layer.name(),
                "features": []
            }
-           
-           # Agrupar features por tipo de superficie
-           surface_groups = {}
-           
            for feature in layer.getFeatures():
                params_json = feature.attribute('parameters')
                if params_json:
                    try:
                        params_dict = json.loads(params_json)
-                       
-                       # Obtener el tipo de superficie
                        surface_type = "Unknown"
                        if 'ILS_surface' in [field.name() for field in layer.fields()]:
                            surface_type = feature.attribute('ILS_surface')
-                       
-                       # Añadir a la estructura
                        feature_data = {
                            "id": feature.id(),
                            "surface_type": surface_type,
                            "parameters": params_dict
                        }
-                       
                        layer_data["features"].append(feature_data)
                        found_params = True
-                   except json.JSONDecodeError:
+                   except Exception:
                        continue
-           
-           # Añadir la capa solo si tiene features con parámetros
            if layer_data["features"]:
                all_params["layers"].append(layer_data)
-       
        if not found_params:
            all_params["error"] = "No OAS ILS parameters found in any layer. Please run a calculation first."
-       
-       # Convertir a JSON con formato bonito
        json_text = json.dumps(all_params, indent=2)
-       
-       # Copiar al portapapeles
        clipboard = QtWidgets.QApplication.clipboard()
        clipboard.setText(json_text)
-       
-       # Mostrar mensaje de éxito
        self.log("OAS ILS parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
        self.iface.messageBar().pushMessage("QPANSOPY", "OAS ILS parameters copied to clipboard as JSON", level=Qgis.Success)
    
@@ -368,7 +443,9 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            'export_kml': export_kml,
            'output_dir': output_dir,
            # Añadir información de unidades
-           'THR_elev_unit': self.units.get('THR_elev', 'm')
+           'THR_elev_unit': self.units.get('THR_elev', 'm'),
+           # Añadir ruta del CSV si está disponible
+           'csv_path': self.csv_path
        }
        
        # Registrar las unidades utilizadas

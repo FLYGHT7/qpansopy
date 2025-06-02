@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 /***************************************************************************
-QPANSOPY Modules
+Utility functions for QPANSOPY
                             A QGIS plugin
 Procedure Analysis and Obstacle Protection Surfaces
                         -------------------
@@ -21,4 +21,33 @@ Procedure Analysis and Obstacle Protection Surfaces
 ***************************************************************************/
 """
 
-# Este archivo es necesario para que Python reconozca el directorio como un paquete
+from qgis.core import Qgis
+
+def get_selected_feature(layer, show_error):
+    """
+    Selecciona la feature a usar según la lógica:
+    - Si hay exactamente una seleccionada, usarla.
+    - Si hay más de una seleccionada, error.
+    - Si ninguna seleccionada y solo hay una en la capa, usarla.
+    - Si ninguna seleccionada y hay varias, error.
+    """
+    if not layer:
+        show_error("No layer provided")
+        return None
+
+    selected = layer.selectedFeatures()
+    if len(selected) == 1:
+        return selected[0]
+    elif len(selected) > 1:
+        show_error("More than one feature is selected. Please select only one feature.")
+        return None
+    else:
+        all_features = list(layer.getFeatures())
+        if len(all_features) == 1:
+            return all_features[0]
+        elif len(all_features) == 0:
+            show_error("No features found in the layer")
+            return None
+        else:
+            show_error("Multiple features found but none selected. Please select one feature.")
+            return None
