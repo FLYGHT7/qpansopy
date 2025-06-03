@@ -109,7 +109,8 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # Add fields
     provider.addAttributes([
         QgsField('ILS_surface', QVariant.String),
-        QgsField('parameters', QVariant.String)  # Renamed from 'constants' to 'parameters'
+        QgsField('parameters', QVariant.String),
+        QgsField('constants', QVariant.String) #these are required for automatic processing later
     ])
     v_layer.updateFields()
     
@@ -161,28 +162,28 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     exterior_ring = [pz(gs_a, thr_elev), pz(gs_b, thr_elev), pz(gs_c, thr_elev), pz(gs_d, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['ground surface', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['ground surface', parameters_json,'[0,0,0]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Approach surface section 1
     exterior_ring = [pz(as1_a, thr_elev+60), pz(gs_a, thr_elev), pz(gs_d, thr_elev), pz(as1_d, thr_elev+60)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['approach surface first section', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['approach surface first section', parameters_json,'[0.02,0,-1.2]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Approach surface section 2
     exterior_ring = [pz(as2_a, thr_elev+300), pz(as1_a, thr_elev+60), pz(as1_d, thr_elev+60), pz(as2_d, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['approach surface second section', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['approach surface second section', parameters_json,'[0.025,0,-16.5]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Missed approach surface
     exterior_ring = [pz(missed_a, thr_elev), pz(missed_b, thr_elev+1800*0.025), pz(missed_c, thr_elev+12000*.025), pz(missed_d, thr_elev+12000*0.025), pz(missed_e, thr_elev+1800*0.025), pz(missed_f, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['missed approach surface', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['missed approach surface', parameters_json,'[-0.025,0,-22.5]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Transition surfaces
@@ -190,56 +191,56 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     exterior_ring = [pz(as2_d, thr_elev+300), pz(as1_d, thr_elev+60), pz(transition_e1_left, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 1', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 1', parameters_json,'[0.00355,.143,-36.66]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Left 2
     exterior_ring = [pz(as1_d, thr_elev+60), pz(transition_e1_left, thr_elev+300), pz(transition_e2_left, thr_elev+300), pz(gs_d, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 2', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 2', parameters_json,'[-0.00145,0.143,-21.36]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Left 3
     exterior_ring = [pz(transition_e2_left, thr_elev+300), pz(gs_d, thr_elev), pz(gs_c, thr_elev), pz(missed_e, thr_elev+1800*0.025), pz(transition_e3_left, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 3', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 3', parameters_json,'[0,0.143,-21.45]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Left 4
     exterior_ring = [pz(missed_e, thr_elev+1800*0.025), pz(missed_d, thr_elev+12000*.025), pz(transition_e3_left, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 4', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 4', parameters_json,'[0.01075,0.143,7.58]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Right 1
     exterior_ring = [pz(as2_a, thr_elev+300), pz(as1_a, thr_elev+60), pz(transition_e1_right, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 1', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 1', parameters_json,'[0.00355,.143,-36.66]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Right 2
     exterior_ring = [pz(as1_a, thr_elev+60), pz(transition_e1_right, thr_elev+300), pz(transition_e2_right, thr_elev+300), pz(gs_a, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 2', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 2', parameters_json,'[-0.00145,0.143,-21.36]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Right 3
     exterior_ring = [pz(transition_e2_right, thr_elev+300), pz(transition_e3_right, thr_elev+300), pz(missed_b, thr_elev+1800*0.025), pz(gs_b, thr_elev), pz(gs_a, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 3', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 3', parameters_json,'[0,0.143,-21.45]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Right 4
     exterior_ring = [pz(missed_b, thr_elev+1800*0.025), pz(missed_c, thr_elev+12000*.025), pz(transition_e3_right, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 4', parameters_json])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 4', parameters_json,'[0.01075,0.143,7.58]'])  # Include parameters JSON
     provider.addFeatures([feature])
     
     # Update layer extents

@@ -413,7 +413,8 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         fields = [
             QgsField('id', QVariant.Int),
             QgsField('ILS_surface', QVariant.String),
-            QgsField('parameters', QVariant.String)
+            QgsField('parameters', QVariant.String),
+            QgsField('constants', QVariant.String)
         ]
         pr.addAttributes(fields)
         v_layer.updateFields()
@@ -424,33 +425,33 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         # Y Surface Left
         seg = QgsFeature()
         line_start = [geometry_dict["Dmirror"], geometry_dict["Emirror"], 
-                      geometry_dict["E'mirror"], geometry_dict["D'mirror"]]
+                      geometry_dict["E'mirror"], geometry_dict["D'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([1, 'Surface Y - Left', parameters_json])
+        seg.setAttributes([1, 'Surface Y - Left', parameters_json,str(OAS_Y)])
         features.append(seg)
         
         # Y Surface Right
         seg = QgsFeature()
         line_start = [geometry_dict["D"], geometry_dict["E"], 
-                      geometry_dict["E'"], geometry_dict["D'"]]
+                      geometry_dict["E'"], geometry_dict["D'mirror"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([2, 'Surface Y - Right', parameters_json])
+        seg.setAttributes([2, 'Surface Y - Right', parameters_json,str(OAS_Y)])
         features.append(seg)
         
         # X Surface Left
         seg = QgsFeature()
         line_start = [geometry_dict["C"], geometry_dict["Dmirror"], 
-                      geometry_dict["D'mirror"], geometry_dict["C'"]]
+                      geometry_dict["D'"], geometry_dict["C'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([3, 'Surface X - Left', parameters_json])
+        seg.setAttributes([3, 'Surface X - Left', parameters_json,str(OAS_X)])
         features.append(seg)
         
         # X Surface Right
         seg = QgsFeature()
         line_start = [geometry_dict["Cmirror"], geometry_dict["D"], 
-                      geometry_dict["D'"], geometry_dict["C'mirror"]]
+                      geometry_dict["D'mirror"], geometry_dict["C'mirror"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([4, 'Surface X - Right', parameters_json])
+        seg.setAttributes([4, 'Surface X - Right', parameters_json,str(OAS_X)])
         features.append(seg)
         
         # W Surface
@@ -458,7 +459,7 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         line_start = [geometry_dict["C"], geometry_dict["Cmirror"], 
                       geometry_dict["C'mirror"], geometry_dict["C'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([5, 'Surface W', parameters_json])
+        seg.setAttributes([5, 'Surface W', parameters_json,str(OAS_W)])
         features.append(seg)
         
         # Z Surface
@@ -466,16 +467,16 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         line_start = [geometry_dict["E"], geometry_dict["Emirror"], 
                       geometry_dict["E'mirror"], geometry_dict["E'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([6, 'Surface Z', parameters_json])
+        seg.setAttributes([6, 'Surface Z', parameters_json,str(OAS_Z)])
         features.append(seg)
         
         # Ground
         seg = QgsFeature()
         line_start = [geometry_dict["C"], geometry_dict["Cmirror"], 
-                      geometry_dict["Dmirror"], geometry_dict["Emirror"], 
-                      geometry_dict["E"], geometry_dict["D"]]
+                      geometry_dict["D"], geometry_dict["E"], 
+                      geometry_dict["Emirror"], geometry_dict["Dmirror"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([7, 'Ground', parameters_json])
+        seg.setAttributes([7, 'Ground', parameters_json,'[0,0,0]'])
         features.append(seg)
         
         # Add all features
