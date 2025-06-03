@@ -143,6 +143,7 @@ def csv_to_structured_json(THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS
         upper_template = {
             "C'": solve_plane_intersection(OAS_W, OAS_X, 300),
             "D'": solve_plane_intersection(OAS_X, OAS_Y, 300),
+            "D0'": solve_plane_intersection(OAS_X, OAS_Y, 300),
             "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)
         }
         OAS_template = {**lower, **upper_template}
@@ -151,6 +152,7 @@ def csv_to_structured_json(THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS
         upper_extended = {
             "C'": solve_plane_intersection(OAS_W, OAS_X, ILS_extension_height),
             "D'": solve_plane_intersection(OAS_X, OAS_Y, ILS_extension_height),
+            "D0'": solve_plane_intersection(OAS_X, OAS_Y, 300),
             "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)  # E' is always at 300m
         }
         OAS_extended_to_FAP = {**lower, **upper_extended}
@@ -302,9 +304,10 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         OAS_template = {
             "C": solve_plane_intersection(OAS_W, OAS_X, 0),
             "D": solve_plane_intersection(OAS_X, OAS_Y, 0),
+            "D": solve_plane_intersection(OAS_X, OAS_Y, 0),
             "E": solve_plane_intersection(OAS_Y, OAS_Z, 0),
             "C'": solve_plane_intersection(OAS_W, OAS_X, 300),
-            "D'": solve_plane_intersection(OAS_X, OAS_Y, 300),
+            "D0'": solve_plane_intersection(OAS_X, OAS_Y, 300),
             "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)
         }
         
@@ -312,9 +315,10 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         OAS_extended_to_FAP = {
             "C": OAS_template["C"],
             "D": OAS_template["D"],
+            "D": OAS_template["D"],
             "E": OAS_template["E"],
             "C'": solve_plane_intersection(OAS_W, OAS_X, ILS_extension_height),
-            "D'": solve_plane_intersection(OAS_X, OAS_Y, ILS_extension_height),
+            "D0'": solve_plane_intersection(OAS_X, OAS_Y, ILS_extension_height),
             "E'": OAS_template["E'"]  # E' is always at 300m
         }
     
@@ -324,9 +328,11 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         OAS_template = {
             "C": (264.912280701755, 51.5006231718033, 0),
             "D": (-314.787533274559, 139.427992202075, 0),
+            "D": (-314.787533274559, 139.427992202075, 0),
             "E": (-900, 206.14654526464, 0),
             "C'": (16260.701754386, 23.2302945102742, 300),
             "D'": (8383.82771078259, 1217.97418460436, 300),
+            "D0'": (8383.82771078259, 1217.97418460436, 300),
             "E'": (-12900, 2936.60225698781, 300)
         }
         
@@ -334,9 +340,11 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         OAS_extended_to_FAP = {
             "C": OAS_template["C"],
             "D": OAS_template["D"],
+            "D0": OAS_template["D"],
             "E": OAS_template["E"],
             "C'": (16260.701754386, 23.2302945102742, ILS_extension_height),
             "D'": (8383.82771078259, 1217.97418460436, ILS_extension_height),
+            "D0'": (8383.82771078259, 1217.97418460436, 300),
             "E'": OAS_template["E'"]
         }
     
@@ -413,7 +421,8 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         fields = [
             QgsField('id', QVariant.Int),
             QgsField('ILS_surface', QVariant.String),
-            QgsField('parameters', QVariant.String)
+            QgsField('parameters', QVariant.String),
+            QgsField('constants', QVariant.String)
         ]
         pr.addAttributes(fields)
         v_layer.updateFields()
@@ -424,33 +433,33 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         # Y Surface Left
         seg = QgsFeature()
         line_start = [geometry_dict["Dmirror"], geometry_dict["Emirror"], 
-                      geometry_dict["E'mirror"], geometry_dict["D'mirror"]]
+                      geometry_dict["E'mirror"], geometry_dict["D0'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([1, 'Surface Y - Left', parameters_json])
+        seg.setAttributes([1, 'Surface Y - Left', parameters_json,str(OAS_Y)])
         features.append(seg)
         
         # Y Surface Right
         seg = QgsFeature()
         line_start = [geometry_dict["D"], geometry_dict["E"], 
-                      geometry_dict["E'"], geometry_dict["D'"]]
+                      geometry_dict["E'"], geometry_dict["D0'mirror"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([2, 'Surface Y - Right', parameters_json])
+        seg.setAttributes([2, 'Surface Y - Right', parameters_json,str(OAS_Y)])
         features.append(seg)
         
         # X Surface Left
         seg = QgsFeature()
         line_start = [geometry_dict["C"], geometry_dict["Dmirror"], 
-                      geometry_dict["D'mirror"], geometry_dict["C'"]]
+                      geometry_dict["D'"], geometry_dict["C'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([3, 'Surface X - Left', parameters_json])
+        seg.setAttributes([3, 'Surface X - Left', parameters_json,str(OAS_X)])
         features.append(seg)
         
         # X Surface Right
         seg = QgsFeature()
         line_start = [geometry_dict["Cmirror"], geometry_dict["D"], 
-                      geometry_dict["D'"], geometry_dict["C'mirror"]]
+                      geometry_dict["D'mirror"], geometry_dict["C'mirror"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([4, 'Surface X - Right', parameters_json])
+        seg.setAttributes([4, 'Surface X - Right', parameters_json,str(OAS_X)])
         features.append(seg)
         
         # W Surface
@@ -458,7 +467,7 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         line_start = [geometry_dict["C"], geometry_dict["Cmirror"], 
                       geometry_dict["C'mirror"], geometry_dict["C'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([5, 'Surface W', parameters_json])
+        seg.setAttributes([5, 'Surface W', parameters_json,str(OAS_W)])
         features.append(seg)
         
         # Z Surface
@@ -466,16 +475,16 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         line_start = [geometry_dict["E"], geometry_dict["Emirror"], 
                       geometry_dict["E'mirror"], geometry_dict["E'"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([6, 'Surface Z', parameters_json])
+        seg.setAttributes([6, 'Surface Z', parameters_json,str(OAS_Z)])
         features.append(seg)
         
         # Ground
         seg = QgsFeature()
         line_start = [geometry_dict["C"], geometry_dict["Cmirror"], 
-                      geometry_dict["Dmirror"], geometry_dict["Emirror"], 
-                      geometry_dict["E"], geometry_dict["D"]]
+                      geometry_dict["D"], geometry_dict["E"], 
+                      geometry_dict["Emirror"], geometry_dict["Dmirror"]]
         seg.setGeometry(QgsPolygon(QgsLineString(line_start)))
-        seg.setAttributes([7, 'Ground', parameters_json])
+        seg.setAttributes([7, 'Ground', parameters_json,'[0,0,0]'])
         features.append(seg)
         
         # Add all features
