@@ -83,17 +83,19 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # Calculate azimuth
     start_point = QgsPoint(runway_geom[0])
     end_point = QgsPoint(runway_geom[1])
-    angle0 = start_point.azimuth(end_point)
+    #angle0 = start_point.azimuth(end_point)
+    azimuth = start_point.azimuth(end_point)
+    back_azimuth = azimuth + 180
     
-    # Use end of runway for calculation
-    s = -1
-    if s == -1:
-        s2 = 0
-    else:
-        s2 = 180
+    # # Use end of runway for calculation
+    # s = -1
+    # if s == -1:
+    #     s2 = 0
+    # else:
+    #     s2 = 180
     
-    azimuth = angle0 + s2
-    back_azimuth = azimuth - 180
+    # azimuth = angle0 + s2
+    # back_azimuth = azimuth - 180
     
     # Function to convert from PointXY and add Z value
     def pz(point, z):
@@ -116,32 +118,32 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     
     # Calculate surface points
     # Ground surface
-    gs_center = thr_geom.project(60, azimuth)
-    gs_a = gs_center.project(150, azimuth-90)
-    gs_b = gs_a.project(960, back_azimuth)
-    gs_d = gs_center.project(150, azimuth+90)
-    gs_c = gs_d.project(960, back_azimuth)
+    gs_center = thr_geom.project(60, back_azimuth)
+    gs_a = gs_center.project(150, back_azimuth-90)
+    gs_b = gs_a.project(960, azimuth)
+    gs_d = gs_center.project(150, back_azimuth+90)
+    gs_c = gs_d.project(960, azimuth)
     
     # Approach surface section 1
-    as1_center = gs_center.project(3000, azimuth)
-    as1_a = as1_center.project(3000*.15+150, azimuth-90)
-    as1_d = as1_center.project(3000*.15+150, azimuth+90)
+    as1_center = gs_center.project(3000, back_azimuth)
+    as1_a = as1_center.project(3000*.15+150, back_azimuth-90)
+    as1_d = as1_center.project(3000*.15+150, back_azimuth+90)
     
     # Approach surface section 2
-    as2_center = as1_center.project(9600, azimuth)
-    as2_a = as2_center.project(12600*.15+150, azimuth-90)
-    as2_d = as2_center.project(12600*.15+150, azimuth+90)
+    as2_center = as1_center.project(9600, back_azimuth)
+    as2_a = as2_center.project(12600*.15+150, back_azimuth-90)
+    as2_d = as2_center.project(12600*.15+150, back_azimuth+90)
     
     # Missed approach surface
-    missed_center = thr_geom.project(900, back_azimuth)
-    missed_a = missed_center.project(150, azimuth-90)
-    missed_m_center = missed_center.project(1800, back_azimuth)
-    missed_b = missed_m_center.project(150+1800*((45/(14.3/100))/1800), azimuth-90)
-    missed_e = missed_m_center.project(150+1800*((45/(14.3/100))/1800), azimuth+90)
-    missed_f = missed_center.project(150, azimuth+90)
-    missed_f_center = missed_center.project(12000, back_azimuth)
-    missed_c = missed_f_center.project(150+1800*((45/(14.3/100))/1800)+(10200*.25), azimuth-90)
-    missed_d = missed_f_center.project(150+1800*((45/(14.3/100))/1800)+(10200*.25), azimuth+90)
+    missed_center = thr_geom.project(900, azimuth)
+    missed_a = missed_center.project(150, back_azimuth-90)
+    missed_m_center = missed_center.project(1800, azimuth)
+    missed_b = missed_m_center.project(150+1800*((45/(14.3/100))/1800), back_azimuth-90)
+    missed_e = missed_m_center.project(150+1800*((45/(14.3/100))/1800), back_azimuth+90)
+    missed_f = missed_center.project(150, back_azimuth+90)
+    missed_f_center = missed_center.project(12000, azimuth)
+    missed_c = missed_f_center.project(150+1800*((45/(14.3/100))/1800)+(10200*.25), back_azimuth-90)
+    missed_d = missed_f_center.project(150+1800*((45/(14.3/100))/1800)+(10200*.25), back_azimuth+90)
     
     # Transition surface side distances
     transition_distance_1 = (300 - 60) / (14.3/100)
@@ -149,12 +151,12 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     transition_distance_3 = (300 - 45) / (14.3/100)
     
     # Transition surface points
-    transition_e1_left = as1_d.project(transition_distance_1, azimuth + 90)
-    transition_e1_right = as1_a.project(transition_distance_1, azimuth - 90)
-    transition_e2_left = gs_d.project(transition_distance_2, azimuth + 90)
-    transition_e2_right = gs_a.project(transition_distance_2, azimuth - 90)
-    transition_e3_left = missed_e.project(transition_distance_3, azimuth + 90)
-    transition_e3_right = missed_b.project(transition_distance_3, azimuth - 90)
+    transition_e1_left = as1_d.project(transition_distance_1, back_azimuth + 90)
+    transition_e1_right = as1_a.project(transition_distance_1, back_azimuth - 90)
+    transition_e2_left = gs_d.project(transition_distance_2, back_azimuth + 90)
+    transition_e2_right = gs_a.project(transition_distance_2, back_azimuth - 90)
+    transition_e3_left = missed_e.project(transition_distance_3, back_azimuth + 90)
+    transition_e3_right = missed_b.project(transition_distance_3, back_azimuth - 90)
     
     # Create and add features for each surface
     
