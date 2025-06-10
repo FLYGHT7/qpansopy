@@ -67,7 +67,17 @@ def run_final_approach(iface, routing_layer, primary_width=0.95, secondary_width
         a+=1
 
     # Calculating point at end of corridor
-    lengthm = (1.45-primary_width)/tan(radians(30)) #NM
+    transition_angle = 30  # degrees
+    total_width = primary_width + secondary_width  # 1.425 NM total
+    
+    # Longitud de la zona de transición corregida
+    lengthm = (total_width - primary_width) / tan(radians(transition_angle))
+
+    # Ancho final validación
+    if abs(secondary_width - (primary_width/2)) > 0.001:
+        iface.messageBar().pushMessage("Warning", "Secondary width should be half of primary width", level=Qgis.Warning)
+        secondary_width = primary_width/2
+
     for i in d:
         int = start_point.project(lengthm*1852,azimuth)
         line_start = int.project(i*1852,azimuth-90)

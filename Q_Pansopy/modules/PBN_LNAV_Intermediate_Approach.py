@@ -61,7 +61,10 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
 
 
     # Calculating point at FAF location 
-    d = (secondary_width/1.72, primary_width/1.72, -secondary_width/1.72, -primary_width/1.72) #NM
+    d = [secondary_width * faf_reduction_factor, 
+         primary_width * faf_reduction_factor, 
+         -secondary_width * faf_reduction_factor, 
+         -primary_width * faf_reduction_factor] #NM
     for i in d:
         line_start = end_point.project(i*1852,azimuth-90)
         pts["m"+str(a)]=line_start
@@ -69,7 +72,7 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
 
     # Calculating point at end of corridor
     e = (secondary_width, primary_width, -secondary_width, -primary_width) #NM
-    lengthm = (primary_width-primary_width/1.72)/tan(radians(30)) #NM
+    lengthm = (primary_width - (primary_width * faf_reduction_factor)) / tan(radians(15))  # Cambiar a 15° según PANS-OPS
     for i in e:
         int = end_point.project(lengthm*1852,back_azimuth)
         line_start = int.project(i*1852,azimuth-90)
