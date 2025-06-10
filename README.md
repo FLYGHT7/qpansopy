@@ -30,3 +30,7 @@ An opensource PANS OPS software implementation based on QGIS
 - Ability to export tables to Word for creating reports
 - Add evaluation of straight segments
 - Add logic for evaluation of curves/offsets
+
+## Sponsors
+This project is funded by the inkind contributions of FLYGHT7 and the following donors:
+![image](https://github.com/user-attachments/assets/91fcad9c-cc35-48c0-b333-a2fb7f39bd10)
