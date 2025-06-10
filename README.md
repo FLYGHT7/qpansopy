@@ -32,5 +32,6 @@ An opensource PANS OPS software implementation based on QGIS
 - Add logic for evaluation of curves/offsets
 
 ## Sponsors
-This project is funded by the inkind contributions of FLYGHT7 and the following donors:
-![image](https://github.com/user-attachments/assets/91fcad9c-cc35-48c0-b333-a2fb7f39bd10)
+This project is funded by the inkind contributions of FLYGHT7 and the following donors:  
+<img src="https://github.com/user-attachments/assets/91fcad9c-cc35-48c0-b333-a2fb7f39bd10" width="150" height="150">
+
