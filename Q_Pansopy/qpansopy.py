@@ -15,6 +15,8 @@ try:
     from .qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
     from .qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
     from .qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
+    from .qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget  # Add this
+    from .qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget  # Add this line
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui
@@ -78,7 +80,23 @@ class Qpansopy:
             self.modules:dict = {"VSS": {"TITLE":"QPANSOPY VSS Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"vss_icon.png","DOCK_WIDGET": QPANSOPYVSSDockWidget,"GUI_INSTANCE":None},
                                 "ILS_BASIC": {"TITLE":"QPANSOPY ILS Tool","TOOLBAR":"ILS","TOOLTIP":"ILS Basic Surface Tool","ICON":"ils_icon.png","DOCK_WIDGET": QPANSOPYILSDockWidget,"GUI_INSTANCE":None},
                                 "WindSpiral": {"TITLE":"QPANSOPY Wind Spiral Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Wind Spiral Tool - Calculate and visualize wind spirals for procedure design","ICON":"wind_spiral.png","DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,"GUI_INSTANCE":None},
-                                "ILS_OAS": {"TITLE":"QPANSOPY OAS ILS Tool","TOOLBAR":"ILS","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"oas_ils.png","DOCK_WIDGET": QPANSOPYOASILSDockWidget,"GUI_INSTANCE":None}}
+                                "ILS_OAS": {"TITLE":"QPANSOPY OAS ILS Tool","TOOLBAR":"ILS","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"oas_ils.png","DOCK_WIDGET": QPANSOPYOASILSDockWidget,"GUI_INSTANCE":None},
+                                "LNAV_APCH": {
+                                    "TITLE": "QPANSOPY LNAV",
+                                    "TOOLBAR": "PBN",
+                                    "TOOLTIP": "LNAV Initial, Intermediate and Final Approach Tool",
+                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                                    "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
+                                    "GUI_INSTANCE": None
+                                },
+                                "ObjectSelection": {
+                                    "TITLE": "QPANSOPY Object Selection",
+                                    "TOOLBAR": "UTILITIES",
+                                    "TOOLTIP": "Extract objects intersecting with surfaces",
+                                    "ICON": "SOO.png",  # Using the SOO icon
+                                    "DOCK_WIDGET": QPANSOPYObjectSelectionDockWidget,
+                                    "GUI_INSTANCE": None
+                                }}
             
             ##If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
             #self.submenus:dict = {}
@@ -117,8 +135,8 @@ class Qpansopy:
                 QIcon(icon_path),
                 properties["TITLE"], 
                 self.iface.mainWindow())
-                ##Use lambda so the toggle_dock function is not called oin init and _,n=name prevents late binding bug
-                new_action.triggered.connect(lambda _,n=name: self.toggle_dock(n))
+                # Modificar la conexión de la señal usando lambda
+                new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n))
                 new_action.setToolTip(properties['TOOLTIP'])
                 toolbar_name = properties['TOOLBAR']
                 self.toolbars[toolbar_name].addAction(new_action)
@@ -130,7 +148,7 @@ class Qpansopy:
                     menu_category = self.submenus[toolbar_name]
                 except KeyError:
                     ##NOTE: is self.submenus is None, this code will only create a submenu for each Toolbar category in self.modules
-                    #if it does not exist we need to first create the submenu then add that the the QPANSOPY Menu
+                    #if it does not exist we need to first create the submenu then add that the QPANSOPY Menu
                     self.submenus[toolbar_name] = QMenu(toolbar_name, self.menu)
                     menu_category = self.submenus[toolbar_name]
                     self.menu.addMenu(menu_category)
@@ -185,13 +203,13 @@ class Qpansopy:
                 self.modules[name]["GUI_INSTANCE"] = None
 
 
-    def toggle_dock(self,name:str):
+    def toggle_dock(self, name):
         """Toggle the requested dock widget
         :param str name: key name from self.module for the module to toggle 
         """
         if self.modules[name]["GUI_INSTANCE"] is None:
             dock_widget = self.modules[name]["DOCK_WIDGET"]
-             # Create the dock widget
+            # Create the dock widget
             module_dock = self.modules[name]["GUI_INSTANCE"] = dock_widget(self.iface)
             # Aplicar configuración
             try:
@@ -201,8 +219,8 @@ class Qpansopy:
             if hasattr(module_dock, "logTextEdit"):
                 module_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
             
-            # Connect the closing signal
-            module_dock.closingPlugin.connect(lambda _,n=name: self.on_dock_closed(n))
+            # Connect the closing signal usando lambda
+            module_dock.closingPlugin.connect(lambda: self.on_dock_closed(name))
             # Add the dock widget to the interface
             self.iface.addDockWidget(Qt.RightDockWidgetArea, module_dock)
 
@@ -254,3 +272,9 @@ class Qpansopy:
             self.settings.setValue("qpansopy/enable_kml", vals["enable_kml"])
             self.settings.setValue("qpansopy/show_log", vals["show_log"])
             self.settings_values = vals
+
+    def create_callback(self, name):
+        """Create a callback function for the given module name"""
+        def callback():
+            self.toggle_dock(name)
+        return callback
