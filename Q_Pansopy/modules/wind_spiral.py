@@ -294,3 +294,39 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     iface.messageBar().pushMessage("QPANSOPY:", "Wind Spiral created successfully", level=Qgis.Success)
     
     return result
+
+def copy_parameters_table(params):
+    """Generate formatted table for Wind Spiral parameters"""
+    from ..utils import format_parameters_table
+    
+    params_dict = {
+        'airport_data': {
+            'aerodrome_elevation': {'value': params.get('adElev', 0), 'unit': params.get('adElev_unit', 'ft')},
+            'temperature_reference': {'value': params.get('tempRef', 15), 'unit': '°C'}
+        },
+        'flight_params': {
+            'IAS': {'value': params.get('IAS', 205), 'unit': 'kt'},
+            'altitude': {'value': params.get('altitude', 800), 'unit': params.get('altitude_unit', 'ft')},
+            'bank_angle': {'value': params.get('bankAngle', 15), 'unit': '°'}
+        },
+        'wind_data': {
+            'wind_speed': {'value': params.get('w', 30), 'unit': 'kt'},
+            'turn_direction': {'value': params.get('turn_direction', 'R'), 'unit': ''}
+        }
+    }
+
+    sections = {
+        'aerodrome_elevation': 'Airport Data',
+        'temperature_reference': 'Airport Data',
+        'IAS': 'Flight Parameters',
+        'altitude': 'Flight Parameters',
+        'bank_angle': 'Flight Parameters',
+        'wind_speed': 'Wind Data',
+        'turn_direction': 'Wind Data'
+    }
+
+    return format_parameters_table(
+        "QPANSOPY WIND SPIRAL PARAMETERS",
+        params_dict,
+        sections
+    )

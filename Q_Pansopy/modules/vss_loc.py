@@ -288,3 +288,35 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     iface.mapCanvas().zoomScale(sc)
     
     return result
+
+def copy_parameters_table(params):
+    """Generate formatted table for VSS LOC parameters"""
+    from ..utils import format_parameters_table
+    
+    params_dict = {
+        'runway_data': {
+            'runway_width': {'value': params.get('rwy_width', 45), 'unit': 'm'},
+            'threshold_elevation': {'value': params.get('thr_elev', 0), 'unit': params.get('thr_elev_unit', 'm')},
+            'strip_width': {'value': params.get('strip_width', 140), 'unit': 'm'}
+        },
+        'approach_data': {
+            'och': {'value': params.get('OCH', 100), 'unit': params.get('OCH_unit', 'm')},
+            'rdh': {'value': params.get('RDH', 15), 'unit': params.get('RDH_unit', 'm')},
+            'vpa': {'value': params.get('VPA', 3.0), 'unit': '°'}
+        }
+    }
+
+    sections = {
+        'runway_width': 'Runway Data',
+        'threshold_elevation': 'Runway Data',
+        'strip_width': 'Runway Data',
+        'och': 'Approach Data',
+        'rdh': 'Approach Data',
+        'vpa': 'Approach Data'
+    }
+
+    return format_parameters_table(
+        "QPANSOPY VSS LOC PARAMETERS",
+        params_dict,
+        sections
+    )

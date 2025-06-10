@@ -329,3 +329,23 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     iface.messageBar().pushMessage("QPANSOPY:", "Basic ILS Surfaces created successfully", level=Qgis.Success)
     
     return result
+
+def copy_parameters_table(params):
+    """Generate formatted table for Basic ILS parameters"""
+    from ..utils import format_parameters_table
+    
+    params_dict = {
+        'runway_data': {
+            'threshold_elevation': {'value': params.get('thr_elev', 0), 'unit': params.get('thr_elev_unit', 'm')}
+        }
+    }
+
+    sections = {
+        'threshold_elevation': 'Runway Data'
+    }
+
+    return format_parameters_table(
+        "QPANSOPY BASIC ILS PARAMETERS",
+        params_dict,
+        sections
+    )

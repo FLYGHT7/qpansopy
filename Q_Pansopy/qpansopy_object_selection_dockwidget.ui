@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QPANSOPYObjectSelectionDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYObjectSelectionDockWidget">
+  <property name="windowTitle">
+   <string>QPANSOPY Object Selection</string>
+  </property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QGroupBox" name="layersGroupBox">
+      <property name="title">
+       <string>Input Layers</string>
+      </property>
+      <layout class="QFormLayout" name="formLayout">
+        <item row="0" column="0">
+          <widget class="QLabel" name="pointLayerLabel">
+           <property name="text">
+            <string>Obstacle Layer (Point):</string>
+           </property>
+          </widget>
+        </item>
+        <item row="0" column="1">
+          <widget class="QgsMapLayerComboBox" name="pointLayerComboBox"/>
+        </item>
+        <item row="1" column="0">
+          <widget class="QLabel" name="surfaceLayerLabel">
+           <property name="text">
+            <string>Surface Layer (Polygon):</string>
+           </property>
+          </widget>
+        </item>
+        <item row="1" column="1">
+          <widget class="QgsMapLayerComboBox" name="surfaceLayerComboBox"/>
+        </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="parametersGroupBox">
+      <property name="title">
+       <string>Parameters</string>
+      </property>
+      <layout class="QFormLayout" name="paramLayout">
+        <item row="0" column="0">
+          <widget class="QLabel" name="markerSizeLabel">
+           <property name="text">
+            <string>Marker Size:</string>
+           </property>
+          </widget>
+        </item>
+        <item row="0" column="1">
+          <widget class="QSpinBox" name="markerSizeSpinBox">
+           <property name="value">
+            <number>3</number>
+           </property>
+          </widget>
+        </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="outputGroupBox">
+      <property name="title">
+       <string>Output</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QLabel" name="outputFolderLabel">
+           <property name="text">
+            <string>Output Folder:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="outputFolderLineEdit"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="browseButton">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="exportKmlCheckBox">
+         <property name="text">
+          <string>Export to KML</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="calculateButton">
+      <property name="text">
+       <string>Extract Objects</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="logTextEdit">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsmaplayercombobox.h</header>
+  </customwidget>
+ </customwidgets>
+</ui>

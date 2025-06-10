@@ -51,3 +51,45 @@ def get_selected_feature(layer, show_error):
         else:
             show_error("Multiple features found but none selected. Please select one feature.")
             return None
+
+def format_parameters_table(title, params_dict, sections=None):
+    """
+    Format parameters as a standardized table for Word/text output
+    Args:
+        title: Title for the table
+        params_dict: Dictionary of parameters and their values
+        sections: Optional dictionary mapping parameter names to section names
+    Returns:
+        Formatted table as string
+    """
+    # Header
+    table = f"{title}\n{'='*50}\n\n"
+    
+    if sections:
+        current_section = None
+        for param, value in params_dict.items():
+            section = sections.get(param, "General")
+            if section != current_section:
+                table += f"\n{section}\n{'-'*len(section)}\n"
+                table += "PARAMETER                    VALUE           UNIT\n"
+                table += "-"*50 + "\n"
+                current_section = section
+            
+            param_name = param.replace('_', ' ').title()
+            if isinstance(value, dict):
+                val, unit = value.get('value', ''), value.get('unit', '')
+            else:
+                val, unit = str(value), params_dict.get(f"{param}_unit", '')
+            
+            table += f"{param_name:<25} {val:<15} {unit}\n"
+    else:
+        table += "PARAMETER                    VALUE           UNIT\n"
+        table += "-"*50 + "\n"
+        for param, value in params_dict.items():
+            if param.endswith('_unit'):
+                continue
+            param_name = param.replace('_', ' ').title()
+            unit = params_dict.get(f"{param}_unit", '')
+            table += f"{param_name:<25} {value:<15} {unit}\n"
+    
+    return table
