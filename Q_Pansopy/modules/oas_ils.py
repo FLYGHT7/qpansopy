@@ -544,3 +544,35 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     iface.messageBar().pushMessage("QPANSOPY:", "Finished OAS CAT I", level=Qgis.Success)
     
     return result
+
+def copy_parameters_table(params):
+    """Generate formatted table for OAS ILS parameters"""
+    from ..utils import format_parameters_table
+    
+    params_dict = {
+        'airport_data': {
+            'threshold_elevation': {'value': params.get('THR_elev', 0), 'unit': 'm'},
+            'delta': {'value': params.get('delta', 0), 'unit': ''}
+        },
+        'approach_data': {
+            'fap_elevation': {'value': params.get('FAP_elev', 2000), 'unit': 'ft'},
+            'moc_intermediate': {'value': params.get('MOC_intermediate', 150), 'unit': 'm'}
+        },
+        'configuration': {
+            'oas_type': {'value': params.get('oas_type', 'Both'), 'unit': ''}
+        }
+    }
+
+    sections = {
+        'threshold_elevation': 'Airport Data',
+        'delta': 'Airport Data',
+        'fap_elevation': 'Approach Data',
+        'moc_intermediate': 'Approach Data',
+        'oas_type': 'Configuration'
+    }
+
+    return format_parameters_table(
+        "QPANSOPY OAS ILS PARAMETERS",
+        params_dict,
+        sections
+    )

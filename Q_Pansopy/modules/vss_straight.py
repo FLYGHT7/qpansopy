@@ -286,3 +286,35 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     iface.mapCanvas().zoomScale(sc)
     
     return result
+
+def copy_parameters_table(params):
+    """Generate formatted table for VSS Straight parameters"""
+    from ..utils import format_parameters_table
+    
+    params_dict = {
+        'runway_details': {
+            'rwy_width': {'value': params.get('rwy_width', 45), 'unit': 'm'},
+            'thr_elev': {'value': params.get('thr_elev', 0), 'unit': params.get('thr_elev_unit', 'm')},
+            'strip_width': {'value': params.get('strip_width', 140), 'unit': 'm'}
+        },
+        'approach_params': {
+            'OCH': {'value': params.get('OCH', 100), 'unit': params.get('OCH_unit', 'm')},
+            'RDH': {'value': params.get('RDH', 15), 'unit': params.get('RDH_unit', 'm')},
+            'VPA': {'value': params.get('VPA', 3.0), 'unit': '°'}
+        }
+    }
+
+    sections = {
+        'rwy_width': 'Runway Data',
+        'thr_elev': 'Runway Data',
+        'strip_width': 'Runway Data',
+        'OCH': 'Approach Parameters',
+        'RDH': 'Approach Parameters',
+        'VPA': 'Approach Parameters'
+    }
+
+    return format_parameters_table(
+        "QPANSOPY VSS STRAIGHT PARAMETERS",
+        params_dict,
+        sections
+    )

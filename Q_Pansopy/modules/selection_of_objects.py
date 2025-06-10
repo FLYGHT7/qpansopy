@@ -150,6 +150,32 @@ def extract_objects(iface, point_layer, surface_layer, marker_size=3, export_kml
         'count': len(intersecting_features)
     }
 
+def copy_parameters_table(params):
+    """Generate formatted table for Object Selection parameters"""
+    from ..utils import format_parameters_table
+    
+    params_dict = {
+        'visualization': {
+            'marker_size': {'value': params.get('marker_size', 3), 'unit': 'px'}
+        },
+        'layers': {
+            'point_layer': {'value': params.get('point_layer_name', ''), 'unit': ''},
+            'surface_layer': {'value': params.get('surface_layer_name', ''), 'unit': ''}
+        }
+    }
+
+    sections = {
+        'marker_size': 'Visualization',
+        'point_layer': 'Input Layers',
+        'surface_layer': 'Input Layers'
+    }
+
+    return format_parameters_table(
+        "QPANSOPY OBJECT SELECTION PARAMETERS",
+        params_dict,
+        sections
+    )
+
 # Call the extraction function
 result = extract_objects(iface, opea_layer, ils_layer, marker_size=3, export_kml=False)
 print(f"{result['count']} features extracted to 'extracted' layer.")
