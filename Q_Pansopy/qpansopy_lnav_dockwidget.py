@@ -48,6 +48,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.logTextEdit.ensureCursorVisible()
 
     def calculate(self):
+        """Run the calculation"""
         routing_layer = self.routingLayerComboBox.currentLayer()
         if not routing_layer:
             self.log("Error: Please select a routing layer")
@@ -57,13 +58,21 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
 
-        # Determine which approach to calculate
-        if self.initialRadioButton.isChecked():
-            from .modules.PBN_LNAV_Initial_Approach import run_initial_approach
-            run_initial_approach(self.iface, routing_layer)
-        elif self.intermediateRadioButton.isChecked():
-            from .modules.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
-            run_intermediate_approach(self.iface, routing_layer)
-        else:  # Final approach
-            from .modules.PBN_LNAV_Final_Approach import run_final_approach
-            run_final_approach(self.iface, routing_layer)
+        try:
+            # Determine which approach to calculate
+            if self.initialRadioButton.isChecked():
+                from .modules.PBN_LNAV_Initial_Approach import run_initial_approach
+                result = run_initial_approach(self.iface, routing_layer)
+            elif self.intermediateRadioButton.isChecked():
+                from .modules.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
+                result = run_intermediate_approach(self.iface, routing_layer)
+            else:  # Final approach
+                from .modules.PBN_LNAV_Final_Approach import run_final_approach
+                result = run_final_approach(self.iface, routing_layer)
+
+            # Log results
+            if result and export_kml:
+                self.log(f"KML exported to: {output_dir}")
+                
+        except Exception as e:
+            self.log(f"Error during calculation: {str(e)}")
