@@ -63,92 +63,93 @@ if not dlg.exec_():
 opea_layer, ils_layer = dlg.getSelections()
 map_crs = QgsProject.instance().crs()
 
-def extract_objects(iface, point_layer, surface_layer, marker_size=3, export_kml=False, output_dir=None):
-    """
-    Extract objects that intersect with surfaces
-    Args:
-        iface: QGIS interface
-        point_layer: Point layer with obstacles
-        surface_layer: Surface layer to analyze
-        marker_size: Size of marker points
-        export_kml: Whether to export to KML
-        output_dir: Output directory for KML
-    """
-    # Reprojection if needed
-    if point_layer.crs().authid() == 'EPSG:4326' and point_layer.crs() != map_crs:
-        transform = QgsCoordinateTransform(point_layer.crs(), map_crs, QgsProject.instance())
-        transformed_features = []
-        for f in point_layer.getFeatures():
-            geom = f.geometry()
-            if geom and not geom.isEmpty():
-                geom.transform(transform)
-                f.setGeometry(geom)
-                transformed_features.append(f)
-
-        reproj_layer = QgsVectorLayer(f"Point?crs={map_crs.authid()}", "reprojected_opea", "memory")
-        reproj_layer.dataProvider().addAttributes(point_layer.fields())
-        reproj_layer.updateFields()
-        reproj_layer.dataProvider().addFeatures(transformed_features)
-        point_layer = reproj_layer  # use internally
-
-        iface.messageBar().pushMessage(
-            "Reprojection Notice",
-            f"'{point_layer.name()}' was reprojected from EPSG:4326 to match the map CRS.",
-            level=Qgis.Info,
-            duration=5
-        )
-
-    # Spatial Index & Intersections
-    surface_index = QgsSpatialIndex(surface_layer.getFeatures())
-    intersecting_features = []
-
-    for pt in point_layer.getFeatures():
-        geom = pt.geometry()
-        if not geom:
-            continue
-        candidate_ids = surface_index.intersects(geom.boundingBox())
-        for surf in surface_layer.getFeatures(QgsFeatureRequest().setFilterFids(candidate_ids)):
-            if geom.intersects(surf.geometry()):
-                intersecting_features.append(pt)
-                break
-
-    # Create result layer
-    extracted_layer = QgsVectorLayer(f"Point?crs={point_layer.crs().authid()}", 
-                                   "extracted_objects", "memory")
-    extracted_layer.dataProvider().addAttributes(point_layer.fields())
-    extracted_layer.updateFields()
-    extracted_layer.dataProvider().addFeatures(intersecting_features)
-
-    # Style layer
-    symbol = QgsSymbol.defaultSymbol(extracted_layer.geometryType())
-    symbol_layer = QgsSimpleMarkerSymbolLayer()
-    symbol_layer.setColor(QColor("red"))
-    symbol_layer.setSize(marker_size)
-    symbol_layer.setStrokeColor(QColor(0, 0, 0, 0))
-    symbol_layer.setStrokeWidth(0)
-    symbol.changeSymbolLayer(0, symbol_layer)
-    extracted_layer.renderer().setSymbol(symbol)
-
-    # Add to project
-    QgsProject.instance().addMapLayer(extracted_layer)
+def extract_objects(iface, point_layer, surface_layer, export_kml=False, output_dir=None, use_selection_only=False):
+    """Extract objects that intersect with surfaces"""
+    try:
+        # Get surfaces to process
+        if use_selection_only:
+            if surface_layer.selectedFeatureCount() == 0:
+                iface.messageBar().pushMessage("Error", "No features selected in surface layer", level=Qgis.Critical)
+                return None
+            surfaces = surface_layer.selectedFeatures()
+        else:
+            surfaces = surface_layer.getFeatures()
     
-    # Export to KML if requested
-    if export_kml and output_dir:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        kml_path = os.path.join(output_dir, f'extracted_objects_{timestamp}.kml')
-        
-        QgsVectorFileWriter.writeAsVectorFormat(
-            extracted_layer,
-            kml_path,
-            'utf-8',
-            QgsCoordinateReferenceSystem('EPSG:4326'),
-            'KML'
-        )
+        # Reprojection if needed
+        if point_layer.crs().authid() == 'EPSG:4326' and point_layer.crs() != map_crs:
+            transform = QgsCoordinateTransform(point_layer.crs(), map_crs, QgsProject.instance())
+            transformed_features = []
+            for f in point_layer.getFeatures():
+                geom = f.geometry()
+                if geom and not geom.isEmpty():
+                    geom.transform(transform)
+                    f.setGeometry(geom)
+                    transformed_features.append(f)
 
-    return {
-        'layer': extracted_layer,
-        'count': len(intersecting_features)
-    }
+            reproj_layer = QgsVectorLayer(f"Point?crs={map_crs.authid()}", "reprojected_opea", "memory")
+            reproj_layer.dataProvider().addAttributes(point_layer.fields())
+            reproj_layer.updateFields()
+            reproj_layer.dataProvider().addFeatures(transformed_features)
+            point_layer = reproj_layer  # use internally
+
+            iface.messageBar().pushMessage(
+                "Reprojection Notice",
+                f"'{point_layer.name()}' was reprojected from EPSG:4326 to match the map CRS.",
+                level=Qgis.Info,
+                duration=5
+            )
+
+        # Spatial Index & Intersections
+        surface_index = QgsSpatialIndex(surface_layer.getFeatures())
+        intersecting_features = []
+
+        for pt in point_layer.getFeatures():
+            geom = pt.geometry()
+            if not geom:
+                continue
+            candidate_ids = surface_index.intersects(geom.boundingBox())
+            for surf in surfaces:
+                if geom.intersects(surf.geometry()):
+                    intersecting_features.append(pt)
+                    break
+
+        # Create result layer
+        extracted_layer = QgsVectorLayer(f"Point?crs={point_layer.crs().authid()}", 
+                                       "extracted_objects", "memory")
+        extracted_layer.dataProvider().addAttributes(point_layer.fields())
+        extracted_layer.updateFields()
+        extracted_layer.dataProvider().addFeatures(intersecting_features)
+
+        # Style layer
+        symbol = QgsSymbol.defaultSymbol(extracted_layer.geometryType())
+        symbol_layer = QgsSimpleMarkerSymbolLayer()
+        symbol_layer.setColor(QColor("red"))
+        symbol_layer.setSize(3)
+        symbol_layer.setStrokeColor(QColor(0, 0, 0, 0))
+        symbol_layer.setStrokeWidth(0)
+        symbol.changeSymbolLayer(0, symbol_layer)
+        extracted_layer.renderer().setSymbol(symbol)
+
+        # Add to project
+        QgsProject.instance().addMapLayer(extracted_layer)
+        
+        # Export to KML if requested
+        if export_kml and output_dir:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            kml_path = os.path.join(output_dir, f'extracted_objects_{timestamp}.kml')
+            
+            QgsVectorFileWriter.writeAsVectorFormat(
+                extracted_layer,
+                kml_path,
+                'utf-8',
+                QgsCoordinateReferenceSystem('EPSG:4326'),
+                'KML'
+            )
+
+        return {"count": count, "features": extracted_features}
+    except Exception as e:
+        iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)
+        return None
 
 def copy_parameters_table(params):
     """Generate formatted table for Object Selection parameters"""
@@ -177,5 +178,5 @@ def copy_parameters_table(params):
     )
 
 # Call the extraction function
-result = extract_objects(iface, opea_layer, ils_layer, marker_size=3, export_kml=False)
+result = extract_objects(iface, opea_layer, ils_layer, export_kml=False)
 print(f"{result['count']} features extracted to 'extracted' layer.")

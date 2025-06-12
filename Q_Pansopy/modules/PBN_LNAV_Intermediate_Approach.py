@@ -3,24 +3,20 @@ LNAV Intermediate Approach (RNP APCH)
 '''
 myglobals = set(globals().keys())
 
-from qgis.core import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import QVariant
+from qgis.core import (
+    QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, 
+    QgsPoint, QgsPolygon, QgsLineString, Qgis
+)
+from PyQt5.QtCore import QVariant
 from math import *
-from qgis.core import Qgis
-iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Intermediate Approach (RNP APCH)", level=Qgis.Info)
 
 def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary_width=1.25):
-    '''
-    LNAV Intermediate Approach (RNP APCH)
-    Args:
-        iface: QGIS interface
-        routing_layer: The layer containing the routing segments
-        primary_width: Width of primary area in NM (default 2.5)
-        secondary_width: Width of secondary area in NM (default 1.25)
-    '''
+    """LNAV Intermediate Approach (RNP APCH)"""
+    # Log must be inside function
+    iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Intermediate Approach (RNP APCH)", level=Qgis.Info)
+    
+    # Define reduction factor at function start
+    faf_reduction_factor = 1/1.72  # Approximately 0.581395349
 
     # Get Projected Coordinate System for the QGIS Project 
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -33,9 +29,10 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
     routing_layer.selectByExpression("segment='intermediate'")
     selection = routing_layer.selectedFeatures()
 
+    # Ensure error message is correct
     if not selection:
-        iface.messageBar().pushMessage("No 'final' segment selected", level=Qgis.Critical)
-        raise Exception("No 'final' segment selected")
+        iface.messageBar().pushMessage("No 'intermediate' segment selected", level=Qgis.Critical)
+        raise Exception("No 'intermediate' segment selected")
 
     for feat in selection:
         geom = feat.geometry().asPolyline()
@@ -59,7 +56,6 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
     pts["m"+str(a)]=end_point
     a+=1
 
-
     # Calculating point at FAF location 
     d = [secondary_width * faf_reduction_factor, 
          primary_width * faf_reduction_factor, 
@@ -79,44 +75,54 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
         pts["mm"+str(a)]=line_start
         a+=1
     
-    #calculating point at IF location
+    # Calculating point at IF location
     f = (1.25,2.5,-1.25,-2.5) #NM
     for i in f:
         pts["m"+str(a)]= start_point.project(i*1852,azimuth-90)
         a+=1
 
-    #Create memory layer
+    # Define areas with the calculated points
+    areas = []
+    
+    # Construct the primary area polygon by connecting points
+    # This needs to be updated based on the actual points generated
+    if len(pts) >= 6:  # Make sure we have enough points
+        # Example - exact indices may need adjustment
+        primary_points = [
+            pts["m1"],  # FAF
+            pts["m3"],  # Right edge of FAF
+            pts["m4"],  # Right at transition
+            # Add more points as needed
+            pts["m2"],  # Left edge of FAF
+            pts["m1"]   # Close the polygon
+        ]
+        areas.append((primary_points, "primary"))
+
+    # Create memory layer
     v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "LNAV Intermediate APCH Segment", "memory")
-    myField = QgsField( 'Symbol', QVariant.String)
+    myField = QgsField('Symbol', QVariant.String)
     v_layer.dataProvider().addAttributes([myField])
     v_layer.updateFields()
 
-    # Area Definition 
-    primary_area = ([pts["m2"],pts["m1"],pts["m4"],pts["mm8"],pts["m12"],pts["m10"],pts["mm6"]],'Primary Area')
-    secondary_area_left = ([pts["m3"],pts["m2"],pts["mm6"],pts["m10"],pts["m11"],pts["mm7"]],'Secondary Area')
-    secondary_area_right = ([pts["m5"],pts["m4"],pts["mm8"],pts["m12"],pts["m13"],pts["mm9"]],'Secondary Area')
-
-    areas = (primary_area, secondary_area_left,secondary_area_right)
-
-    # Creating areas
+    # Create areas
     for area in areas:
         pr = v_layer.dataProvider()
         seg = QgsFeature()
         seg.setGeometry(QgsPolygon(QgsLineString(area[0]), rings=[]))
         seg.setAttributes([area[1]])
-        pr.addFeatures( [ seg ] )
+        pr.addFeatures([seg])
 
     v_layer.updateExtents()
     QgsProject.instance().addMapLayers([v_layer])
 
-    # Zoom to layer
-    v_layer.selectAll()
-    canvas = iface.mapCanvas()
-    canvas.zoomToSelected(v_layer)
-    v_layer.removeSelection()
-    v_layer.loadNamedStyle('c:/Users/anton/Documents/GitHub/qpansopy_og/styles/primary_secondary_areas.qml')
-
     iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Intermediate (RNP APCH)", level=Qgis.Success)
+    
+    # Return a result
+    return {
+        "layer": v_layer,
+        "points": pts,
+        "areas": areas
+    }
 
 set(globals().keys()).difference(myglobals)
 

@@ -1,6 +1,7 @@
 from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal
 from qgis.core import QgsMapLayerProxyModel, Qgis
+from qgis.gui import QgsMapLayerComboBox
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -14,7 +15,7 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
 
-        # Setup layer comboboxes
+        # Setup layer combos
         self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
         self.surfaceLayerComboBox.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         
@@ -48,31 +49,37 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.logTextEdit.ensureCursorVisible()
 
     def extract_objects(self):
-        point_layer = self.pointLayerComboBox.currentLayer()
-        surface_layer = self.surfaceLayerComboBox.currentLayer()
-        
-        if not point_layer or not surface_layer:
-            self.log("Error: Please select both layers")
-            return
-
-        marker_size = self.markerSizeSpinBox.value()
-        export_kml = self.exportKmlCheckBox.isChecked()
-        output_dir = self.outputFolderLineEdit.text() if export_kml else None
-
+        """Extract intersecting objects"""
         try:
+            point_layer = self.pointLayerComboBox.currentLayer()
+            surface_layer = self.surfaceLayerComboBox.currentLayer()
+            
+            if not point_layer or not surface_layer:
+                self.log("Error: Please select both input layers")
+                return
+
+            # Get options
+            export_kml = self.exportKmlCheckBox.isChecked()
+            output_dir = self.outputFolderLineEdit.text() if export_kml else None
+            use_selection_only = self.useSelectionOnlyCheckBox.isChecked()
+            
             from .modules.selection_of_objects import extract_objects
             result = extract_objects(
                 self.iface,
                 point_layer,
                 surface_layer,
-                marker_size,
-                export_kml,
-                output_dir
+                export_kml=export_kml,
+                output_dir=output_dir,
+                use_selection_only=use_selection_only
             )
             
-            self.log(f"Extracted {result['count']} objects")
-            if export_kml:
-                self.log(f"KML exported to: {output_dir}")
+            if result:
+                msg = f"Extracted {result['count']} objects"
+                if export_kml:
+                    msg += f"\nKML exported to: {output_dir}"
+                self.log(msg)
                 
         except Exception as e:
             self.log(f"Error during extraction: {str(e)}")
+            self.iface.messageBar().pushMessage(
+                "Error", str(e), level=Qgis.Critical)
