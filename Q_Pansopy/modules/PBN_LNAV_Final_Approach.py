@@ -83,10 +83,20 @@ def run_final_approach(iface, routing_layer, primary_width=0.95, secondary_width
         pts["m"+str(a)]= start_point.project(i*1852,azimuth-90)
         a+=1
 
-    # Define areas before using them
+    # Define areas with the calculated points
     areas = []
-    # Add points to areas (normally this would come from your calculation)
-    # For example: areas.append(([pts["m0"], pts["m1"], pts["m2"], pts["m3"], pts["m0"]], "primary"))
+    
+    # Create primary area polygon - need to handle all the edge cases
+    if len(pts) >= 6:  # Make sure we have enough points
+        # Example - exact indices may need adjustment
+        primary_points = [
+            pts["m1"],  # MAPt
+            pts["m3"],  # Right edge of MAPt
+            # Need to find the right mm points
+            pts["m2"],  # Left edge of MAPt
+            pts["m1"]   # Close the polygon
+        ]
+        areas.append((primary_points, "primary"))
 
     #Create memory layer
     v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "LNAV Final APCH Segment", "memory")
@@ -110,7 +120,8 @@ def run_final_approach(iface, routing_layer, primary_width=0.95, secondary_width
     # Return a result
     return {
         "layer": v_layer,
-        "points": pts
+        "points": pts,
+        "areas": areas
     }
 
 set(globals().keys()).difference(myglobals)

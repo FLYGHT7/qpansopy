@@ -59,20 +59,43 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         output_dir = self.outputFolderLineEdit.text()
 
         try:
+            # Select appropriate features first - make sure we work with a clean selection
+            routing_layer.removeSelection()
+            
             # Determine which approach to calculate
             if self.initialRadioButton.isChecked():
+                self.log("Calculating Initial Approach...")
+                # For initial approach, we need to select by attribute
+                routing_layer.selectByExpression("segment='initial'")
                 from .modules.PBN_LNAV_Initial_Approach import run_initial_approach
                 result = run_initial_approach(self.iface, routing_layer)
+                approach_type = "Initial"
             elif self.intermediateRadioButton.isChecked():
+                self.log("Calculating Intermediate Approach...")
+                routing_layer.selectByExpression("segment='intermediate'")
                 from .modules.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
                 result = run_intermediate_approach(self.iface, routing_layer)
+                approach_type = "Intermediate"
             else:  # Final approach
+                self.log("Calculating Final Approach...")
+                routing_layer.selectByExpression("segment='final'")
                 from .modules.PBN_LNAV_Final_Approach import run_final_approach
                 result = run_final_approach(self.iface, routing_layer)
+                approach_type = "Final"
+
+            # Check selection - if nothing selected, warn user
+            if routing_layer.selectedFeatureCount() == 0:
+                self.log(f"Warning: No features with segment='{approach_type.lower()}' found")
+                return
 
             # Log results
-            if result and export_kml:
-                self.log(f"KML exported to: {output_dir}")
+            if result:
+                self.log(f"{approach_type} Approach calculation completed successfully")
+                if export_kml:
+                    # Add KML export code here if available
+                    self.log(f"KML export would go to: {output_dir}")
                 
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())

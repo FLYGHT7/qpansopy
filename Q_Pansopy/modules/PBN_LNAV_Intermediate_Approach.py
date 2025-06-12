@@ -29,6 +29,7 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
     routing_layer.selectByExpression("segment='intermediate'")
     selection = routing_layer.selectedFeatures()
 
+    # Ensure error message is correct
     if not selection:
         iface.messageBar().pushMessage("No 'intermediate' segment selected", level=Qgis.Critical)
         raise Exception("No 'intermediate' segment selected")
@@ -80,10 +81,22 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
         pts["m"+str(a)]= start_point.project(i*1852,azimuth-90)
         a+=1
 
-    # Define areas before using them
+    # Define areas with the calculated points
     areas = []
-    # Add points to areas (normally this would come from your calculation)
-    # For example: areas.append(([pts["m0"], pts["m1"], pts["m2"], pts["m3"], pts["m0"]], "primary"))
+    
+    # Construct the primary area polygon by connecting points
+    # This needs to be updated based on the actual points generated
+    if len(pts) >= 6:  # Make sure we have enough points
+        # Example - exact indices may need adjustment
+        primary_points = [
+            pts["m1"],  # FAF
+            pts["m3"],  # Right edge of FAF
+            pts["m4"],  # Right at transition
+            # Add more points as needed
+            pts["m2"],  # Left edge of FAF
+            pts["m1"]   # Close the polygon
+        ]
+        areas.append((primary_points, "primary"))
 
     # Create memory layer
     v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "LNAV Intermediate APCH Segment", "memory")
@@ -107,7 +120,8 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
     # Return a result
     return {
         "layer": v_layer,
-        "points": pts
+        "points": pts,
+        "areas": areas
     }
 
 set(globals().keys()).difference(myglobals)

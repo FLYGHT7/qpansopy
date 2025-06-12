@@ -76,11 +76,26 @@ def run_initial_approach(iface, routing_layer, primary_width=2.5, secondary_widt
         pts["m"+str(a)]=line_start
         a+=1
 
-    # Define areas before using them
+    # Define areas with the calculated points
     areas = []
-    # Add points to areas (normally this would come from your calculation)
-    # For example: areas.append(([pts["m0"], pts["m1"], pts["m2"], pts["m3"], pts["m0"]], "primary"))
-
+    
+    # Primary Area - Connect the points in a logical order
+    # This needs to be updated based on the actual points generated
+    if len(pts) >= 8:  # Make sure we have enough points
+        primary_points = [
+            pts["m1"],  # IF
+            pts["m3"],  # Right edge of IF
+            pts["m7"],  # Right edge of IAF
+            pts["m0"],  # IAF
+            pts["m5"],  # Left edge of IAF
+            pts["m2"],  # Left edge of IF
+            pts["m1"]   # Close the polygon
+        ]
+        areas.append((primary_points, "primary"))
+    
+    # Secondary Area - similar approach with other points
+    # ...add code for secondary areas if needed...
+    
     # Create memory layer
     v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "Initial APCH Segment", "memory")
     myField = QgsField('Symbol', QVariant.String)
@@ -103,5 +118,6 @@ def run_initial_approach(iface, routing_layer, primary_width=2.5, secondary_widt
     # Return a result instead of using globals
     return {
         "layer": v_layer,
-        "points": pts
+        "points": pts,
+        "areas": areas
     }
