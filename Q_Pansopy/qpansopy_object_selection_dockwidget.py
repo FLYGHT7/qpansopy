@@ -23,6 +23,11 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.outputFolderLineEdit.setText(self.get_desktop_path())
         
         # Connect signals
+        self.setup_connections()
+
+    def setup_connections(self):
+        """Setup signal/slot connections"""
+        # Conectar el botón Extract directamente a la función extract_objects
         self.calculateButton.clicked.connect(self.extract_objects)
         self.browseButton.clicked.connect(self.browse_output_folder)
 
@@ -57,13 +62,20 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if not point_layer or not surface_layer:
                 self.log("Error: Please select both input layers")
                 return
-
+            
             # Get options
             export_kml = self.exportKmlCheckBox.isChecked()
             output_dir = self.outputFolderLineEdit.text() if export_kml else None
             use_selection_only = self.useSelectionOnlyCheckBox.isChecked()
             
+            # Mensaje de inicio de procesamiento
+            self.log("Starting object extraction...")
+            self.iface.messageBar().pushMessage("QPANSOPY", "Extracting objects...", level=Qgis.Info)
+            
+            # Importar directamente la función de extracción y ejecutarla
             from .modules.selection_of_objects import extract_objects
+            
+            # IMPORTANTE: Ejecutar directamente la función sin abrir diálogos
             result = extract_objects(
                 self.iface,
                 point_layer,
@@ -73,11 +85,17 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 use_selection_only=use_selection_only
             )
             
+            # Mostrar resultados
             if result:
                 msg = f"Extracted {result['count']} objects"
                 if export_kml:
                     msg += f"\nKML exported to: {output_dir}"
                 self.log(msg)
+                self.iface.messageBar().pushMessage("QPANSOPY", msg, level=Qgis.Success)
+    
+        except Exception as e:
+            self.log(f"Error during extraction: {str(e)}")
+            self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)
                 
         except Exception as e:
             self.log(f"Error during extraction: {str(e)}")

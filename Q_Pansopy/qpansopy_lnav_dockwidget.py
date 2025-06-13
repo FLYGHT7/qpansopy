@@ -53,40 +53,34 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not routing_layer:
             self.log("Error: Please select a routing layer")
             return
-
+            
+        # NO hacer selecciones automáticas aquí
+        # Verificar que el usuario tenga al menos un elemento seleccionado
+        if routing_layer.selectedFeatureCount() == 0:
+            self.log("Error: Please select at least one segment in the map before calculation")
+            return
+        
         # Get export options
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
 
         try:
-            # Select appropriate features first - make sure we work with a clean selection
-            routing_layer.removeSelection()
-            
-            # Determine which approach to calculate
+            # Determine which approach to calculate - usar solo la selección actual del usuario
             if self.initialRadioButton.isChecked():
                 self.log("Calculating Initial Approach...")
-                # For initial approach, we need to select by attribute
-                routing_layer.selectByExpression("segment='initial'")
                 from .modules.PBN_LNAV_Initial_Approach import run_initial_approach
                 result = run_initial_approach(self.iface, routing_layer)
                 approach_type = "Initial"
             elif self.intermediateRadioButton.isChecked():
                 self.log("Calculating Intermediate Approach...")
-                routing_layer.selectByExpression("segment='intermediate'")
                 from .modules.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
                 result = run_intermediate_approach(self.iface, routing_layer)
                 approach_type = "Intermediate"
             else:  # Final approach
                 self.log("Calculating Final Approach...")
-                routing_layer.selectByExpression("segment='final'")
                 from .modules.PBN_LNAV_Final_Approach import run_final_approach
                 result = run_final_approach(self.iface, routing_layer)
                 approach_type = "Final"
-
-            # Check selection - if nothing selected, warn user
-            if routing_layer.selectedFeatureCount() == 0:
-                self.log(f"Warning: No features with segment='{approach_type.lower()}' found")
-                return
 
             # Log results
             if result:
@@ -94,6 +88,12 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 if export_kml:
                     # Add KML export code here if available
                     self.log(f"KML export would go to: {output_dir}")
+                
+        except Exception as e:
+            self.log(f"Error during calculation: {str(e)}")
+            import traceback
+            self.log(traceback.format_exc())
+            self.log(f"KML export would go to: {output_dir}")
                 
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
