@@ -17,13 +17,15 @@ An opensource PANS OPS software implementation based on QGIS
 ### Precision Approach
 - ILS Basic Surfaces
 - ILS OAS CAT I
+### PBN Approach
+- PBN LNAV (straight to runway)
+- PBN intermediate (aligned)
+- PBN initial (without automatic connection to the intermediate)
 
 ## Next Steps 
 - CONV VOR Template
 - CONV NDB Template
-- PBN LNAV (straight to runway)
-- PBN intermediate (aligned)
-- PBN initial (without automatic connection to the intermediate)
+- CONV Initial Approach (Straight)
 
 ## Roadmap
 - Initial focus in correct area creation
