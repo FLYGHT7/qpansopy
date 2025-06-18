@@ -203,10 +203,14 @@ class Qpansopy:
                 self.modules[name]["GUI_INSTANCE"] = None
 
 
-    def toggle_dock(self, name):
+    def toggle_dock(self, name=None):
         """Toggle the requested dock widget
         :param str name: key name from self.module for the module to toggle 
         """
+        # Si name es None, simplemente retornar sin hacer nada
+        if name is None:
+            return
+            
         if self.modules[name]["GUI_INSTANCE"] is None:
             dock_widget = self.modules[name]["DOCK_WIDGET"]
             # Create the dock widget
