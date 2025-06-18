@@ -88,16 +88,16 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Mostrar resultados
             if result:
                 msg = f"Extracted {result['count']} objects"
-                if export_kml:
-                    msg += f"\nKML exported to: {output_dir}"
+                if export_kml and 'kml_path' in result:
+                    msg += f"\nKML exported to: {result['kml_path']}"
                 self.log(msg)
                 self.iface.messageBar().pushMessage("QPANSOPY", msg, level=Qgis.Success)
     
         except Exception as e:
             self.log(f"Error during extraction: {str(e)}")
             self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)
-                
-        except Exception as e:
+            import traceback
+            self.log(traceback.format_exc())
             self.log(f"Error during extraction: {str(e)}")
             self.iface.messageBar().pushMessage(
                 "Error", str(e), level=Qgis.Critical)

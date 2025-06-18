@@ -65,7 +65,7 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     output_dir = params.get('output_dir', os.path.expanduser('~'))
 
     # --- UNIT CONVERSION PATCH ---
-    # Convert adElev to feet if needed (for logging/ISA dialog only)
+    # Get adElev and tempRef from params, ensure they're present
     adElev = float(params.get('adElev', 0))
     adElev_unit = params.get('adElev_unit', 'ft')
     if adElev_unit == 'm':
@@ -211,7 +211,7 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
         
         # Calculate drift point
         dist_xd, dist_yd = (e * 1852 * math.cos(angle - drift_angle * (side / 90)), 
-                           e * 1852 * math.sin(angle - drift_angle * (side / 90)))
+                          e * 1852 * math.sin(angle - drift_angle * (side / 90)))
         dx1, dy2 = (cx1 + dist_xd, cy2 + dist_yd)
         line_startd = QgsPointXY(dx1, dy2)
         
@@ -226,7 +226,8 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
             pr.addFeatures([seg])
     
     # Create line layer for wind spiral curve
-    pv_layer = QgsVectorLayer("LineString?crs=" + map_srid, "Wind Spiral Curve", "memory")
+    layer_name = f"Wind_Spiral_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    pv_layer = QgsVectorLayer("LineString?crs=" + map_srid, layer_name, "memory")
     myField = QgsField('parameters', QVariant.String)
     pv_layer.dataProvider().addAttributes([myField])
     pv_layer.updateFields()

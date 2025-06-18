@@ -44,48 +44,87 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def __init__(self, iface):
         """Constructor."""
         super(QPANSOPYWindSpiralDockWidget, self).__init__(iface.mainWindow())
-        # Set up the user interface from Designer.
         self.setupUi(self)
         self.iface = iface
         
-        # Diccionario para almacenar los valores exactos ingresados
-        self.exact_values = {}
-        # Diccionario para almacenar las unidades seleccionadas
-        self.units = {
-            'adElev': 'ft',
-            'altitude': 'ft'
-        }
+        # Setup layer combos
+        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
+        self.referenceLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
         
-        # Configure the dock widget to be resizable
-        self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                         QtWidgets.QDockWidget.DockWidgetFloatable |
-                         QtWidgets.QDockWidget.DockWidgetClosable)
+        # Establecer parámetros predeterminados
+        self.setup_parameters()
         
-        # Set minimum and maximum sizes
-        self.setMinimumWidth(450)
-        self.setMinimumHeight(550)  # Aumentado para dar más espacio
+        # Set default output folder
+        self.outputFolderLineEdit.setText(self.get_desktop_path())
         
-        # Eliminar el botón de copiar parámetros existente si existe
-        # (para evitar duplicados)
-        existing_button = self.findChild(QtWidgets.QPushButton, "copyParamsButton")
-        if existing_button:
-            existing_button.setParent(None)
-            existing_button.deleteLater()
+        # Connect signals
+        self.calculateButton.clicked.connect(self.calculate)
+        self.browseButton.clicked.connect(self.browse_output_folder)
+        self.copyParamsButton.clicked.connect(self.copy_parameters)
         
-        # Reconstruir completamente el layout para evitar problemas de superposición
-        self.rebuild_layout()
+        # Inicializar log
+        self.log("Wind Spiral generator loaded. Set parameters and click Calculate.")
+
+    def setup_parameters(self):
+        """Setup parameter input fields"""
+        # Crear layout para parámetros
+        layout = self.formLayout
         
-        # Asegura que el log se puede ocultar sin error
-        if hasattr(self, "logTextEdit") and self.logTextEdit is not None:
-            self.logTextEdit.setVisible(True)  # El valor real lo pone qpansopy.py
-        # Asegura que el checkbox de KML existe
-        if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
-            self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
-            self.exportKmlCheckBox.setChecked(True)
-            self.verticalLayout.addWidget(self.exportKmlCheckBox)
+        # Aerodrome Elevation
+        self.adElevLineEdit = QtWidgets.QLineEdit("0")
+        self.adElevUnitCombo = QtWidgets.QComboBox()
+        self.adElevUnitCombo.addItems(['ft', 'm'])
         
-        # Log message
-        self.log("QPANSOPY Wind Spiral plugin loaded. Select layers and parameters, then click Calculate.")
+        adElevContainer = QtWidgets.QWidget()
+        adElevLayout = QtWidgets.QHBoxLayout(adElevContainer)
+        adElevLayout.setContentsMargins(0, 0, 0, 0)
+        adElevLayout.addWidget(self.adElevLineEdit)
+        adElevLayout.addWidget(self.adElevUnitCombo)
+        
+        layout.addRow("Aerodrome Elevation:", adElevContainer)
+        
+        # Temperature Reference
+        self.tempRefLineEdit = QtWidgets.QLineEdit("15")
+        layout.addRow("Temperature Reference (°C):", self.tempRefLineEdit)
+        
+        # ISA Variation
+        self.isaVarLineEdit = QtWidgets.QLineEdit("0")
+        layout.addRow("ISA Variation:", self.isaVarLineEdit)
+        
+        # IAS
+        self.iasLineEdit = QtWidgets.QLineEdit("205")
+        layout.addRow("IAS (kt):", self.iasLineEdit)
+        
+        # Altitude
+        self.altitudeLineEdit = QtWidgets.QLineEdit("800")
+        self.altitudeUnitCombo = QtWidgets.QComboBox()
+        self.altitudeUnitCombo.addItems(['ft', 'm'])
+        
+        altitudeContainer = QtWidgets.QWidget()
+        altitudeLayout = QtWidgets.QHBoxLayout(altitudeContainer)
+        altitudeLayout.setContentsMargins(0, 0, 0, 0)
+        altitudeLayout.addWidget(self.altitudeLineEdit)
+        altitudeLayout.addWidget(self.altitudeUnitCombo)
+        
+        layout.addRow("Altitude:", altitudeContainer)
+        
+        # Bank Angle
+        self.bankAngleLineEdit = QtWidgets.QLineEdit("15")
+        layout.addRow("Bank Angle (°):", self.bankAngleLineEdit)
+        
+        # Wind Speed
+        self.windSpeedLineEdit = QtWidgets.QLineEdit("30")
+        layout.addRow("Wind Speed (kt):", self.windSpeedLineEdit)
+        
+        # Turn Direction
+        self.turnDirectionCombo = QtWidgets.QComboBox()
+        self.turnDirectionCombo.addItems(['R', 'L'])
+        layout.addRow("Turn Direction:", self.turnDirectionCombo)
+        
+        # Show Points
+        self.showPointsCheckBox = QtWidgets.QCheckBox("Show Points")
+        self.showPointsCheckBox.setChecked(True)
+        layout.addRow("", self.showPointsCheckBox)
 
     def rebuild_layout(self):
         """Reconstruir completamente el layout para evitar problemas de superposición"""
@@ -611,3 +650,33 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log(f"Error during calculation: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
+
+    def copy_parameters(self):
+        """Copy parameters to clipboard"""
+        try:
+            # Get parameters
+            params = {
+                'adElev': self.adElevLineEdit.text(),
+                'adElev_unit': self.adElevUnitCombo.currentText(),
+                'tempRef': self.tempRefLineEdit.text(),
+                'isa_var': self.isaVarLineEdit.text(),
+                'IAS': self.iasLineEdit.text(),
+                'altitude': self.altitudeLineEdit.text(),
+                'altitude_unit': self.altitudeUnitCombo.currentText(),
+                'bankAngle': self.bankAngleLineEdit.text(),
+                'w': self.windSpeedLineEdit.text(),
+                'turn_direction': self.turnDirectionCombo.currentText()
+            }
+            
+            # Import module and format parameters
+            from .modules.wind_spiral import copy_parameters_table
+            formatted_params = copy_parameters_table(params)
+            
+            # Copy to clipboard
+            clipboard = QtWidgets.QApplication.clipboard()
+            clipboard.setText(formatted_params)
+            
+            self.log("Parameters copied to clipboard")
+            
+        except Exception as e:
+            self.log(f"Error copying parameters: {str(e)}")
