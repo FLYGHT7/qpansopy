@@ -14,6 +14,7 @@ An opensource PANS OPS software implementation based on QGIS
 ### Utilities 
 - VSS NPA
 - Wind Spiral Utility
+- Object Selection (Extract points intersecting area)
 ### Precision Approach
 - ILS Basic Surfaces
 - ILS OAS CAT I
