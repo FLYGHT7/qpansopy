@@ -1,6 +1,7 @@
 '''
 LNAV Intermediate Approach (RNP APCH)
 '''
+import os
 from qgis.core import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -110,6 +111,15 @@ def run_intermediate_approach(iface, routing_layer, primary_width=2.5, secondary
 
     v_layer.updateExtents()
     QgsProject.instance().addMapLayers([v_layer])
+
+    # Go up one level to reach the plugin root
+    plugin_root = os.path.dirname(os.path.dirname(__file__))
+    style_path = os.path.join(plugin_root, 'styles', 'primary_secondary_areas.qml')
+    style_path = style_path.replace(os.sep, '/')
+    if os.path.exists(style_path):
+        v_layer.loadNamedStyle(style_path)
+    else:
+        iface.messageBar().pushMessage("Style file missing", style_path, level=Qgis.Warning)
 
     iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Intermediate (RNP APCH)", level=Qgis.Success)
     
