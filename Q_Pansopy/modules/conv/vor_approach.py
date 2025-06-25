@@ -47,26 +47,26 @@ def run_vor_approach(iface, routing_layer):
             # End point of template
             end_template = start_point.project(L*1852, azimuth)
             
-            # Primary area width at start: ±1 NM
-            primary_width_start = 1.0
+            # Primary area width at start: ±0.5 NM
+            primary_width_start = 0.5
             pts['p1'] = start_point.project(primary_width_start*1852, azimuth-90)  # Left side start
             pts['p2'] = start_point.project(primary_width_start*1852, azimuth+90)  # Right side start
             
-            # Primary area width at end: ±(L*tan(7.8°) + 1) NM
-            primary_width_end = L*tan(radians(7.8)) + 1.0
-            pts['p3'] = end_template.project(primary_width_end*1852, azimuth-90)  # Left side end
-            pts['p4'] = end_template.project(primary_width_end*1852, azimuth+90)  # Right side end
+            # Secondary width at end: ±(L*tan(7.8°) + 1.0) NM
+            secondary_width_end = L*tan(radians(7.8)) + 1.0
+            pts['s3'] = end_template.project(secondary_width_end*1852, azimuth-90)  # Left secondary end
+            pts['s4'] = end_template.project(secondary_width_end*1852, azimuth+90)  # Right secondary end
             
-            # Secondary area extends beyond primary area
-            # Secondary width at start: ±1.5 NM
-            secondary_width_start = 1.5
+            # Secondary width at start: ±1.00 NM
+            secondary_width_start = 1.0
             pts['s1'] = start_point.project(secondary_width_start*1852, azimuth-90)  # Left secondary start
             pts['s2'] = start_point.project(secondary_width_start*1852, azimuth+90)  # Right secondary start
             
-            # Secondary width at end: ±(L*tan(10°) + 1.5) NM
-            secondary_width_end = L*tan(radians(10.0)) + 1.5
-            pts['s3'] = end_template.project(secondary_width_end*1852, azimuth-90)  # Left secondary end
-            pts['s4'] = end_template.project(secondary_width_end*1852, azimuth+90)  # Right secondary end
+            # Primary area width at end: requires to calculate half of secondary
+            secondary_end_line = QgsGeometry.fromPolylineXY([QgsPointXY(end_template), QgsPointXY(pts['s4'])])
+            primary_width_end = (secondary_end_line.length()/1852)*0.5
+            pts['p3'] = end_template.project(primary_width_end*1852, azimuth-90)  # Left side end
+            pts['p4'] = end_template.project(primary_width_end*1852, azimuth+90)  # Right side end
             
             # Create memory layer for polygons
             v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "VOR Approach Areas", "memory")
