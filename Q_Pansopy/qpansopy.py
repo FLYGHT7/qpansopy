@@ -15,8 +15,11 @@ try:
     from .qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
     from .qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
     from .qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
-    from .qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget  # Add this
-    from .qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget  # Add this line
+    from .qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
+    from .qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
+    from .qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
+    from .qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
+    from .qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui
@@ -74,9 +77,7 @@ class Qpansopy:
             # Verificar que los módulos necesarios estén disponibles
             if 'QPANSOPYVSSDockWidget' not in globals():
                 QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Warning", 
-                                   "Some modules could not be imported. The plugin may not work correctly.")
-            
-            #Configure Modules NAME:PROPERTIES (STR:DICT)
+                                   "Some modules could not be imported. The plugin may not work correctly.")            #Configure Modules NAME:PROPERTIES (STR:DICT)
             self.modules:dict = {"VSS": {"TITLE":"QPANSOPY VSS Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"vss_icon.png","DOCK_WIDGET": QPANSOPYVSSDockWidget,"GUI_INSTANCE":None},
                                 "ILS_BASIC": {"TITLE":"QPANSOPY ILS Tool","TOOLBAR":"ILS","TOOLTIP":"ILS Basic Surface Tool","ICON":"ils_icon.png","DOCK_WIDGET": QPANSOPYILSDockWidget,"GUI_INSTANCE":None},
                                 "WindSpiral": {"TITLE":"QPANSOPY Wind Spiral Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Wind Spiral Tool - Calculate and visualize wind spirals for procedure design","ICON":"wind_spiral.png","DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,"GUI_INSTANCE":None},
@@ -87,6 +88,30 @@ class Qpansopy:
                                     "TOOLTIP": "LNAV Initial, Intermediate and Final Approach Tool",
                                     "ICON": os.path.join(self.icons_dir, 'PBN.png'),
                                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
+                                    "GUI_INSTANCE": None
+                                },
+                                "VOR_CONV": {
+                                    "TITLE": "QPANSOPY VOR",
+                                    "TOOLBAR": "CONV",
+                                    "TOOLTIP": "VOR Conventional Approach Areas Tool",
+                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                                    "DOCK_WIDGET": QPANSOPYVORDockWidget,
+                                    "GUI_INSTANCE": None
+                                },
+                                "NDB_CONV": {
+                                    "TITLE": "QPANSOPY NDB",
+                                    "TOOLBAR": "CONV",
+                                    "TOOLTIP": "NDB Conventional Approach Areas Tool",
+                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                                    "DOCK_WIDGET": QPANSOPYNDBDockWidget,
+                                    "GUI_INSTANCE": None
+                                },
+                                "CONV_INITIAL": {
+                                    "TITLE": "QPANSOPY CONV Initial",
+                                    "TOOLBAR": "CONV",
+                                    "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
+                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                                    "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
                                     "GUI_INSTANCE": None
                                 },
                                 "ObjectSelection": {
