@@ -79,10 +79,10 @@ class Qpansopy:
             if 'QPANSOPYVSSDockWidget' not in globals():
                 QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Warning", 
                                    "Some modules could not be imported. The plugin may not work correctly.")            #Configure Modules NAME:PROPERTIES (STR:DICT)
-            self.modules:dict = {"VSS": {"TITLE":"QPANSOPY VSS Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"vss_icon.png","DOCK_WIDGET": QPANSOPYVSSDockWidget,"GUI_INSTANCE":None},
-                                "ILS_BASIC": {"TITLE":"QPANSOPY ILS Tool","TOOLBAR":"ILS","TOOLTIP":"ILS Basic Surface Tool","ICON":"ils_icon.png","DOCK_WIDGET": QPANSOPYILSDockWidget,"GUI_INSTANCE":None},
-                                "WindSpiral": {"TITLE":"QPANSOPY Wind Spiral Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Wind Spiral Tool - Calculate and visualize wind spirals for procedure design","ICON":"wind_spiral.png","DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,"GUI_INSTANCE":None},
-                                "ILS_OAS": {"TITLE":"QPANSOPY OAS ILS Tool","TOOLBAR":"ILS","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"oas_ils.png","DOCK_WIDGET": QPANSOPYOASILSDockWidget,"GUI_INSTANCE":None},
+            self.modules:dict = {"VSS": {"TITLE":"QPANSOPY VSS Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"vss.svg","DOCK_WIDGET": QPANSOPYVSSDockWidget,"GUI_INSTANCE":None},
+                                "ILS_BASIC": {"TITLE":"QPANSOPY ILS Tool","TOOLBAR":"ILS","TOOLTIP":"ILS Basic Surface Tool","ICON":"basic_ils.svg","DOCK_WIDGET": QPANSOPYILSDockWidget,"GUI_INSTANCE":None},
+                                "WindSpiral": {"TITLE":"QPANSOPY Wind Spiral Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Wind Spiral Tool - Calculate and visualize wind spirals for procedure design","ICON":"wind_spiral.svg","DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,"GUI_INSTANCE":None},
+                                "ILS_OAS": {"TITLE":"QPANSOPY OAS ILS Tool","TOOLBAR":"ILS","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"oas_ils.svg","DOCK_WIDGET": QPANSOPYOASILSDockWidget,"GUI_INSTANCE":None},
                                 "LNAV_APCH": {
                                     "TITLE": "QPANSOPY LNAV",
                                     "TOOLBAR": "PBN",
@@ -95,7 +95,7 @@ class Qpansopy:
                                     "TITLE": "QPANSOPY VOR",
                                     "TOOLBAR": "CONV",
                                     "TOOLTIP": "VOR Conventional Approach Areas Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                                    "ICON": os.path.join(self.icons_dir, 'vor.svg'),
                                     "DOCK_WIDGET": QPANSOPYVORDockWidget,
                                     "GUI_INSTANCE": None
                                 },
@@ -103,7 +103,7 @@ class Qpansopy:
                                     "TITLE": "QPANSOPY NDB",
                                     "TOOLBAR": "CONV",
                                     "TOOLTIP": "NDB Conventional Approach Areas Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                                    "ICON": os.path.join(self.icons_dir, 'ndb.svg'),
                                     "DOCK_WIDGET": QPANSOPYNDBDockWidget,
                                     "GUI_INSTANCE": None
                                 },
@@ -111,7 +111,7 @@ class Qpansopy:
                                     "TITLE": "QPANSOPY CONV Initial",
                                     "TOOLBAR": "CONV",
                                     "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                                    "ICON": os.path.join(self.icons_dir, 'conv_corridor.svg'),
                                     "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
                                     "GUI_INSTANCE": None
                                 },
