@@ -41,32 +41,38 @@ def run_ndb_approach(iface, routing_layer):
             else:
                 L = length/1852
             
-            # Calculate key points for NDB template
+            # Calculate key points for NDB template ensuring perfect symmetry
             pts = {}
             
             # End point of template
             end_template = start_point.project(L*1852, azimuth)
             
-            # Primary area width at start: ±1.25 NM
-            primary_width_start = 1.25
-            pts['p1'] = start_point.project(primary_width_start*1852, azimuth-90)  # Left side start
-            pts['p2'] = start_point.project(primary_width_start*1852, azimuth+90)  # Right side start
+            # Calculate half-widths for perfect symmetry
+            # Primary area half-width at start: 1.25 NM (total width = 2.5 NM)
+            primary_half_width_start = 1.25
+            # Primary area half-width at end: (L*tan(10.3°) + 1.25) NM
+            primary_half_width_end = L*tan(radians(10.3)) + 1.25
             
-            # Primary area width at end: ±(L*tan(10.3°) + 1.25) NM
-            primary_width_end = L*tan(radians(10.3)) + 1.25
-            pts['p3'] = end_template.project(primary_width_end*1852, azimuth-90)  # Left side end
-            pts['p4'] = end_template.project(primary_width_end*1852, azimuth+90)  # Right side end
+            # Secondary area half-width at start: 2.0 NM (total width = 4 NM)
+            secondary_half_width_start = 2.0
+            # Secondary area half-width at end: (L*tan(12°) + 2.0) NM
+            secondary_half_width_end = L*tan(radians(12.0)) + 2.0
             
-            # Secondary area extends beyond primary area
-            # Secondary width at start: ±2.0 NM
-            secondary_width_start = 2.0
-            pts['s1'] = start_point.project(secondary_width_start*1852, azimuth-90)  # Left secondary start
-            pts['s2'] = start_point.project(secondary_width_start*1852, azimuth+90)  # Right secondary start
+            # Create symmetric points using perpendicular bearings
+            left_bearing = azimuth - 90  # 90 degrees to the left
+            right_bearing = azimuth + 90  # 90 degrees to the right
             
-            # Secondary width at end: ±(L*tan(12°) + 2.0) NM
-            secondary_width_end = L*tan(radians(12.0)) + 2.0
-            pts['s3'] = end_template.project(secondary_width_end*1852, azimuth-90)  # Left secondary end
-            pts['s4'] = end_template.project(secondary_width_end*1852, azimuth+90)  # Right secondary end
+            # Primary area points (symmetric about centerline)
+            pts['p1'] = start_point.project(primary_half_width_start*1852, left_bearing)   # Left side start
+            pts['p2'] = start_point.project(primary_half_width_start*1852, right_bearing)  # Right side start
+            pts['p3'] = end_template.project(primary_half_width_end*1852, left_bearing)    # Left side end
+            pts['p4'] = end_template.project(primary_half_width_end*1852, right_bearing)   # Right side end
+            
+            # Secondary area points (symmetric about centerline)
+            pts['s1'] = start_point.project(secondary_half_width_start*1852, left_bearing)   # Left secondary start
+            pts['s2'] = start_point.project(secondary_half_width_start*1852, right_bearing)  # Right secondary start
+            pts['s3'] = end_template.project(secondary_half_width_end*1852, left_bearing)    # Left secondary end
+            pts['s4'] = end_template.project(secondary_half_width_end*1852, right_bearing)   # Right secondary end
             
             # Create memory layer for polygons
             v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "NDB Approach Areas", "memory")

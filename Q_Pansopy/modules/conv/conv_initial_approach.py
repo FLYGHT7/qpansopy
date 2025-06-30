@@ -59,9 +59,9 @@ def run_conv_initial_approach(iface, routing_layer):
             # routine 1 FAF determination
             bearing = azimuth
             angle = 90 - bearing
-            bearing_rad = radians(bearing)
-            angle_rad = radians(angle)
-            dist_x, dist_y = (length0 * cos(angle_rad), length0 * sin(angle_rad))
+            bearing = radians(bearing)
+            angle = radians(angle)
+            dist_x, dist_y = (length0 * cos(angle), length0 * sin(angle))
             
             pts["m"+str(a)] = QgsPoint(end_point.x() + dist_x, end_point.y() + dist_y)
             a += 1
@@ -76,9 +76,9 @@ def run_conv_initial_approach(iface, routing_layer):
                 TNA_dist = i * 1852
                 bearing = azimuth + 90
                 angle = 90 - bearing
-                bearing_rad = radians(bearing)
-                angle_rad = radians(angle)
-                dist_x, dist_y = (TNA_dist * cos(angle_rad), TNA_dist * sin(angle_rad))
+                bearing = radians(bearing)
+                angle = radians(angle)
+                dist_x, dist_y = (TNA_dist * cos(angle), TNA_dist * sin(angle))
                 bx1, by2 = (start_point.x() + dist_x, start_point.y() + dist_y)
 
                 line_start = QgsPoint(bx1, by2)
@@ -92,9 +92,9 @@ def run_conv_initial_approach(iface, routing_layer):
                 TNA_dist = i * 1852
                 bearing = azimuth + 90
                 angle = 90 - bearing
-                bearing_rad = radians(bearing)
-                angle_rad = radians(angle)
-                dist_x, dist_y = (TNA_dist * cos(angle_rad), TNA_dist * sin(angle_rad))
+                bearing = radians(bearing)
+                angle = radians(angle)
+                dist_x, dist_y = (TNA_dist * cos(angle), TNA_dist * sin(angle))
                 bx1, by2 = (end_point.x() + dist_x, end_point.y() + dist_y)
 
                 line_start = QgsPoint(bx1, by2)

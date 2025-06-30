@@ -34,7 +34,7 @@ import datetime
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'qpansopy_wind_spiral_dockwidget.ui'))
+    os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_wind_spiral_dockwidget.ui'))
 
 
 class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -612,10 +612,20 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         show_points = self.showPointsCheckBox.isChecked()
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
+        
+        # Get aerodrome elevation and temperature reference for ISA calculation
+        adElev = self.exact_values.get('adElev', self.adElevLineEdit.text())
+        tempRef = self.exact_values.get('tempRef', self.tempRefLineEdit.text())
+        
         # Unidades
         altitude_unit = self.units.get('altitude', 'ft')
+        adElev_unit = self.units.get('adElev', 'ft')
+        
         # Prepare parameters
         params = {
+            'adElev': adElev,
+            'adElev_unit': adElev_unit,
+            'tempRef': tempRef,
             'IAS': IAS,
             'altitude': altitude,
             'altitude_unit': altitude_unit,
@@ -624,8 +634,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'turn_direction': turn_direction,
             'show_points': show_points,
             'export_kml': export_kml,
-            'output_dir': output_dir,
-            'isa_var': isa_var
+            'output_dir': output_dir
         }
         
         # Registrar las unidades utilizadas
@@ -633,7 +642,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         try:
             # Import here to avoid circular imports
-            from .modules.wind_spiral import calculate_wind_spiral
+            from ...modules.wind_spiral import calculate_wind_spiral
             result = calculate_wind_spiral(self.iface, point_layer, reference_layer, params)
             
             # Log results
@@ -669,7 +678,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             }
             
             # Import module and format parameters
-            from .modules.wind_spiral import copy_parameters_table
+            from ...modules.wind_spiral import copy_parameters_table
             formatted_params = copy_parameters_table(params)
             
             # Copy to clipboard

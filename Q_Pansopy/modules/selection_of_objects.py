@@ -6,6 +6,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsWkbTypes,
     QgsFeature,
+    QgsGeometry,
     QgsSymbol,
     QgsSimpleMarkerSymbolLayer,
     QgsVectorFileWriter,
@@ -83,9 +84,14 @@ def extract_objects(iface, point_layer, surface_layer, export_kml=False, output_
     point_crs = point_layer.crs()
     surface_crs = surface_layer.crs()
     
-    # Crear transformaciones si es necesario
-    transform_point_to_project = QgsCoordinateTransform(point_crs, project_crs, QgsProject.instance())
-    transform_surface_to_project = QgsCoordinateTransform(surface_crs, project_crs, QgsProject.instance())
+    # Crear transformaciones si es necesario (optimización: verificar una sola vez por capa)
+    transform_point_to_project = None
+    transform_surface_to_project = None
+    
+    if point_crs != project_crs:
+        transform_point_to_project = QgsCoordinateTransform(point_crs, project_crs, QgsProject.instance())
+    if surface_crs != project_crs:
+        transform_surface_to_project = QgsCoordinateTransform(surface_crs, project_crs, QgsProject.instance())
     
     # Obtener las geometrías de superficie
     if use_selection_only:
@@ -99,7 +105,7 @@ def extract_objects(iface, point_layer, surface_layer, export_kml=False, output_
     for feat in surface_features:
         geom = feat.geometry()
         # Transformar al CRS del proyecto si es necesario
-        if surface_crs != project_crs:
+        if transform_surface_to_project:
             geom.transform(transform_surface_to_project)
             
         if surface_geom is None:
@@ -109,6 +115,23 @@ def extract_objects(iface, point_layer, surface_layer, export_kml=False, output_
     
     if surface_geom is None:
         return result
+    
+    # Crear índice espacial para optimizar las consultas de intersección
+    spatial_index = QgsSpatialIndex()
+    point_features = {}
+    
+    # Poblar el índice espacial con los puntos (transformados si es necesario)
+    for feat in point_layer.getFeatures():
+        geom = feat.geometry()
+        # Transformar al CRS del proyecto si es necesario (sin usar clone())
+        if transform_point_to_project:
+            # Crear una copia de la geometría para transformar
+            transformed_geom = QgsGeometry(geom)
+            transformed_geom.transform(transform_point_to_project)
+            geom = transformed_geom
+            
+        spatial_index.addFeature(feat)
+        point_features[feat.id()] = (feat, geom)
     
     # Crear una nueva capa para los objetos extraídos usando el CRS del proyecto
     current_date = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -123,21 +146,21 @@ def extract_objects(iface, point_layer, surface_layer, export_kml=False, output_
     provider.addAttributes(point_layer.fields())
     extracted_layer.updateFields()
     
-    # Verificar intersecciones y añadir características
-    for feat in point_layer.getFeatures():
-        geom = feat.geometry()
-        # Transformar al CRS del proyecto si es necesario
-        if point_crs != project_crs:
-            geom = geom.clone()
-            geom.transform(transform_point_to_project)
+    # Usar índice espacial para encontrar candidatos, luego verificar intersección exacta
+    candidate_ids = spatial_index.intersects(surface_geom.boundingBox())
+    
+    # Verificar intersecciones exactas solo para los candidatos
+    for feature_id in candidate_ids:
+        if feature_id in point_features:
+            feat, geom = point_features[feature_id]
             
-        if surface_geom.intersects(geom):
-            # Crear nueva característica y añadirla a la capa de resultados
-            new_feat = QgsFeature(feat)
-            new_feat.setGeometry(geom)
-            provider.addFeatures([new_feat])
-            result['features'].append(new_feat)
-            result['count'] += 1
+            if surface_geom.intersects(geom):
+                # Crear nueva característica y añadirla a la capa de resultados
+                new_feat = QgsFeature(feat)
+                new_feat.setGeometry(geom)
+                provider.addFeatures([new_feat])
+                result['features'].append(new_feat)
+                result['count'] += 1
     
     # Actualizar la capa
     extracted_layer.updateExtents()

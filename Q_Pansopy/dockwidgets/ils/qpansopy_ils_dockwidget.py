@@ -33,7 +33,7 @@ import datetime
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-   os.path.dirname(__file__), 'qpansopy_ils_dockwidget.ui'))
+   os.path.dirname(__file__), '..', '..', 'ui', 'ils', 'qpansopy_ils_dockwidget.ui'))
 
 
 class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -513,7 +513,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            # Run calculation for Basic ILS
            self.log("Running Basic ILS calculation...")
            # Import here to avoid circular imports
-           from .modules.basic_ils import calculate_basic_ils
+           from ...modules.basic_ils import calculate_basic_ils
            result = calculate_basic_ils(self.iface, point_layer, runway_layer, params)
            
            # Log results
