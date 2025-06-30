@@ -228,20 +228,6 @@
          </property>
         </widget>
        </item>
-       <!-- Añadir botón para cargar CSV -->
-       <item>
-        <widget class="QPushButton" name="loadCsvButton">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>25</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>Load Constants from CSV</string>
-         </property>
-        </widget>
-       </item>
       </layout>
      </widget>
     </item>

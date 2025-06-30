@@ -248,7 +248,9 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     global OAS_template, OAS_extended_to_FAP, OAS_W, OAS_X, OAS_Y, OAS_Z
     
     # Extract parameters
-    THR_elev = float(params.get('THR_elev', 0))
+    THR_elev = float(params.get('THR_elev', 0))  # This is already in meters
+    THR_elev_raw = params.get('THR_elev_raw', THR_elev)  # Original value before conversion
+    THR_elev_unit = params.get('THR_elev_unit', 'm')  # Original unit
     delta = float(params.get('delta', 0))
     FAP_elev = float(params.get('FAP_elev', 2000))
     MOC_intermediate = float(params.get('MOC_intermediate', 150))
@@ -256,13 +258,15 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
     
-    # Calculate derived values
+    # Calculate derived values (THR_elev is already in meters)
     FAP_height = FAP_elev * 0.3048 - THR_elev  # Convert ft to m and calculate height above threshold
     ILS_extension_height = FAP_height - MOC_intermediate
     
     # Create a parameters dictionary for JSON storage
     parameters_dict = {
-        'THR_elev': str(THR_elev),
+        'THR_elev': str(THR_elev),  # Converted value in meters
+        'THR_elev_raw': str(THR_elev_raw),  # Original value as entered by user
+        'THR_elev_unit': THR_elev_unit,  # Original unit
         'delta': str(delta),
         'FAP_elev': str(FAP_elev),
         'MOC_intermediate': str(MOC_intermediate),
@@ -275,78 +279,26 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     # Convert parameters to JSON string
     parameters_json = json.dumps(parameters_dict)
     
-    # Ask user if they want to load constants from CSV
-    reply = QMessageBox.question(None, 'Load Constants', 
-                                'Do you want to load OAS constants from a CSV file?',
-                                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+    # Load constants from CSV file - this is now mandatory
+    csv_path = params.get('csv_path')
+    if not csv_path:
+        raise ValueError("CSV file path is required but not provided")
     
-    if reply == QMessageBox.Yes:
-        # Load constants from CSV
-        csv_data = csv_to_structured_json(THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS_extension_height)
-        if not csv_data:
-            # User cancelled CSV selection or error occurred, use default constants
-            use_default_constants = True
-        else:
-            use_default_constants = False
-    else:
-        # Use default constants
-        use_default_constants = True
+    # Load constants from the provided CSV file
+    csv_data = csv_to_structured_json_from_path(csv_path, THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS_extension_height)
+    if not csv_data:
+        raise ValueError("Failed to load constants from CSV file")
     
-    if use_default_constants:
-        # Define plane constants for OAS surfaces
-        # Format: (A, B, C) where Ax + By + C = z
-        OAS_W = [0.0267, 0, 0]
-        OAS_X = [0.026, 0.026, 0]
-        OAS_Y = [-0.026, 0.026, 0]
-        OAS_Z = [0, 0.026, 0]
-        
-        # Calculate OAS template intersections
-        OAS_template = {
-            "C": solve_plane_intersection(OAS_W, OAS_X, 0),
-            "D": solve_plane_intersection(OAS_X, OAS_Y, 0),
-            "D": solve_plane_intersection(OAS_X, OAS_Y, 0),
-            "E": solve_plane_intersection(OAS_Y, OAS_Z, 0),
-            "C'": solve_plane_intersection(OAS_W, OAS_X, 300),
-            "D0'": solve_plane_intersection(OAS_X, OAS_Y, 300),
-            "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)
-        }
-        
-        # Calculate OAS extended intersections
-        OAS_extended_to_FAP = {
-            "C": OAS_template["C"],
-            "D": OAS_template["D"],
-            "D": OAS_template["D"],
-            "E": OAS_template["E"],
-            "C'": solve_plane_intersection(OAS_W, OAS_X, ILS_extension_height),
-            "D0'": solve_plane_intersection(OAS_X, OAS_Y, ILS_extension_height),
-            "E'": OAS_template["E'"]  # E' is always at 300m
-        }
+    # CSV constants have been loaded and applied to global variables OAS_W, OAS_X, OAS_Y, OAS_Z
+    # and OAS_template, OAS_extended_to_FAP have been calculated
     
-    # If any of the calculated intersections is None, fall back to hardcoded values
+    # Validate that CSV constants were loaded properly
+    if not OAS_template or not OAS_extended_to_FAP:
+        raise ValueError("Failed to calculate OAS intersections from CSV constants")
+    
+    # Check if any of the calculated intersections is None
     if None in OAS_template.values() or None in OAS_extended_to_FAP.values():
-        # OAS constants for CAT I (hardcoded)
-        OAS_template = {
-            "C": (264.912280701755, 51.5006231718033, 0),
-            "D": (-314.787533274559, 139.427992202075, 0),
-            "D": (-314.787533274559, 139.427992202075, 0),
-            "E": (-900, 206.14654526464, 0),
-            "C'": (16260.701754386, 23.2302945102742, 300),
-            "D'": (8383.82771078259, 1217.97418460436, 300),
-            "D0'": (8383.82771078259, 1217.97418460436, 300),
-            "E'": (-12900, 2936.60225698781, 300)
-        }
-        
-        # For extended, use the same values but adjust C' and D' heights
-        OAS_extended_to_FAP = {
-            "C": OAS_template["C"],
-            "D": OAS_template["D"],
-            "D0": OAS_template["D"],
-            "E": OAS_template["E"],
-            "C'": (16260.701754386, 23.2302945102742, ILS_extension_height),
-            "D'": (8383.82771078259, 1217.97418460436, ILS_extension_height),
-            "D0'": (8383.82771078259, 1217.97418460436, 300),
-            "E'": OAS_template["E'"]
-        }
+        raise ValueError("Invalid CSV constants resulted in failed intersection calculations")
     
     # Log start
     iface.messageBar().pushMessage("QPANSOPY:", "Executing OAS CAT I", level=Qgis.Info)
@@ -585,3 +537,102 @@ def copy_parameters_table(params):
         params_dict,
         sections
     )
+
+def csv_to_structured_json_from_path(csv_path, THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS_extension_height):
+    """
+    Read OAS constants from a CSV file path and convert to structured JSON
+    
+    :param csv_path: Path to the CSV file
+    :param THR_elev: Threshold elevation in meters
+    :param FAP_elev: FAP elevation in feet
+    :param MOC_intermediate: MOC intermediate in meters
+    :param FAP_height: FAP height in meters
+    :param ILS_extension_height: ILS extension height in meters
+    :return: Dictionary with structured data or None if error occurs
+    """
+    global OAS_template, OAS_extended_to_FAP, OAS_W, OAS_X, OAS_Y, OAS_Z
+    
+    if not csv_path or not os.path.exists(csv_path):
+        return None
+    
+    data = {}
+    current_section = None
+    stop_section = "---OAS Template coordinates -m(meters)"
+    plane_constants = {}
+    
+    try:
+        with open(csv_path, 'r', encoding='utf-8-sig') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith('---') and line.strip() == stop_section:
+                    break
+                if line.startswith('---'):
+                    current_section = line.strip('- \t\n')
+                    data[current_section] = {}
+                    continue
+                if '\t' in line:
+                    parts = [p.strip().rstrip(',') for p in line.split('\t') if p.strip()]
+                else:
+                    parts = [p.strip().rstrip(',') for p in re.split(r',|\s{2,}', line) if p.strip()]
+                if len(parts)==2:
+                    key, value = parts
+                elif len(parts)>2:
+                    key = ' '.join(parts[:-1])
+                    value = parts[-1]
+                else:
+                    continue
+                
+                if current_section:
+                    try:
+                        if value.replace('.', '').replace('-', '').isdigit():
+                            data[current_section][key] = float(value)
+                        else:
+                            data[current_section][key] = value
+                    except ValueError:
+                        data[current_section][key] = value
+        
+        # Extract plane constants
+        for section, values in data.items():
+            if 'W' in values and 'X' in values and 'Y' in values and 'Z' in values:
+                plane_constants = {
+                    'W': [values['W'], 0, 0],
+                    'X': [values['X'], values['X'], 0],
+                    'Y': [-values['Y'], values['Y'], 0],
+                    'Z': [0, values['Z'], 0]
+                }
+                break
+        
+        if plane_constants:
+            OAS_W = plane_constants['W']
+            OAS_X = plane_constants['X']
+            OAS_Y = plane_constants['Y']
+            OAS_Z = plane_constants['Z']
+            
+            # Calculate intersections
+            OAS_template = {
+                "C": solve_plane_intersection(OAS_W, OAS_X, 0),
+                "D": solve_plane_intersection(OAS_X, OAS_Y, 0),
+                "E": solve_plane_intersection(OAS_Y, OAS_Z, 0),
+                "C'": solve_plane_intersection(OAS_W, OAS_X, 300),
+                "D0'": solve_plane_intersection(OAS_X, OAS_Y, 300),
+                "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)
+            }
+            
+            OAS_extended_to_FAP = {
+                "C": OAS_template["C"],
+                "D": OAS_template["D"],
+                "E": OAS_template["E"],
+                "C'": solve_plane_intersection(OAS_W, OAS_X, ILS_extension_height),
+                "D0'": solve_plane_intersection(OAS_X, OAS_Y, ILS_extension_height),
+                "E'": solve_plane_intersection(OAS_Y, OAS_Z, ILS_extension_height)
+            }
+            
+            return data
+        else:
+            return None
+            
+    except Exception as e:
+        print(f"Error reading CSV file: {str(e)}")
+        return None
