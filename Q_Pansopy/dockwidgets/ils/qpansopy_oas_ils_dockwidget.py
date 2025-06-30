@@ -33,7 +33,7 @@ import datetime  # Añadido para la función de copia de parámetros
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-   os.path.dirname(__file__), 'qpansopy_oas_ils_dockwidget.ui'))
+   os.path.dirname(__file__), '..', '..', 'ui', 'ils', 'qpansopy_oas_ils_dockwidget.ui'))
 
 
 class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -457,7 +457,7 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            # Run calculation for OAS ILS
            self.log("Running OAS ILS CAT I calculation...")
            # Import here to avoid circular imports
-           from .modules.oas_ils import calculate_oas_ils
+           from ...modules.oas_ils import calculate_oas_ils
            result = calculate_oas_ils(self.iface, point_layer, runway_layer, params)
            
            # Log results

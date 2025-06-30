@@ -11,15 +11,16 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCo
 
 # Importar los dock widgets con manejo de errores
 try:
-    from .qpansopy_vss_dockwidget import QPANSOPYVSSDockWidget
-    from .qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
-    from .qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
-    from .qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
-    from .qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
-    from .qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
-    from .qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
-    from .qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
-    from .qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
+    # Import dock widgets from new organized structure
+    from .dockwidgets.utilities.qpansopy_vss_dockwidget import QPANSOPYVSSDockWidget
+    from .dockwidgets.ils.qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
+    from .dockwidgets.utilities.qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
+    from .dockwidgets.ils.qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
+    from .dockwidgets.utilities.qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
+    from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
+    from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
+    from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
+    from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui

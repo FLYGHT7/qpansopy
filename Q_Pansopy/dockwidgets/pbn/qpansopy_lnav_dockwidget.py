@@ -5,7 +5,7 @@ import os
 import datetime
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'qpansopy_lnav_dockwidget.ui'))
+    os.path.dirname(__file__), '..', '..', 'ui', 'pbn', 'qpansopy_lnav_dockwidget.ui'))
 
 class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -68,17 +68,17 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Determine which approach to calculate - usar solo la selección actual del usuario
             if self.initialRadioButton.isChecked():
                 self.log("Calculating Initial Approach...")
-                from .modules.PBN_LNAV_Initial_Approach import run_initial_approach
+                from ...modules.PBN_LNAV_Initial_Approach import run_initial_approach
                 result = run_initial_approach(self.iface, routing_layer)
                 approach_type = "Initial"
             elif self.intermediateRadioButton.isChecked():
                 self.log("Calculating Intermediate Approach...")
-                from .modules.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
+                from ...modules.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
                 result = run_intermediate_approach(self.iface, routing_layer)
                 approach_type = "Intermediate"
             else:  # Final approach
                 self.log("Calculating Final Approach...")
-                from .modules.PBN_LNAV_Final_Approach import run_final_approach
+                from ...modules.PBN_LNAV_Final_Approach import run_final_approach
                 result = run_final_approach(self.iface, routing_layer)
                 approach_type = "Final"
 

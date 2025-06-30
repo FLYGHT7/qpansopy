@@ -5,7 +5,7 @@ import os
 import datetime
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'qpansopy_vor_dockwidget.ui'))
+    os.path.dirname(__file__), '..', '..', 'ui', 'conv', 'qpansopy_vor_dockwidget.ui'))
 
 class QPANSOPYVORDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -65,7 +65,7 @@ class QPANSOPYVORDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         try:
             self.log("Calculating VOR Approach Areas...")
-            from .modules.conv.vor_approach import run_vor_approach
+            from ...modules.conv.vor_approach import run_vor_approach
             result = run_vor_approach(self.iface, routing_layer)
 
             # Log results

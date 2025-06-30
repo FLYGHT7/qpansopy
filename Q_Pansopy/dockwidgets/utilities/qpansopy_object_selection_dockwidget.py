@@ -5,7 +5,7 @@ from qgis.gui import QgsMapLayerComboBox
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'qpansopy_object_selection_dockwidget.ui'))
+    os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_object_selection_dockwidget.ui'))
 
 class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -73,7 +73,7 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage("QPANSOPY", "Extracting objects...", level=Qgis.Info)
             
             # Importar directamente la función de extracción y ejecutarla
-            from .modules.selection_of_objects import extract_objects
+            from ...modules.selection_of_objects import extract_objects
             
             # IMPORTANTE: Ejecutar directamente la función sin abrir diálogos
             result = extract_objects(

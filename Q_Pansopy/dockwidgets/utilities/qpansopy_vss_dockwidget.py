@@ -33,7 +33,7 @@ import datetime
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-os.path.dirname(__file__), 'qpansopy_vss_dockwidget.ui'))
+os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_vss_dockwidget.ui'))
 
 
 class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -413,12 +413,12 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if self.straightInNPARadioButton.isChecked():
                 self.log("Running Straight In calculation...")
                 # Import here to avoid circular imports
-                from .modules.vss_straight import calculate_vss_straight
+                from ...modules.vss_straight import calculate_vss_straight
                 result = calculate_vss_straight(self.iface, point_layer, runway_layer, params)
             else:  # LOC is selected
                 self.log("Running LOC calculation...")
                 # Import here to avoid circular imports
-                from .modules.vss_loc import calculate_vss_loc
+                from ...modules.vss_loc import calculate_vss_loc
                 result = calculate_vss_loc(self.iface, point_layer, runway_layer, params)
             
             # Log results
