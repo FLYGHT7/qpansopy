@@ -58,20 +58,21 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
         altitude = altitude * 3.28084
     bankAngle = float(params.get('bankAngle', 15))
     w = float(params.get('w', 30))
-    isa_var = float(params.get('isa_var', 0))
     turn_direction = params.get('turn_direction', 'R')
     show_points = params.get('show_points', True)
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
 
-    # --- UNIT CONVERSION PATCH ---
-    # Get adElev and tempRef from params, ensure they're present
+    # Get aerodrome elevation and temperature reference from params
     adElev = float(params.get('adElev', 0))
     adElev_unit = params.get('adElev_unit', 'ft')
     if adElev_unit == 'm':
         adElev = adElev * 3.28084
     tempRef = float(params.get('tempRef', 15))
-    # --- END PATCH ---
+    
+    # Calculate ISA temperature and deviation
+    valueISA = ISA_temperature(adElev, tempRef)
+    isa_var = valueISA[3]  # Use the calculated ISA deviation
     
     # Create a parameters dictionary for JSON storage
     parameters_dict = {
@@ -83,18 +84,18 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
         'altitude_unit': altitude_unit,
         'bankAngle': str(bankAngle),
         'w': str(w),
-        'isa_var': str(isa_var),
+        'isa_calculated': str(round(valueISA[2], 2)),
+        'isa_var': str(round(isa_var, 2)),
         'turn_direction': turn_direction,
         'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'calculation_type': 'Wind Spiral'
     }
     parameters_json = json.dumps(parameters_dict)
 
-    # Log ISA deviation (for info only, not used in calculation)
-    valueISA = ISA_temperature(adElev, tempRef)
+    # Log ISA calculation results
     iface.messageBar().pushMessage(
         "Info", 
-        f"ISA + {isa_var} (Calculated: {round(valueISA[3],2)})", 
+        f"ISA Temperature: {round(valueISA[2], 2)}°C, ISA Deviation: {round(isa_var, 2)}°C", 
         level=Qgis.Info
     )
 
@@ -300,10 +301,17 @@ def copy_parameters_table(params):
     """Generate formatted table for Wind Spiral parameters"""
     from ..utils import format_parameters_table
     
+    # Calculate ISA values if adElev and tempRef are provided
+    adElev = float(params.get('adElev', 0))
+    tempRef = float(params.get('tempRef', 15))
+    valueISA = ISA_temperature(adElev, tempRef)
+    
     params_dict = {
         'airport_data': {
             'aerodrome_elevation': {'value': params.get('adElev', 0), 'unit': params.get('adElev_unit', 'ft')},
-            'temperature_reference': {'value': params.get('tempRef', 15), 'unit': '°C'}
+            'temperature_reference': {'value': params.get('tempRef', 15), 'unit': '°C'},
+            'isa_calculated': {'value': round(valueISA[2], 2), 'unit': '°C'},
+            'isa_variation': {'value': round(valueISA[3], 2), 'unit': '°C'}
         },
         'flight_params': {
             'IAS': {'value': params.get('IAS', 205), 'unit': 'kt'},
@@ -319,6 +327,8 @@ def copy_parameters_table(params):
     sections = {
         'aerodrome_elevation': 'Airport Data',
         'temperature_reference': 'Airport Data',
+        'isa_calculated': 'Airport Data',
+        'isa_variation': 'Airport Data',
         'IAS': 'Flight Parameters',
         'altitude': 'Flight Parameters',
         'bank_angle': 'Flight Parameters',

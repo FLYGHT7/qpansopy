@@ -33,7 +33,7 @@ import datetime  # Añadido para la función de copia de parámetros
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-   os.path.dirname(__file__), 'qpansopy_oas_ils_dockwidget.ui'))
+   os.path.dirname(__file__), '..', '..', 'ui', 'ils', 'qpansopy_oas_ils_dockwidget.ui'))
 
 
 class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -75,9 +75,8 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.calculateButton.clicked.connect(self.calculate)
        self.browseButton.clicked.connect(self.browse_output_folder)
        
-       # Conectar el botón de carga de CSV si existe
-       if hasattr(self, 'loadCsvButton'):
-           self.loadCsvButton.clicked.connect(self.load_csv)
+       # Remove the redundant load CSV button functionality
+       # CSV loading is now mandatory during calculation
        
        # Set default output folder
        self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -105,22 +104,27 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        
        # Log message
        self.log("QPANSOPY OAS ILS plugin loaded. Select layers and parameters, then click Calculate.")
+       self.log("Note: A CSV file with OAS constants will be required when you click Calculate.")
    
-   def load_csv(self):
-       """Cargar un archivo CSV con constantes OAS"""
+   def request_csv_file(self):
+       """Request CSV file from user - mandatory for calculation"""
        from PyQt5.QtWidgets import QFileDialog
        
        csv_path, _ = QFileDialog.getOpenFileName(
            self,
-           "Select CSV File with OAS Constants",
+           "Select CSV File with OAS Constants (Required)",
            "",
            "CSV Files (*.csv);;All Files (*)"
        )
        
        if csv_path:
            self.csv_path = csv_path
-           self.log(f"CSV file loaded: {os.path.basename(csv_path)}")
-           self.iface.messageBar().pushMessage("QPANSOPY", f"CSV file loaded: {os.path.basename(csv_path)}", level=Qgis.Info)
+           self.log(f"CSV file selected: {os.path.basename(csv_path)}")
+           return True
+       else:
+           self.log("OAS Constants not provided, Calculation not performed")
+           self.iface.messageBar().pushMessage("QPANSOPY", "OAS Constants file is required for calculation", level=Qgis.Warning)
+           return False
    
    def setup_copy_button(self):
        """Configurar botones para copiar parámetros al portapapeles"""
@@ -181,12 +185,22 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                            for key, value in params_dict.items():
                                if key.endswith('_unit'):
                                    continue
+                               if key == 'THR_elev_raw':
+                                   continue  # Skip raw value, we'll handle it specially
                                display_name = key.replace('_', ' ').title()
                                unit = ""
                                unit_key = key + '_unit'
                                if unit_key in params_dict:
                                    unit = params_dict[unit_key]
-                               params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+                               
+                               # Special handling for THR_elev to show both original and converted
+                               if key == 'THR_elev':
+                                   raw_value = params_dict.get('THR_elev_raw', value)
+                                   original_unit = params_dict.get('THR_elev_unit', 'm')
+                                   params_text += f"{'Threshold Elevation (Original)':<25}\t{raw_value}\t\t{original_unit}\n"
+                                   params_text += f"{'Threshold Elevation (Meters)':<25}\t{value}\t\tm\n"
+                               else:
+                                   params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
                            if 'ILS_surface' in [field.name() for field in layer.fields()]:
                                surface_type = feature.attribute('ILS_surface')
                                if surface_type:
@@ -302,16 +316,16 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Añadir el widget al formulario
        self.formLayout.addRow("Threshold Elevation:", thrElevContainer)
        
-       # Delta
+       # Delta - Hidden for now, kept for future use
        self.deltaLineEdit = QtWidgets.QLineEdit(self)
        self.deltaLineEdit.setValidator(validator)
        self.deltaLineEdit.setText("0")
        self.deltaLineEdit.textChanged.connect(
            lambda text: self.store_exact_value('delta', text))
        self.deltaLineEdit.setMinimumHeight(25)
+       self.deltaLineEdit.setVisible(False)  # Hide the Delta field
        
-       # Añadir el widget al formulario
-       self.formLayout.addRow("Delta:", self.deltaLineEdit)
+       # Don't add Delta to the form layout (hidden)
        
        # FAP Elevation (ft)
        self.fapElevLineEdit = QtWidgets.QLineEdit(self)
@@ -411,9 +425,26 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        
        return True
    
+   def convert_threshold_elevation_to_meters(self, thr_elev_value, unit):
+       """Convert threshold elevation to meters based on selected unit"""
+       try:
+           value = float(thr_elev_value)
+           if unit == 'ft':
+               # Convert feet to meters (1 ft = 0.3048 m)
+               return value * 0.3048
+           else:
+               # Already in meters
+               return value
+       except (ValueError, TypeError):
+           return 0.0
+   
    def calculate(self):
        """Run the calculation"""
        self.log("Starting calculation...")
+       
+       # First, request CSV file - this is mandatory
+       if not self.request_csv_file():
+           return
        
        # Validate inputs
        if not self.validate_inputs():
@@ -423,8 +454,14 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        point_layer = self.pointLayerComboBox.currentLayer()
        runway_layer = self.runwayLayerComboBox.currentLayer()
        
-       # Usar valores exactos si están disponibles, de lo contrario usar los valores de los QLineEdit
-       THR_elev = self.exact_values.get('THR_elev', self.thrElevLineEdit.text())
+       # Get raw values from UI
+       THR_elev_raw = self.exact_values.get('THR_elev', self.thrElevLineEdit.text())
+       THR_elev_unit = self.units.get('THR_elev', 'm')
+       
+       # Convert threshold elevation to meters for internal calculations
+       THR_elev_meters = self.convert_threshold_elevation_to_meters(THR_elev_raw, THR_elev_unit)
+       
+       # Other parameters (already in correct units)
        delta = self.exact_values.get('delta', self.deltaLineEdit.text())
        FAP_elev = self.exact_values.get('FAP_elev', self.fapElevLineEdit.text())
        MOC_intermediate = self.exact_values.get('MOC_intermediate', self.mocIntermediateLineEdit.text())
@@ -435,7 +472,8 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        
        # Prepare parameters
        params = {
-           'THR_elev': THR_elev,
+           'THR_elev': THR_elev_meters,  # Use converted value in meters
+           'THR_elev_raw': THR_elev_raw,  # Keep original value for documentation
            'delta': delta,
            'FAP_elev': FAP_elev,
            'MOC_intermediate': MOC_intermediate,
@@ -443,13 +481,13 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            'export_kml': export_kml,
            'output_dir': output_dir,
            # Añadir información de unidades
-           'THR_elev_unit': self.units.get('THR_elev', 'm'),
+           'THR_elev_unit': THR_elev_unit,
            # Añadir ruta del CSV si está disponible
            'csv_path': self.csv_path
        }
        
-       # Registrar las unidades utilizadas
-       self.log(f"Using units - Threshold Elevation: {self.units.get('THR_elev', 'm')}")
+       # Registrar las unidades utilizadas y la conversión
+       self.log(f"Threshold Elevation: {THR_elev_raw} {THR_elev_unit} = {THR_elev_meters:.4f} m (converted)")
        self.log(f"FAP Elevation: {FAP_elev} ft, MOC Intermediate: {MOC_intermediate} m")
        self.log(f"OAS Type: {oas_type}")
        
@@ -457,7 +495,7 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            # Run calculation for OAS ILS
            self.log("Running OAS ILS CAT I calculation...")
            # Import here to avoid circular imports
-           from .modules.oas_ils import calculate_oas_ils
+           from ...modules.oas_ils import calculate_oas_ils
            result = calculate_oas_ils(self.iface, point_layer, runway_layer, params)
            
            # Log results
