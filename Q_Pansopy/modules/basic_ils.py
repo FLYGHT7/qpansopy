@@ -4,7 +4,7 @@ Basic ILS Surface Generator
 """
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, 
-    QgsCoordinateReferenceSystem, QgsCoordinateTransform,
+    QgsCoordinateReferenceSystem,
     QgsPointXY, QgsWkbTypes, QgsField, QgsFields, QgsPoint,
     QgsLineString, QgsPolygon, QgsVectorFileWriter
 )
@@ -23,7 +23,7 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     Create Basic ILS Surfaces
     
     :param iface: QGIS interface
-    :param point_layer: Point layer with the reference point (WGS84)
+    :param point_layer: Point layer with the reference point (projected CRS)
     :param runway_layer: Runway layer (projected CRS)
     :param params: Dictionary with calculation parameters
     :return: Dictionary with results
@@ -33,8 +33,32 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
     
-    # Get units
+    # Get units and convert to meters if necessary
     thr_elev_unit = params.get('thr_elev_unit', 'm')
+    original_thr_elev = thr_elev  # Store original value for logging
+    
+    # Convert threshold elevation to meters if it's in feet
+    if thr_elev_unit == 'ft':
+        thr_elev = thr_elev * 0.3048  # Convert feet to meters
+        iface.messageBar().pushMessage(
+            "Info", 
+            f"Converted threshold elevation from {original_thr_elev} ft to {round(thr_elev, 3)} m", 
+            level=Qgis.Info
+        )
+    elif thr_elev_unit == 'm':
+        iface.messageBar().pushMessage(
+            "Info", 
+            f"Using threshold elevation: {thr_elev} m (no conversion needed)", 
+            level=Qgis.Info
+        )
+    else:
+        # Handle unknown units by defaulting to meters
+        iface.messageBar().pushMessage(
+            "Warning", 
+            f"Unknown elevation unit '{thr_elev_unit}', assuming meters", 
+            level=Qgis.Warning
+        )
+        thr_elev_unit = 'm'
     
     # Create a parameters dictionary for JSON storage
     parameters_dict = {
@@ -138,12 +162,26 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     missed_center = thr_geom.project(900, azimuth)
     missed_a = missed_center.project(150, back_azimuth-90)
     missed_m_center = missed_center.project(1800, azimuth)
-    missed_b = missed_m_center.project(150+1800*((45/(14.3/100))/1800), back_azimuth-90)
-    missed_e = missed_m_center.project(150+1800*((45/(14.3/100))/1800), back_azimuth+90)
+    
+    # Simplified missed approach divergence calculation:
+    # For the lateral divergence at 1800m from start:
+    # Standard 15% slope gives lateral spread of 15% of distance = 1800 * 0.15 = 270m
+    # Add initial half-width of 150m: total = 150 + 270 = 420m
+    missed_half_width_1800m = 150 + (1800 * 0.15)
+    
+    missed_b = missed_m_center.project(missed_half_width_1800m, back_azimuth-90)
+    missed_e = missed_m_center.project(missed_half_width_1800m, back_azimuth+90)
     missed_f = missed_center.project(150, back_azimuth+90)
     missed_f_center = missed_center.project(12000, azimuth)
-    missed_c = missed_f_center.project(150+1800*((45/(14.3/100))/1800)+(10200*.25), back_azimuth-90)
-    missed_d = missed_f_center.project(150+1800*((45/(14.3/100))/1800)+(10200*.25), back_azimuth+90)
+    
+    # For the final points at 12000m from start:
+    # Total distance from threshold = 900 + 12000 = 12900m
+    # Lateral spread = 15% of 12900m = 1935m
+    # Add initial half-width: total = 150 + 1935 = 2085m
+    missed_half_width_12000m = 150 + (12900 * 0.15)
+    
+    missed_c = missed_f_center.project(missed_half_width_12000m, back_azimuth-90)
+    missed_d = missed_f_center.project(missed_half_width_12000m, back_azimuth+90)
     
     # Transition surface side distances
     transition_distance_1 = (300 - 60) / (14.3/100)
@@ -159,90 +197,92 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     transition_e3_right = missed_b.project(transition_distance_3, back_azimuth - 90)
     
     # Create and add features for each surface
+    # Note: Constants arrays in the format [a, b, c] define surface equations z = ax + by + c
+    # where x,y are coordinates relative to a reference point and z is elevation
     
-    # Ground surface
+    # Ground surface - horizontal at threshold elevation
     exterior_ring = [pz(gs_a, thr_elev), pz(gs_b, thr_elev), pz(gs_c, thr_elev), pz(gs_d, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['ground surface', parameters_json,'[0,0,0]'])  # Include parameters JSON
+    feature.setAttributes(['ground surface', parameters_json,'[0,0,0]'])  # Horizontal surface
     provider.addFeatures([feature])
     
-    # Approach surface section 1
+    # Approach surface section 1 - 2% upward slope (1:50)
     exterior_ring = [pz(as1_a, thr_elev+60), pz(gs_a, thr_elev), pz(gs_d, thr_elev), pz(as1_d, thr_elev+60)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['approach surface first section', parameters_json,'[0.02,0,-1.2]'])  # Include parameters JSON
+    feature.setAttributes(['approach surface first section', parameters_json,'[0.02,0,-1.2]'])  # 2% slope
     provider.addFeatures([feature])
     
-    # Approach surface section 2
+    # Approach surface section 2 - 2.5% upward slope (1:40)
     exterior_ring = [pz(as2_a, thr_elev+300), pz(as1_a, thr_elev+60), pz(as1_d, thr_elev+60), pz(as2_d, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['approach surface second section', parameters_json,'[0.025,0,-16.5]'])  # Include parameters JSON
+    feature.setAttributes(['approach surface second section', parameters_json,'[0.025,0,-16.5]'])  # 2.5% slope
     provider.addFeatures([feature])
     
-    # Missed approach surface
+    # Missed approach surface - 2.5% upward slope (1:40) with lateral divergence
     exterior_ring = [pz(missed_a, thr_elev), pz(missed_b, thr_elev+1800*0.025), pz(missed_c, thr_elev+12000*.025), pz(missed_d, thr_elev+12000*0.025), pz(missed_e, thr_elev+1800*0.025), pz(missed_f, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['missed approach surface', parameters_json,'[-0.025,0,-22.5]'])  # Include parameters JSON
+    feature.setAttributes(['missed approach surface', parameters_json,'[-0.025,0,-22.5]'])  # 2.5% downward slope
     provider.addFeatures([feature])
     
-    # Transition surfaces
-    # Left 1
+    # Transition surfaces - 14.3% lateral slope (1:7) connecting approach/missed surfaces
+    # Left 1 - connects approach section 1 to approach section 2
     exterior_ring = [pz(as2_d, thr_elev+300), pz(as1_d, thr_elev+60), pz(transition_e1_left, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 1', parameters_json,'[0.00355,.143,-36.66]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 1', parameters_json,'[0.00355,.143,-36.66]'])  # Complex slope
     provider.addFeatures([feature])
     
-    # Left 2
+    # Left 2 - connects approach section 1 to ground surface
     exterior_ring = [pz(as1_d, thr_elev+60), pz(transition_e1_left, thr_elev+300), pz(transition_e2_left, thr_elev+300), pz(gs_d, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 2', parameters_json,'[-0.00145,0.143,-21.36]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 2', parameters_json,'[-0.00145,0.143,-21.36]'])  # Complex slope
     provider.addFeatures([feature])
     
-    # Left 3
+    # Left 3 - connects ground surface to missed approach surface
     exterior_ring = [pz(transition_e2_left, thr_elev+300), pz(gs_d, thr_elev), pz(gs_c, thr_elev), pz(missed_e, thr_elev+1800*0.025), pz(transition_e3_left, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 3', parameters_json,'[0,0.143,-21.45]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 3', parameters_json,'[0,0.143,-21.45]'])  # 14.3% lateral slope
     provider.addFeatures([feature])
     
-    # Left 4
+    # Left 4 - continues missed approach transition
     exterior_ring = [pz(missed_e, thr_elev+1800*0.025), pz(missed_d, thr_elev+12000*.025), pz(transition_e3_left, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - left 4', parameters_json,'[0.01075,0.143,7.58]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - left 4', parameters_json,'[0.01075,0.143,7.58]'])  # Complex slope
     provider.addFeatures([feature])
     
-    # Right 1
+    # Right 1 - mirrors left 1 on opposite side
     exterior_ring = [pz(as2_a, thr_elev+300), pz(as1_a, thr_elev+60), pz(transition_e1_right, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 1', parameters_json,'[0.00355,.143,-36.66]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 1', parameters_json,'[0.00355,.143,-36.66]'])  # Complex slope
     provider.addFeatures([feature])
     
-    # Right 2
+    # Right 2 - mirrors left 2 on opposite side
     exterior_ring = [pz(as1_a, thr_elev+60), pz(transition_e1_right, thr_elev+300), pz(transition_e2_right, thr_elev+300), pz(gs_a, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 2', parameters_json,'[-0.00145,0.143,-21.36]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 2', parameters_json,'[-0.00145,0.143,-21.36]'])  # Complex slope
     provider.addFeatures([feature])
     
-    # Right 3
+    # Right 3 - mirrors left 3 on opposite side
     exterior_ring = [pz(transition_e2_right, thr_elev+300), pz(transition_e3_right, thr_elev+300), pz(missed_b, thr_elev+1800*0.025), pz(gs_b, thr_elev), pz(gs_a, thr_elev)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 3', parameters_json,'[0,0.143,-21.45]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 3', parameters_json,'[0,0.143,-21.45]'])  # 14.3% lateral slope
     provider.addFeatures([feature])
     
-    # Right 4
+    # Right 4 - mirrors left 4 on opposite side
     exterior_ring = [pz(missed_b, thr_elev+1800*0.025), pz(missed_c, thr_elev+12000*.025), pz(transition_e3_right, thr_elev+300)]
     feature = QgsFeature()
     feature.setGeometry(QgsPolygon(QgsLineString(exterior_ring)))
-    feature.setAttributes(['transition surface - right 4', parameters_json,'[0.01075,0.143,7.58]'])  # Include parameters JSON
+    feature.setAttributes(['transition surface - right 4', parameters_json,'[0.01075,0.143,7.58]'])  # Complex slope
     provider.addFeatures([feature])
     
     # Update layer extents
@@ -274,14 +314,14 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
         # Define KML export path
         kml_export_path = os.path.join(output_dir, f'Basic_ILS_Surfaces_{timestamp}.kml')
         
-        # Export to KML
-        crs = QgsCoordinateReferenceSystem("EPSG:4326")
+        # Export to KML using WGS84 (required for KML format)
+        kml_crs = QgsCoordinateReferenceSystem("EPSG:4326")
         
         kml_error = QgsVectorFileWriter.writeAsVectorFormat(
             v_layer,
             kml_export_path,
             'utf-8',
-            crs,
+            kml_crs,
             'KML',
             layerOptions=['MODE=2']
         )
@@ -334,14 +374,33 @@ def copy_parameters_table(params):
     """Generate formatted table for Basic ILS parameters"""
     from ..utils import format_parameters_table
     
+    # Get original and converted values for display
+    original_value = params.get('thr_elev', 0)
+    original_unit = params.get('thr_elev_unit', 'm')
+    
+    # Calculate converted value if necessary
+    if original_unit == 'ft':
+        converted_value = float(original_value) * 0.3048
+        display_text = f"{original_value} {original_unit} ({round(converted_value, 3)} m)"
+    else:
+        display_text = f"{original_value} {original_unit}"
+    
     params_dict = {
         'runway_data': {
-            'threshold_elevation': {'value': params.get('thr_elev', 0), 'unit': params.get('thr_elev_unit', 'm')}
+            'threshold_elevation': {'value': display_text, 'unit': ''}
+        },
+        'calculation_info': {
+            'coordinate_system': {'value': 'Projected CRS Required', 'unit': ''},
+            'surface_slopes': {'value': 'Approach: 2-2.5%, Transition: 14.3%', 'unit': ''},
+            'constants_format': {'value': '[a, b, c] for z = ax + by + c', 'unit': ''}
         }
     }
 
     sections = {
-        'threshold_elevation': 'Runway Data'
+        'threshold_elevation': 'Runway Data',
+        'coordinate_system': 'Calculation Info',
+        'surface_slopes': 'Calculation Info',
+        'constants_format': 'Calculation Info'
     }
 
     return format_parameters_table(
