@@ -22,14 +22,15 @@ Procedure Analysis and Obstacle Protection Surfaces - OAS ILS Module
 """
 
 import os
+import json
+import datetime
+import traceback
 from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.utils import iface
 from qgis.core import Qgis
-import json
-import datetime  # Añadido para la función de copia de parámetros
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -118,12 +119,36 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        )
        
        if csv_path:
-           self.csv_path = csv_path
-           self.log(f"CSV file selected: {os.path.basename(csv_path)}")
-           return True
+           # Validate that the file exists and is readable
+           if os.path.exists(csv_path):
+               try:
+                   with open(csv_path, 'r', encoding='utf-8-sig') as f:
+                       # Try to read first few lines to validate format
+                       lines = f.readlines()[:10]
+                       if any('OAS constants' in line for line in lines):
+                           self.csv_path = csv_path
+                           self.log(f"CSV file selected: {os.path.basename(csv_path)}")
+                           self.iface.messageBar().pushMessage("QPANSOPY", f"OAS Constants file loaded: {os.path.basename(csv_path)}", level=Qgis.Success)
+                           return True
+                       else:
+                           self.log("Warning: Selected CSV file may not contain OAS constants")
+                           self.iface.messageBar().pushMessage("QPANSOPY", "Warning: Selected CSV file may not contain expected OAS constants format", level=Qgis.Warning)
+                           self.csv_path = csv_path  # Still allow it, might be a different format
+                           return True
+               except Exception as e:
+                   error_msg = f"Error reading CSV file: {str(e)}"
+                   self.log(error_msg)
+                   self.iface.messageBar().pushMessage("QPANSOPY Error", error_msg, level=Qgis.Critical)
+                   return False
+           else:
+               error_msg = "Selected CSV file does not exist"
+               self.log(error_msg)
+               self.iface.messageBar().pushMessage("QPANSOPY Error", error_msg, level=Qgis.Critical)
+               return False
        else:
-           self.log("OAS Constants not provided, Calculation not performed")
-           self.iface.messageBar().pushMessage("QPANSOPY", "OAS Constants file is required for calculation", level=Qgis.Warning)
+           error_msg = "OAS Constants file is required for calculation"
+           self.log(error_msg)
+           self.iface.messageBar().pushMessage("QPANSOPY", error_msg, level=Qgis.Warning)
            return False
    
    def setup_copy_button(self):
@@ -153,11 +178,15 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
    def copy_parameters_for_word(self):
        """Copiar los parámetros OAS ILS en formato tabla para Word"""
+       import json
+       import datetime
+       
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
        params_text = "QPANSOPY OAS ILS CALCULATION PARAMETERS\n"
        params_text += "=" * 50 + "\n\n"
        found_params = False
+       
        for layer in vector_layers:
            if 'parameters' in [field.name() for field in layer.fields()]:
                has_oas_params = False
@@ -171,56 +200,90 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                                break
                        except Exception:
                            pass
+           
            if has_oas_params:
                params_text += f"LAYER: {layer.name()}\n"
                params_text += "-" * 30 + "\n\n"
+               
                for feature in layer.getFeatures():
                    params_json = feature.attribute('parameters')
                    if params_json:
                        found_params = True
                        try:
                            params_dict = json.loads(params_json)
+                           
+                           # Create formatted table
                            params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
                            params_text += "-" * 50 + "\n"
+                           
+                           # Parameter name mapping
+                           param_names = {
+                               'THR_elev': 'Threshold Elevation',
+                               'THR_elev_raw': 'Threshold Elevation (Original)',
+                               'THR_elev_unit': 'Threshold Elevation Unit',
+                               'delta': 'Delta',
+                               'FAP_elev': 'FAP Elevation',
+                               'MOC_intermediate': 'MOC Intermediate',
+                               'FAP_height': 'FAP Height',
+                               'ILS_extension_height': 'ILS Extension Height',
+                               'calculation_type': 'Calculation Type',
+                               'calculation_date': 'Calculation Date'
+                           }
+                           
+                           # Format parameters in table
                            for key, value in params_dict.items():
                                if key.endswith('_unit'):
-                                   continue
-                               if key == 'THR_elev_raw':
-                                   continue  # Skip raw value, we'll handle it specially
-                               display_name = key.replace('_', ' ').title()
-                               unit = ""
-                               unit_key = key + '_unit'
-                               if unit_key in params_dict:
-                                   unit = params_dict[unit_key]
+                                   continue  # Skip unit fields
                                
-                               # Special handling for THR_elev to show both original and converted
+                               display_name = param_names.get(key, key.replace('_', ' ').title())
+                               unit = ""
+                               
+                               # Get unit if exists
                                if key == 'THR_elev':
-                                   raw_value = params_dict.get('THR_elev_raw', value)
-                                   original_unit = params_dict.get('THR_elev_unit', 'm')
-                                   params_text += f"{'Threshold Elevation (Original)':<25}\t{raw_value}\t\t{original_unit}\n"
-                                   params_text += f"{'Threshold Elevation (Meters)':<25}\t{value}\t\tm\n"
-                               else:
-                                   params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+                                   unit = params_dict.get('THR_elev_unit', 'm')
+                               elif key == 'FAP_elev':
+                                   unit = 'ft'
+                               elif key == 'MOC_intermediate':
+                                   unit = 'm'
+                               elif key == 'FAP_height':
+                                   unit = 'm'
+                               elif key == 'ILS_extension_height':
+                                   unit = 'm'
+                               
+                               params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+                           
+                           # Add surface type if available
                            if 'ILS_surface' in [field.name() for field in layer.fields()]:
                                surface_type = feature.attribute('ILS_surface')
                                if surface_type:
                                    params_text += f"\nSurface Type: {surface_type}\n"
+                           
                            params_text += "\n"
-                           break
-                       except Exception:
+                           break  # Only need parameters from one feature
+                       except json.JSONDecodeError:
                            params_text += "Error: Could not parse parameters JSON\n\n"
+               
                params_text += "\n"
+       
        if not found_params:
            params_text += "No OAS ILS parameters found in any layer. Please run a calculation first.\n"
+       
+       # Copy to clipboard
        clipboard = QtWidgets.QApplication.clipboard()
        clipboard.setText(params_text)
+       
+       # Show success message
        self.log("OAS ILS parameters copied to clipboard in Word format. You can now paste them into Word.")
        self.iface.messageBar().pushMessage("QPANSOPY", "OAS ILS parameters copied to clipboard in Word format", level=Qgis.Success)
 
    def copy_parameters_as_json(self):
        """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""
+       import json
+       import datetime
+       
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
+       
        all_params = {
            "metadata": {
                "plugin": "QPANSOPY OAS ILS",
@@ -229,8 +292,11 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            },
            "layers": []
        }
+       
        found_params = False
        oas_layers = []
+       
+       # First identify OAS ILS layers
        for layer in vector_layers:
            if 'parameters' in [field.name() for field in layer.fields()]:
                for feature in layer.getFeatures():
@@ -242,41 +308,54 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                                if layer not in oas_layers:
                                    oas_layers.append(layer)
                                found_params = True
-                       except Exception:
+                       except json.JSONDecodeError:
                            pass
-       if not oas_layers:
-           for layer in vector_layers:
-               if 'parameters' in [field.name() for field in layer.fields()]:
-                   oas_layers.append(layer)
+       
+       # Process identified layers
        for layer in oas_layers:
            layer_data = {
                "name": layer.name(),
                "features": []
            }
+           
            for feature in layer.getFeatures():
                params_json = feature.attribute('parameters')
                if params_json:
                    try:
                        params_dict = json.loads(params_json)
+                       
+                       # Get surface type
                        surface_type = "Unknown"
                        if 'ILS_surface' in [field.name() for field in layer.fields()]:
                            surface_type = feature.attribute('ILS_surface')
+                       
+                       # Add to structure
                        feature_data = {
                            "id": feature.id(),
                            "surface_type": surface_type,
                            "parameters": params_dict
                        }
+                       
                        layer_data["features"].append(feature_data)
                        found_params = True
-                   except Exception:
+                   except json.JSONDecodeError:
                        continue
+           
+           # Add layer only if it has features with parameters
            if layer_data["features"]:
                all_params["layers"].append(layer_data)
+       
        if not found_params:
            all_params["error"] = "No OAS ILS parameters found in any layer. Please run a calculation first."
+       
+       # Convert to JSON with pretty formatting
        json_text = json.dumps(all_params, indent=2)
+       
+       # Copy to clipboard
        clipboard = QtWidgets.QApplication.clipboard()
        clipboard.setText(json_text)
+       
+       # Show success message
        self.log("OAS ILS parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
        self.iface.messageBar().pushMessage("QPANSOPY", "OAS ILS parameters copied to clipboard as JSON", level=Qgis.Success)
    
@@ -511,6 +590,8 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                self.log("Calculation completed but no results were returned.")
                
        except Exception as e:
-           self.log(f"Error during calculation: {str(e)}")
-           import traceback
+           error_msg = f"Error during calculation: {str(e)}"
+           self.log(error_msg)
+           # Also show as an info message for better UX as requested by client
+           self.iface.messageBar().pushMessage("QPANSOPY Error", error_msg, level=Qgis.Critical)
            self.log(traceback.format_exc())

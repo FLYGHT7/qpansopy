@@ -44,209 +44,98 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def __init__(self, iface):
         """Constructor."""
         super(QPANSOPYWindSpiralDockWidget, self).__init__(iface.mainWindow())
+        
+        # Initialize exact_values dictionary BEFORE setupUi to prevent AttributeError
+        self.exact_values = {}
+        
+        # Initialize units dictionary
+        self.units = {
+            'adElev': 'ft',
+            'altitude': 'ft'
+        }
+        
+        # Set up the user interface from Designer.
         self.setupUi(self)
         self.iface = iface
         
-        # Setup layer combos
-        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.referenceLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
-        
-        # Establecer parámetros predeterminados
-        self.setup_parameters()
+        # Setup layer combos (these should already exist from UI file)
+        if hasattr(self, 'pointLayerComboBox'):
+            self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
+        if hasattr(self, 'referenceLayerComboBox'):
+            self.referenceLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
         
         # Set default output folder
-        self.outputFolderLineEdit.setText(self.get_desktop_path())
+        if hasattr(self, 'outputFolderLineEdit'):
+            self.outputFolderLineEdit.setText(self.get_desktop_path())
         
-        # Connect signals
-        self.calculateButton.clicked.connect(self.calculate)
-        self.browseButton.clicked.connect(self.browse_output_folder)
-        self.copyParamsButton.clicked.connect(self.copy_parameters)
+        # Connect signals for existing UI elements
+        if hasattr(self, 'calculateButton'):
+            self.calculateButton.clicked.connect(self.calculate)
+        if hasattr(self, 'browseButton'):
+            self.browseButton.clicked.connect(self.browse_output_folder)
+        if hasattr(self, 'copyParamsButton'):
+            self.copyParamsButton.clicked.connect(self.copy_parameters_for_word)
         
-        # Inicializar log
+        # Setup parameter input fields dynamically
+        self.setup_dynamic_parameters()
+        
+        # Log initial message
         self.log("Wind Spiral generator loaded. Set parameters and click Calculate.")
 
-    def setup_parameters(self):
-        """Setup parameter input fields"""
-        # Crear layout para parámetros
-        layout = self.formLayout
+    def setup_dynamic_parameters(self):
+        """Setup parameter input fields that aren't defined in the UI file"""
+        # Find the form layout (should exist in UI file)
+        if not hasattr(self, 'formLayout'):
+            # If formLayout doesn't exist, we need to create it
+            self.log("Warning: formLayout not found in UI, creating dynamically")
+            return
         
-        # Aerodrome Elevation
-        self.adElevLineEdit = QtWidgets.QLineEdit("0")
-        self.adElevUnitCombo = QtWidgets.QComboBox()
-        self.adElevUnitCombo.addItems(['ft', 'm'])
-        
-        adElevContainer = QtWidgets.QWidget()
-        adElevLayout = QtWidgets.QHBoxLayout(adElevContainer)
-        adElevLayout.setContentsMargins(0, 0, 0, 0)
-        adElevLayout.addWidget(self.adElevLineEdit)
-        adElevLayout.addWidget(self.adElevUnitCombo)
-        
-        layout.addRow("Aerodrome Elevation:", adElevContainer)
-        
-        # Temperature Reference
-        self.tempRefLineEdit = QtWidgets.QLineEdit("15")
-        layout.addRow("Temperature Reference (°C):", self.tempRefLineEdit)
-        
-        # ISA Variation
-        self.isaVarLineEdit = QtWidgets.QLineEdit("0")
-        layout.addRow("ISA Variation:", self.isaVarLineEdit)
-        
-        # IAS
-        self.iasLineEdit = QtWidgets.QLineEdit("205")
-        layout.addRow("IAS (kt):", self.iasLineEdit)
-        
-        # Altitude
-        self.altitudeLineEdit = QtWidgets.QLineEdit("800")
-        self.altitudeUnitCombo = QtWidgets.QComboBox()
-        self.altitudeUnitCombo.addItems(['ft', 'm'])
-        
-        altitudeContainer = QtWidgets.QWidget()
-        altitudeLayout = QtWidgets.QHBoxLayout(altitudeContainer)
-        altitudeLayout.setContentsMargins(0, 0, 0, 0)
-        altitudeLayout.addWidget(self.altitudeLineEdit)
-        altitudeLayout.addWidget(self.altitudeUnitCombo)
-        
-        layout.addRow("Altitude:", altitudeContainer)
-        
-        # Bank Angle
-        self.bankAngleLineEdit = QtWidgets.QLineEdit("15")
-        layout.addRow("Bank Angle (°):", self.bankAngleLineEdit)
-        
-        # Wind Speed
-        self.windSpeedLineEdit = QtWidgets.QLineEdit("30")
-        layout.addRow("Wind Speed (kt):", self.windSpeedLineEdit)
-        
-        # Turn Direction
-        self.turnDirectionCombo = QtWidgets.QComboBox()
-        self.turnDirectionCombo.addItems(['R', 'L'])
-        layout.addRow("Turn Direction:", self.turnDirectionCombo)
-        
-        # Show Points
-        self.showPointsCheckBox = QtWidgets.QCheckBox("Show Points")
-        self.showPointsCheckBox.setChecked(True)
-        layout.addRow("", self.showPointsCheckBox)
-
-    def rebuild_layout(self):
-        """Reconstruir completamente el layout para evitar problemas de superposición"""
-        # Eliminar todos los widgets del layout principal
-        while self.verticalLayout.count():
-            item = self.verticalLayout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.setParent(None)
-        
-        # Crear nuevos group boxes
-        self.create_layers_group()
-        self.create_parameters_group()
-        self.create_output_group()
-        
-        # Añadir el botón Calculate
-        self.calculateButton = QtWidgets.QPushButton("Calculate", self)
-        self.calculateButton.clicked.connect(self.calculate)
-        self.calculateButton.setMinimumHeight(30)
-        self.verticalLayout.addWidget(self.calculateButton)
-        
-        # Crear el grupo de log
-        self.create_log_group()
-        
-        # Añadir el botón para copiar parámetros (Word y JSON)
-        buttons_layout = QtWidgets.QHBoxLayout()
-        self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
-        self.copyParamsWordButton.setObjectName("copyParamsWordButton")
-        self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
-        self.copyParamsWordButton.setMinimumHeight(30)
-        self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
-        self.copyParamsJsonButton.setObjectName("copyParamsJsonButton")
-        self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
-        self.copyParamsJsonButton.setMinimumHeight(30)
-        buttons_layout.addWidget(self.copyParamsWordButton)
-        buttons_layout.addWidget(self.copyParamsJsonButton)
-        buttons_widget = QtWidgets.QWidget(self)
-        buttons_widget.setLayout(buttons_layout)
-        self.verticalLayout.addWidget(buttons_widget)
-        
-        # Añadir un espaciador al final para que todo se alinee hacia arriba
-        spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacer)
-
-    def create_layers_group(self):
-        """Crear el grupo de capas"""
-        layers_group = QtWidgets.QGroupBox("Layers", self)
-        layers_layout = QtWidgets.QFormLayout(layers_group)
-        layers_layout.setSpacing(8)
-        layers_layout.setContentsMargins(8, 8, 8, 8)
-        
-        # Point Layer - Usar QgsMapLayerComboBox en lugar de QgsMapLayerProxyModel
-        self.pointLayerComboBox = QgsMapLayerComboBox(self)
-        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.pointLayerComboBox.setMinimumHeight(25)
-        layers_layout.addRow("Point Layer:", self.pointLayerComboBox)
-        
-        # Reference Layer - Usar QgsMapLayerComboBox en lugar de QgsMapLayerProxyModel
-        self.referenceLayerComboBox = QgsMapLayerComboBox(self)
-        self.referenceLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
-        self.referenceLayerComboBox.setMinimumHeight(25)
-        layers_layout.addRow("Reference Layer:", self.referenceLayerComboBox)
-        
-        # Añadir el grupo al layout principal
-        self.verticalLayout.addWidget(layers_group)
-
-    def create_parameters_group(self):
-        """Crear el grupo de parámetros"""
-        params_group = QtWidgets.QGroupBox("Parameters", self)
-        self.formLayout = QtWidgets.QFormLayout(params_group)
-        self.formLayout.setSpacing(8)
-        self.formLayout.setContentsMargins(8, 8, 8, 8)
-        
-        # Crear un validador para números decimales
+        # Create validator for numeric inputs
         regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegExpValidator(regex)
         
-        # Aerodrome Elevation y Temperature Reference (ocultos por defecto)
+        # Aerodrome Elevation with unit selector
         self.adElevLineEdit = QtWidgets.QLineEdit(self)
         self.adElevLineEdit.setValidator(validator)
         self.adElevLineEdit.setText("0")
+        self.adElevLineEdit.textChanged.connect(
+            lambda text: self.store_exact_value('adElev', text))
         self.adElevLineEdit.setMinimumHeight(28)
+        
         self.adElevUnitCombo = QtWidgets.QComboBox(self)
         self.adElevUnitCombo.addItems(['ft', 'm'])
+        self.adElevUnitCombo.currentTextChanged.connect(
+            lambda text: self.update_unit('adElev', text))
         self.adElevUnitCombo.setMinimumHeight(28)
         self.adElevUnitCombo.setFixedWidth(45)
+        
         adElevContainer = QtWidgets.QWidget(self)
         adElevLayout = QtWidgets.QHBoxLayout(adElevContainer)
         adElevLayout.setContentsMargins(0, 0, 0, 0)
         adElevLayout.setSpacing(5)
         adElevLayout.addWidget(self.adElevLineEdit)
         adElevLayout.addWidget(self.adElevUnitCombo)
+        
         self.formLayout.addRow("Aerodrome Elevation:", adElevContainer)
-        adElevContainer.hide()
-        self.adElevContainer = adElevContainer
-
+        
+        # Temperature Reference
         self.tempRefLineEdit = QtWidgets.QLineEdit(self)
         self.tempRefLineEdit.setValidator(validator)
         self.tempRefLineEdit.setText("15")
+        self.tempRefLineEdit.textChanged.connect(
+            lambda text: self.store_exact_value('tempRef', text))
         self.tempRefLineEdit.setMinimumHeight(28)
         self.formLayout.addRow("Temperature Reference (°C):", self.tempRefLineEdit)
-        self.tempRefLineEdit.hide()
-
-        # ISA Variation (°C) input (visible por defecto)
+        
+        # ISA Variation
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
         self.isaVarLineEdit.setValidator(validator)
         self.isaVarLineEdit.setText("0")
+        self.isaVarLineEdit.textChanged.connect(
+            lambda text: self.store_exact_value('isaVar', text))
         self.isaVarLineEdit.setMinimumHeight(28)
-        # Botón para calcular ISA
-        self.isaCalcButton = QtWidgets.QToolButton(self)
-        self.isaCalcButton.setText("🧮")
-        self.isaCalcButton.setToolTip("Calculate ISA Variation")
-        self.isaCalcButton.setFixedWidth(28)
-        self.isaCalcButton.clicked.connect(self.show_isa_calc_dialog)
-        isaVarContainer = QtWidgets.QWidget(self)
-        isaVarLayout = QtWidgets.QHBoxLayout(isaVarContainer)
-        isaVarLayout.setContentsMargins(0, 0, 0, 0)
-        isaVarLayout.setSpacing(5)
-        isaVarLayout.addWidget(self.isaVarLineEdit)
-        isaVarLayout.addWidget(self.isaCalcButton)
-        self.formLayout.addRow("ISA Variation (°C):", isaVarContainer)
-
+        self.formLayout.addRow("ISA Variation (°C):", self.isaVarLineEdit)
+        
         # IAS
         self.IASLineEdit = QtWidgets.QLineEdit(self)
         self.IASLineEdit.setValidator(validator)
@@ -254,11 +143,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.IASLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('IAS', text))
         self.IASLineEdit.setMinimumHeight(28)
-        
-        # Añadir el widget al formulario
         self.formLayout.addRow("IAS (kt):", self.IASLineEdit)
         
-        # Altitude con selector de unidades
+        # Altitude with unit selector
         self.altitudeLineEdit = QtWidgets.QLineEdit(self)
         self.altitudeLineEdit.setValidator(validator)
         self.altitudeLineEdit.setText("800")
@@ -273,7 +160,6 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.altitudeUnitCombo.setMinimumHeight(28)
         self.altitudeUnitCombo.setFixedWidth(45)
         
-        # Crear un widget contenedor para el campo y el selector de unidades
         altitudeContainer = QtWidgets.QWidget(self)
         altitudeLayout = QtWidgets.QHBoxLayout(altitudeContainer)
         altitudeLayout.setContentsMargins(0, 0, 0, 0)
@@ -281,7 +167,6 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         altitudeLayout.addWidget(self.altitudeLineEdit)
         altitudeLayout.addWidget(self.altitudeUnitCombo)
         
-        # Añadir el widget al formulario
         self.formLayout.addRow("Altitude:", altitudeContainer)
         
         # Bank Angle
@@ -291,8 +176,6 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.bankAngleLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('bankAngle', text))
         self.bankAngleLineEdit.setMinimumHeight(28)
-        
-        # Añadir el widget al formulario
         self.formLayout.addRow("Bank Angle (°):", self.bankAngleLineEdit)
         
         # Wind Speed
@@ -302,134 +185,67 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.windSpeedLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('w', text))
         self.windSpeedLineEdit.setMinimumHeight(28)
-        
-        # Añadir el widget al formulario
         self.formLayout.addRow("Wind Speed (kt):", self.windSpeedLineEdit)
         
         # Turn Direction
         self.turnDirectionCombo = QtWidgets.QComboBox(self)
         self.turnDirectionCombo.addItems(['R', 'L'])
         self.turnDirectionCombo.setMinimumHeight(28)
-        
-        # Añadir el widget al formulario
         self.formLayout.addRow("Turn Direction:", self.turnDirectionCombo)
         
-        # Show Points Checkbox
-        self.showPointsCheckBox = QtWidgets.QCheckBox(self)
-        self.showPointsCheckBox.setChecked(True)
-        self.showPointsCheckBox.setMinimumHeight(28)
+        # Show Points checkbox
+        self.showPointsCheckBox = QtWidgets.QCheckBox("Show intermediate points", self)
+        self.formLayout.addRow("", self.showPointsCheckBox)
         
-        # Añadir el widget al formulario
-        self.formLayout.addRow("Show Construction Points:", self.showPointsCheckBox)
+        # Export KML checkbox
+        self.exportKmlCheckBox = QtWidgets.QCheckBox("Export KML", self)
+        self.formLayout.addRow("", self.exportKmlCheckBox)
         
-        # Añadir el grupo al layout principal
-        self.verticalLayout.addWidget(params_group)
+        # Output folder
+        if not hasattr(self, 'outputFolderLineEdit'):
+            self.outputFolderLineEdit = QtWidgets.QLineEdit(self)
+            self.outputFolderLineEdit.setText(self.get_desktop_path())
+            self.formLayout.addRow("Output Folder:", self.outputFolderLineEdit)
+        
+        # Export KML Checkbox (if not in UI)
+        if not hasattr(self, 'exportKmlCheckBox'):
+            self.exportKmlCheckBox = QtWidgets.QCheckBox(self)
+            self.exportKmlCheckBox.setChecked(True)
+            
+    def store_exact_value(self, key, value):
+        """Store exact value for precise calculations"""
+        try:
+            self.exact_values[key] = float(value)
+        except ValueError:
+            if key in self.exact_values:
+                del self.exact_values[key]
+    
+    def update_unit(self, param, unit):
+        """Update unit for parameter"""
+        self.units[param] = unit
 
-    def create_output_group(self):
-        """Crear el grupo de salida"""
-        output_group = QtWidgets.QGroupBox("Output", self)
-        output_layout = QtWidgets.QVBoxLayout(output_group)
-        output_layout.setSpacing(8)
-        output_layout.setContentsMargins(8, 8, 8, 8)
-        
-        # Output Folder
-        folder_layout = QtWidgets.QHBoxLayout()
-        folder_layout.setSpacing(5)
-        
-        folder_label = QtWidgets.QLabel("Output Folder:", self)
-        self.outputFolderLineEdit = QtWidgets.QLineEdit(self)
-        self.outputFolderLineEdit.setText(self.get_desktop_path())
-        self.outputFolderLineEdit.setMinimumHeight(28)
-        
-        self.browseButton = QtWidgets.QPushButton("Browse", self)
-        self.browseButton.clicked.connect(self.browse_output_folder)
-        self.browseButton.setMinimumHeight(28)
-        
-        folder_layout.addWidget(folder_label)
-        folder_layout.addWidget(self.outputFolderLineEdit)
-        folder_layout.addWidget(self.browseButton)
-        
-        output_layout.addLayout(folder_layout)
-        
-        # Export to KML
-        self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
-        self.exportKmlCheckBox.setChecked(True)
-        self.exportKmlCheckBox.setMinimumHeight(28)
-        
-        output_layout.addWidget(self.exportKmlCheckBox)
-        
-        # Añadir el grupo al layout principal
-        self.verticalLayout.addWidget(output_group)
+    def get_desktop_path(self):
+        """Get desktop path for default output folder"""
+        try:
+            import os
+            return os.path.join(os.path.expanduser("~"), "Desktop")
+        except:
+            return ""
 
-    def create_log_group(self):
-        """Crear el grupo de log"""
-        log_group = QtWidgets.QGroupBox("Log", self)
-        log_layout = QtWidgets.QVBoxLayout(log_group)
-        log_layout.setSpacing(0)
-        log_layout.setContentsMargins(8, 8, 8, 8)
-        
-        # Establecer una política de tamaño fija para el grupo de log
-        log_group.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        log_group.setMaximumHeight(100)  # Altura máxima para todo el grupo
-        
-        self.logTextEdit = QtWidgets.QTextEdit(self)
-        self.logTextEdit.setReadOnly(True)
-        self.logTextEdit.setMinimumHeight(60)
-        self.logTextEdit.setMaximumHeight(60)
-        
-        # Asegurarse de que el QTextEdit tenga una política de tamaño fija
-        self.logTextEdit.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        
-        log_layout.addWidget(self.logTextEdit)
-        
-        # Añadir el grupo al layout principal sin espaciador
-        self.verticalLayout.addWidget(log_group)
+    def browse_output_folder(self):
+        """Browse for output folder"""
+        folder = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Select Output Folder", self.outputFolderLineEdit.text())
+        if folder:
+            self.outputFolderLineEdit.setText(folder)
 
-    def show_isa_calc_dialog(self):
-        """Mostrar diálogo para calcular ISA Variation"""
-        dlg = QtWidgets.QDialog(self)
-        dlg.setWindowTitle("Calculate ISA Variation")
-        layout = QtWidgets.QFormLayout(dlg)
-        # Aerodrome Elevation
-        adElevEdit = QtWidgets.QLineEdit(self.adElevLineEdit.text())
-        adElevEdit.setValidator(self.adElevLineEdit.validator())
-        adElevUnitCombo = QtWidgets.QComboBox()
-        adElevUnitCombo.addItems(['ft', 'm'])
-        adElevUnitCombo.setCurrentText(self.adElevUnitCombo.currentText())
-        adElevContainer = QtWidgets.QWidget()
-        adElevLayout = QtWidgets.QHBoxLayout(adElevContainer)
-        adElevLayout.setContentsMargins(0, 0, 0, 0)
-        adElevLayout.setSpacing(5)
-        adElevLayout.addWidget(adElevEdit)
-        adElevLayout.addWidget(adElevUnitCombo)
-        layout.addRow("Aerodrome Elevation:", adElevContainer)
-        # Temperature Reference
-        tempRefEdit = QtWidgets.QLineEdit(self.tempRefLineEdit.text())
-        tempRefEdit.setValidator(self.tempRefLineEdit.validator())
-        layout.addRow("Temperature Reference (°C):", tempRefEdit)
-        # Botones
-        btnBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
-        layout.addWidget(btnBox)
-        btnBox.accepted.connect(dlg.accept)
-        btnBox.rejected.connect(dlg.reject)
-        if dlg.exec_():
-            try:
-                adElev = float(adElevEdit.text())
-                adElev_unit = adElevUnitCombo.currentText()
-                if adElev_unit == 'm':
-                    adElev_ft = adElev * 3.28084
-                else:
-                    adElev_ft = adElev
-                tempRef = float(tempRefEdit.text())
-                tempISA = 15 - 0.00198 * adElev_ft
-                isa_var = tempRef - tempISA
-                self.isaVarLineEdit.setText(str(round(isa_var, 2)))
-                # También actualizar los campos ocultos
-                self.adElevLineEdit.setText(str(adElev))
-                self.adElevUnitCombo.setCurrentText(adElev_unit)
-                self.tempRefLineEdit.setText(str(tempRef))
-            except Exception as e:
-                QtWidgets.QMessageBox.warning(self, "Error", f"Invalid input: {e}")
+    def log(self, message):
+        """Log a message"""
+        if hasattr(self, 'logTextEdit'):
+            timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+            self.logTextEdit.append(f"[{timestamp}] {message}")
+        else:
+            print(f"Wind Spiral: {message}")
 
     def copy_parameters_for_word(self):
         """Copiar los parámetros en formato tabla para Word"""
@@ -452,6 +268,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
             'adElev_unit': self.units.get('adElev', 'ft'),
             'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+            'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
             'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
             'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
             'altitude_unit': self.units.get('altitude', 'ft'),
@@ -460,7 +277,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'turn_direction': self.turnDirectionCombo.currentText(),
             'show_points': self.showPointsCheckBox.isChecked()
         }
-        for key in ['adElev', 'tempRef', 'IAS', 'altitude', 'bankAngle', 'w', 'turn_direction', 'show_points']:
+        for key in ['adElev', 'tempRef', 'isaVar', 'IAS', 'altitude', 'bankAngle', 'w', 'turn_direction', 'show_points']:
             display_name = param_names.get(key, key.replace('_', ' ').title())
             value = params[key]
             unit = ""
@@ -494,6 +311,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
                 'adElev_unit': self.units.get('adElev', 'ft'),
                 'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+                'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
                 'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
                 'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
                 'altitude_unit': self.units.get('altitude', 'ft'),
@@ -509,49 +327,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log("Wind Spiral parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
         self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied to clipboard as JSON", level=Qgis.Success)
 
-    def update_unit(self, param_name, unit):
-        """Actualizar la unidad seleccionada para un parámetro"""
-        self.units[param_name] = unit
-
-    def store_exact_value(self, param_name, text):
-        """Almacenar el valor exacto ingresado por el usuario"""
-        try:
-            # Intentar convertir a float para validar
-            value = float(text.replace(',', '.'))
-            # Si es válido, almacenar el texto original
-            self.exact_values[param_name] = text.replace(',', '.')
-        except ValueError:
-            # Si no es un número válido, no hacer nada
-            pass
-
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
-
-    def get_desktop_path(self):
-        """Get the path to the desktop"""
-        if os.name == 'nt':  # Windows
-            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-        elif os.name == 'posix':  # macOS or Linux
-            return os.path.join(os.path.expanduser('~'), 'Desktop')
-        else:
-            return os.path.expanduser('~')
-
-    def browse_output_folder(self):
-        """Open a folder browser dialog"""
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
-            self,
-            "Select Output Folder",
-            self.outputFolderLineEdit.text()
-        )
-        if folder:
-            self.outputFolderLineEdit.setText(folder)
-
-    def log(self, message):
-        """Add a message to the log"""
-        self.logTextEdit.append(message)
-        # Ensure the latest message is visible
-        self.logTextEdit.ensureCursorVisible()
 
     def validate_inputs(self):
         """Validate user inputs"""
@@ -597,8 +375,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         
         # Usar el valor de ISA Variation directamente
+        isa_var = self.exact_values.get('isaVar', self.isaVarLineEdit.text())
         try:
-            isa_var = float(self.isaVarLineEdit.text())
+            isa_var = float(isa_var)
         except Exception:
             isa_var = 0
         # Get parameters
@@ -665,15 +444,15 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         try:
             # Get parameters
             params = {
-                'adElev': self.adElevLineEdit.text(),
+                'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
                 'adElev_unit': self.adElevUnitCombo.currentText(),
-                'tempRef': self.tempRefLineEdit.text(),
-                'isa_var': self.isaVarLineEdit.text(),
-                'IAS': self.iasLineEdit.text(),
-                'altitude': self.altitudeLineEdit.text(),
+                'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+                'isa_var': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
+                'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
+                'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
                 'altitude_unit': self.altitudeUnitCombo.currentText(),
-                'bankAngle': self.bankAngleLineEdit.text(),
-                'w': self.windSpeedLineEdit.text(),
+                'bankAngle': self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()),
+                'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
                 'turn_direction': self.turnDirectionCombo.currentText()
             }
             

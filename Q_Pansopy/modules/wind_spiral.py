@@ -34,10 +34,21 @@ def tas_calculation(ias, altitude, var, bank_angle, wind_speed=30):
     :param wind_speed: Wind speed in knots (default: 30)
     :return: Tuple of (k, tas, rate_of_turn, radius_of_turn, wind_speed)
     """
-    k = 171233 * (((288 + var) - 0.00198 * altitude) ** 0.5) / (288 - 0.00198 * altitude) ** 2.628
-    tas = k * ias
-    rate_of_turn = (3431 * math.tan(math.radians(bank_angle))) / (math.pi * tas)
-    radius_of_turn = tas / (20 * math.pi * rate_of_turn)
+    # ISA temperature at altitude
+    temp_isa_alt = 288.15 - 0.00198 * altitude  # Kelvin
+    temp_actual = temp_isa_alt + var  # Actual temperature in Kelvin
+    
+    # TAS correction factor (simplified approximation)
+    # More accurate formula: TAS = IAS * sqrt(ρ0/ρ) where ρ is density
+    k = math.sqrt(temp_actual / 288.15)  # Temperature correction
+    tas = ias * k
+    
+    # Rate of turn in degrees per minute
+    rate_of_turn = (1091 * math.tan(math.radians(bank_angle))) / tas
+    
+    # Radius of turn in nautical miles
+    radius_of_turn = tas / (20 * math.pi * rate_of_turn / 60)  # Convert rate to deg/sec
+    
     return k, tas, rate_of_turn, radius_of_turn, wind_speed
 
 def calculate_wind_spiral(iface, point_layer, reference_layer, params):
@@ -111,13 +122,23 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     values = tas_calculation(IAS, altitude, isa_var, bankAngle, w)
     r_turn = values[3]
     
-    # Calculate drift angle
-    drift_angle = math.asin(values[4] / values[1])
+    # Calculate drift angle (check for division by zero)
+    if values[1] > 0:  # TAS > 0
+        drift_ratio = values[4] / values[1]  # wind_speed / TAS
+        if abs(drift_ratio) <= 1.0:  # Ensure valid input for asin
+            drift_angle = math.asin(drift_ratio)
+        else:
+            drift_angle = math.asin(1.0 if drift_ratio > 0 else -1.0)  # Max drift angle
+    else:
+        drift_angle = 0.0  # No drift if no airspeed
     
     # Calculate wind spiral radii
     wind_spiral_radius = {}
     for i in range(30, 390, 30):
-        windspiral = (i / values[2]) * (values[4] / 3600)
+        # Time for turn segment in minutes
+        time_minutes = i / values[2]  # degrees / (degrees per minute)
+        # Wind drift distance in nautical miles
+        windspiral = time_minutes * (values[4] / 60)  # minutes * (knots / 60 min/hr)
         wind_spiral_radius["radius_" + str(i)] = windspiral
     
     # Get map CRS
