@@ -52,6 +52,7 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
         if not intermediate_features:
             iface.messageBar().pushMessage("No 'intermediate' segment found in your selection", level=Qgis.Critical)
             return None
+
         # Process the user's selected features - use the first valid intermediate segment found
         for feat in intermediate_features:
             try:
@@ -136,21 +137,10 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
         if os.path.exists(style_path):
             v_layer.loadNamedStyle(style_path)
 
-        iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Intermediate (RNP APCH)", level=Qgis.Success)
+        iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Intermediate Approach (RNP APCH)", level=Qgis.Success)
         
         return {"intermediate_layer": v_layer}
         
     except Exception as e:
         iface.messageBar().pushMessage("Error", f"Error in intermediate approach: {str(e)}", level=Qgis.Critical)
         return None
-
-
-# Legacy script execution (for backward compatibility when run directly)
-if __name__ == "__main__":
-    # This will run when the script is executed directly in QGIS console
-    from qgis.utils import iface
-    result = run_intermediate_approach(iface, None)
-    if result:
-        print("Intermediate approach calculation completed successfully")
-    else:
-        print("Intermediate approach calculation failed")

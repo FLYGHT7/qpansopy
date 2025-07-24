@@ -136,14 +136,3 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
     except Exception as e:
         iface.messageBar().pushMessage("Error", f"Error in initial approach: {str(e)}", level=Qgis.Critical)
         return None
-
-
-# Legacy script execution (for backward compatibility when run directly)
-if __name__ == "__main__":
-    # This will run when the script is executed directly in QGIS console
-    from qgis.utils import iface
-    result = run_initial_approach(iface, None)
-    if result:
-        print("Initial approach calculation completed successfully")
-    else:
-        print("Initial approach calculation failed")
