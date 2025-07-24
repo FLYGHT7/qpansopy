@@ -240,7 +240,6 @@ if __name__ == "__main__":
         print("Missed approach calculation completed successfully")
     else:
         print("Missed approach calculation failed")
-=======
 '''
 PBN Missed Approach (RNP APCH)
 '''
