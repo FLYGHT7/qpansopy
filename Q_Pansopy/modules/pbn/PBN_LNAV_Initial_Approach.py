@@ -72,6 +72,7 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
             return None
 
         # Calculate point coordinates using the original algorithm
+
         pts = {}
         a = 0
 
@@ -128,7 +129,6 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
         style_path = os.path.join(os.path.dirname(__file__), '..', '..', 'styles', 'primary_secondary_areas.qml')
         if os.path.exists(style_path):
             v_layer.loadNamedStyle(style_path)
-
         iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Initial Approach (RNP APCH)", level=Qgis.Success)
         
         return {"initial_layer": v_layer}
@@ -136,14 +136,3 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
     except Exception as e:
         iface.messageBar().pushMessage("Error", f"Error in initial approach: {str(e)}", level=Qgis.Critical)
         return None
-
-
-# Legacy script execution (for backward compatibility when run directly)
-if __name__ == "__main__":
-    # This will run when the script is executed directly in QGIS console
-    from qgis.utils import iface
-    result = run_initial_approach(iface, None)
-    if result:
-        print("Initial approach calculation completed successfully")
-    else:
-        print("Initial approach calculation failed")

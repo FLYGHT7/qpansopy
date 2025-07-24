@@ -23,7 +23,7 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
         # Use the passed iface parameter
         iface = iface_param
         
-        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV final (RNP APCH)", level=Qgis.Info)
+        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Final Approach (RNP APCH)", level=Qgis.Info)
 
         # Get Projected Coordinate System for the QGIS Project 
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -52,6 +52,7 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
         if not final_features:
             iface.messageBar().pushMessage("No 'final' segment found in your selection", level=Qgis.Critical)
             return None
+
         # Process the user's selected features - use the first valid final segment found
         for feat in final_features:
             try:
@@ -78,41 +79,34 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
         pts["m"+str(a)] = end_point.project(length, back_azimuth)
         a += 1
 
-        # MAPt determination 
+        # RWY determination 
         pts["m"+str(a)] = end_point
         a += 1
 
-        # Calculating point at MAPt location 
-        d = (0.475, 0.95, -0.475, -0.95)  # NM
+        # Calculating point at RWY location 
+        d = (0.575, 1.15, -0.575, -1.15)  # NM
         for i in d:
             line_start = end_point.project(i*1852, azimuth-90)
             pts["m"+str(a)] = line_start
             a += 1
 
-        # Calculating point at end of corridor
-        lengthm = (1.45-0.95)/tan(radians(30))  # NM
-        for i in d:
-            int_point = start_point.project(lengthm*1852, azimuth)
-            line_start = int_point.project(i*1852, azimuth-90)
-            pts["mm"+str(a)] = line_start
-            a += 1
-           
         # Calculating point at FAF location
-        f = (0.725, 1.45, -0.725, -1.45)  # NM
-        for i in f:
-            pts["m"+str(a)] = start_point.project(i*1852, azimuth-90)
+        d = (0.725, 1.45, -0.725, -1.45)  # NM
+        for i in d:
+            line_start = start_point.project(i*1852, azimuth-90)
+            pts["m"+str(a)] = line_start
             a += 1
 
         # Create memory layer
-        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "LNAV Final APCH Segment", "memory")
+        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "Final APCH Segment", "memory")
         myField = QgsField('Symbol', QVariant.String)
         v_layer.dataProvider().addAttributes([myField])
         v_layer.updateFields()
 
         # Area Definition 
-        primary_area = ([pts["m2"], pts["m1"], pts["m4"], pts["mm8"], pts["m12"], pts["m10"], pts["mm6"]], 'Primary Area')
-        secondary_area_left = ([pts["m3"], pts["m2"], pts["mm6"], pts["m10"], pts["m11"], pts["mm7"]], 'Secondary Area')
-        secondary_area_right = ([pts["m5"], pts["m4"], pts["mm8"], pts["m12"], pts["m13"], pts["mm9"]], 'Secondary Area')
+        primary_area = ([pts["m2"], pts["m1"], pts["m4"], pts["m8"], pts["m0"], pts["m6"]], 'Primary Area')
+        secondary_area_left = ([pts["m3"], pts["m2"], pts["m6"], pts["m7"]], 'Secondary Area')
+        secondary_area_right = ([pts["m4"], pts["m5"], pts["m9"], pts["m8"]], 'Secondary Area')
 
         areas = (primary_area, secondary_area_left, secondary_area_right)
 
@@ -135,21 +129,10 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
         if os.path.exists(style_path):
             v_layer.loadNamedStyle(style_path)
 
-        iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV final (RNP APCH)", level=Qgis.Success)
+        iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Final Approach (RNP APCH)", level=Qgis.Success)
         
         return {"final_layer": v_layer}
         
     except Exception as e:
         iface.messageBar().pushMessage("Error", f"Error in final approach: {str(e)}", level=Qgis.Critical)
         return None
-
-
-# Legacy script execution (for backward compatibility when run directly)
-if __name__ == "__main__":
-    # This will run when the script is executed directly in QGIS console
-    from qgis.utils import iface
-    result = run_final_approach(iface, None)
-    if result:
-        print("Final approach calculation completed successfully")
-    else:
-        print("Final approach calculation failed")
