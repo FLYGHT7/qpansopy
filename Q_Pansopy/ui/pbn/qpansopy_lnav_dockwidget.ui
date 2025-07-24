@@ -64,6 +64,13 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QRadioButton" name="missedRadioButton">
+         <property name="text">
+          <string>Missed Approach</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>

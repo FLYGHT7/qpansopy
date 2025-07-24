@@ -86,7 +86,7 @@ class Qpansopy:
                                 "LNAV_APCH": {
                                     "TITLE": "QPANSOPY LNAV",
                                     "TOOLBAR": "PBN",
-                                    "TOOLTIP": "LNAV Initial, Intermediate and Final Approach Tool",
+                                    "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
                                     "ICON": os.path.join(self.icons_dir, 'PBN.png'),
                                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
                                     "GUI_INSTANCE": None

@@ -3,6 +3,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from qgis.core import QgsMapLayerProxyModel
 import os
 import datetime
+import runpy
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'pbn', 'qpansopy_lnav_dockwidget.ui'))
@@ -58,6 +59,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Verificar que el usuario tenga al menos un elemento seleccionado
         if routing_layer.selectedFeatureCount() == 0:
             self.log("Error: Please select at least one segment in the map before calculation")
+            self.log("Tip: Use the selection tool to manually select the segment you want to calculate")
             return
         
         # Get export options
@@ -68,32 +70,35 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Determine which approach to calculate - usar solo la selección actual del usuario
             if self.initialRadioButton.isChecked():
                 self.log("Calculating Initial Approach...")
-                from ...modules.PBN_LNAV_Initial_Approach import run_initial_approach
-                result = run_initial_approach(self.iface, routing_layer)
+                # Use function from Initial Approach module
+                from ...modules.pbn.PBN_LNAV_Initial_Approach import run_initial_approach
+                result = run_initial_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Initial"
             elif self.intermediateRadioButton.isChecked():
                 self.log("Calculating Intermediate Approach...")
-                from ...modules.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
-                result = run_intermediate_approach(self.iface, routing_layer)
+                # Use function from Intermediate Approach module
+                from ...modules.pbn.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
+                result = run_intermediate_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Intermediate"
+            elif self.missedRadioButton.isChecked():
+                self.log("Calculating Missed Approach...")
+                from ...modules.pbn.PBN_LNAV_Missed_Approach import run_missed_approach
+                result = run_missed_approach(self.iface, routing_layer, export_kml, output_dir)
+                approach_type = "Missed"
             else:  # Final approach
                 self.log("Calculating Final Approach...")
-                from ...modules.PBN_LNAV_Final_Approach import run_final_approach
-                result = run_final_approach(self.iface, routing_layer)
+                # Use function from Final Approach module
+                from ...modules.pbn.PBN_LNAV_Final_Approach import run_final_approach
+                result = run_final_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Final"
 
             # Log results
             if result:
                 self.log(f"{approach_type} Approach calculation completed successfully")
-                if export_kml:
-                    # Add KML export code here if available
-                    self.log(f"KML export would go to: {output_dir}")
-                
-        except Exception as e:
-            self.log(f"Error during calculation: {str(e)}")
-            import traceback
-            self.log(traceback.format_exc())
-            self.log(f"KML export would go to: {output_dir}")
+                if export_kml and 'kml_path' in result:
+                    self.log(f"KML exported to: {result['kml_path']}")
+                elif export_kml:
+                    self.log(f"KML export was requested but not supported for {approach_type} approach")
                 
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
