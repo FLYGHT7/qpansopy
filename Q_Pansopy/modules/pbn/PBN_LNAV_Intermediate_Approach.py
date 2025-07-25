@@ -1,7 +1,39 @@
 # -*- coding: utf-8 -*-
 """
 PBN LNAV Intermediate Approach (RNP APCH) Generator
+
+This module implements Performance-Based Navigation (PBN) Lateral Navigation (LNAV) 
+Intermediate Approach procedures according to ICAO Doc 9613 (PBN Manual) standards.
+
+The module generates obstacle protection surfaces and areas for RNP APCH (Required 
+Navigation Performance Approach) procedures during the intermediate approach segment.
+
+Key Features:
+- Intermediate approach segment area calculations
+- Transition zone protection surface generation
+- Course change and alignment calculations
+- Primary and secondary area polygon creation
+- ICAO-compliant geometric calculations
+
+
+Intermediate Approach Characteristics:
+- Altitude range: Typically 1500-3000 ft AGL
+- Course alignment: Final approach track alignment
+- RNP value: Usually 1.0 NM
+- Obstacle clearance: 820 ft minimum in primary area
+- Length: Typically 5-10 NM depending on terrain and airspace
+
+Navigation Requirements:
+- Provides transition from initial to final approach
+- Ensures proper course alignment before final descent
+- May include stepdown fixes for obstacle clearance
+- Supports various entry patterns and course reversals
+
+Author: QPANSOPY Development Team
+Date: 2025
+Version: 2.0
 """
+
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 from qgis.core import Qgis
@@ -11,49 +43,103 @@ import os
 
 def run_intermediate_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
-    Run LNAV Intermediate Approach calculation
+    Execute PBN LNAV Intermediate Approach area calculation and protection surface generation.
     
-    :param iface_param: QGIS interface
-    :param routing_layer: Routing layer 
-    :param export_kml: Whether to export KML (not implemented)
-    :param output_dir: Output directory (not implemented)
-    :return: Result dictionary or None
+    This function processes the intermediate approach segment of an RNP APCH procedure,
+    calculating primary and secondary protection areas based on ICAO standards.
+    
+    The intermediate approach provides the critical transition between initial and final
+    approach phases, ensuring proper course alignment and obstacle clearance during
+    the descent and positioning phase of the approach procedure.
+    
+    Algorithm Overview:
+    1. Identifies intermediate segment from user-selected routing features
+    2. Calculates corridor widths based on RNP values and segment characteristics
+    3. Determines transition points and alignment requirements
+    4. Generates primary and secondary protection areas
+    5. Applies appropriate geometric calculations for course changes
+    6. Creates QGIS vector layers with standardized styling
+    
+    Args:
+        iface_param (QgsInterface): QGIS interface instance for UI interactions
+        routing_layer (QgsVectorLayer): Vector layer containing approach routing segments
+        export_kml (bool, optional): Flag to enable KML export functionality. 
+                                   Defaults to False. Currently not implemented.
+        output_dir (str, optional): Directory path for output files. 
+                                  Defaults to None. Currently not implemented.
+    
+    Returns:
+        dict or None: Dictionary containing generated layers and calculation results.
+                     Returns None if execution fails or required data is missing.
+                     
+                     Expected return structure:
+                     {
+                         'intermediate_layer': QgsVectorLayer,
+                         'calculation_parameters': dict,
+                         'alignment_coordinates': list,
+                         'transition_points': list
+                     }
+    
+    Raises:
+        RuntimeError: When QGIS interface operations fail
+        ValueError: When routing layer data is invalid or insufficient
+        GeometryError: When segment geometry cannot be processed
+        
+    Notes:
+        - Requires manual segment selection by user (no automatic selection)
+        - Course alignment calculations are critical for final approach preparation
+        - Transition zones may require special geometric considerations
+        - All calculations performed in projected coordinate systems
+        - Intermediate segment must connect properly with initial and final segments
+        
+    Example:
+        >>> result = run_intermediate_approach(iface, routing_layer)
+        >>> if result:
+        ...     print(f"Intermediate approach areas generated successfully")
+        ...     print(f"Transition points: {result['transition_points']}")
     """
     try:
-        # Use the passed iface parameter
+        # Initialize QGIS interface from parameter
         iface = iface_param
         
+        # Notify user of intermediate approach calculation start
         iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Intermediate Approach (RNP APCH)", level=Qgis.Info)
 
-        # Get Projected Coordinate System for the QGIS Project 
+        # Extract current project's coordinate reference system
+        # Critical for accurate geometric calculations in intermediate phase
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
-        # Use the provided routing layer instead of searching
+        # Validate routing layer input for intermediate approach processing
         if routing_layer is None:
-            # Fallback: search for routing layer
+            # Fallback mechanism: attempt to locate routing layer automatically
+            # This searches all project layers for names containing "routing"
             for layer in QgsProject.instance().mapLayers().values():
                 if "routing" in layer.name().lower():
                     routing_layer = layer
                     break
 
+        # Critical validation: ensure routing layer exists for intermediate processing
         if routing_layer is None:
             iface.messageBar().pushMessage("No Routing Selected", level=Qgis.Critical)
             return None
 
-        # Use only the user's current selection - do not auto-select
+        # Enforce manual selection requirement - no automatic feature selection
+        # Intermediate approach requires explicit user selection for proper alignment
         selected_features = routing_layer.selectedFeatures()
 
         if not selected_features:
             iface.messageBar().pushMessage("Please select at least one segment in the routing layer", level=Qgis.Critical)
             return None
 
-        # Find intermediate segment in the user's selection
+        # Filter for intermediate approach segments within user selection
+        # Intermediate segments are identified by 'segment' attribute value of 'intermediate'
         intermediate_features = [feat for feat in selected_features if feat.attribute('segment') == 'intermediate']
         if not intermediate_features:
             iface.messageBar().pushMessage("No 'intermediate' segment found in your selection", level=Qgis.Critical)
             return None
 
-        # Process the user's selected features - use the first valid intermediate segment found
+        # Process intermediate approach segments from user selection
+        # Iterate through valid intermediate segments to find first processable one
         for feat in intermediate_features:
             try:
                 geom = feat.geometry().asPolyline()

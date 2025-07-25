@@ -1,7 +1,31 @@
 # -*- coding: utf-8 -*-
 """
 PBN LNAV Initial Approach (RNP APCH) Generator
+
+This module implements Performance-Based Navigation (PBN) Lateral Navigation (LNAV) 
+Initial Approach procedures according to ICAO Doc 9613 (PBN Manual) standards.
+
+The module generates obstacle protection surfaces and areas for RNP APCH (Required 
+Navigation Performance Approach) procedures during the initial approach segment.
+
+Key Features:
+- Initial approach segment area calculations
+- Entry zone protection surface generation
+- Corridor width calculations based on RNP values
+- Primary and secondary area polygon creation
+- ICAO-compliant geometric calculations
+
+Initial Approach Characteristics:
+- Entry altitude: Typically 3000-6000 ft AGL
+- Track alignment: May include course reversals or holding patterns
+- RNP value: Usually 1.0 NM or greater
+- Obstacle clearance: 1000 ft minimum in primary area
+
+Author: QPANSOPY Development Team
+Date: 2025
+Version: 2.0
 """
+
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 from qgis.core import Qgis
@@ -11,13 +35,57 @@ import os
 
 def run_initial_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
-    Run LNAV Initial Approach calculation
+    Execute PBN LNAV Initial Approach area calculation and protection surface generation.
     
-    :param iface_param: QGIS interface
-    :param routing_layer: Routing layer 
-    :param export_kml: Whether to export KML (not implemented)
-    :param output_dir: Output directory (not implemented)
-    :return: Result dictionary or None
+    This function processes the initial approach segment of an RNP APCH procedure,
+    calculating primary and secondary protection areas based on ICAO standards.
+    
+    The initial approach provides the transition from en-route navigation to the
+    intermediate approach phase, with specific geometric requirements for obstacle
+    protection and navigation accuracy.
+    
+    Algorithm Overview:
+    1. Identifies initial segment from user-selected routing features
+    2. Calculates corridor widths based on RNP values and segment length
+    3. Generates primary and secondary protection areas
+    4. Creates entry/exit transition zones if applicable
+    5. Applies appropriate cartographic styling
+    
+    Args:
+        iface_param (QgsInterface): QGIS interface instance for UI interactions
+        routing_layer (QgsVectorLayer): Vector layer containing approach routing segments
+        export_kml (bool, optional): Flag to enable KML export functionality. 
+                                   Defaults to False. Currently not implemented.
+        output_dir (str, optional): Directory path for output files. 
+                                  Defaults to None. Currently not implemented.
+    
+    Returns:
+        dict or None: Dictionary containing generated layers and calculation results.
+                     Returns None if execution fails or required data is missing.
+                     
+                     Expected return structure:
+                     {
+                         'initial_layer': QgsVectorLayer,
+                         'calculation_parameters': dict,
+                         'entry_coordinates': list,
+                         'exit_coordinates': list
+                     }
+    
+    Raises:
+        RuntimeError: When QGIS interface operations fail
+        ValueError: When routing layer data is invalid or insufficient
+        GeometryError: When segment geometry cannot be processed
+        
+    Notes:
+        - Requires manual segment selection by user (no automatic selection)
+        - RNP values determine corridor width calculations
+        - Entry zones may require specific angular considerations
+        - All calculations performed in projected coordinate systems
+        
+    Example:
+        >>> result = run_initial_approach(iface, routing_layer)
+        >>> if result:
+        ...     print(f"Initial approach areas generated successfully")
     """
     try:
         # Use the passed iface parameter
