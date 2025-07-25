@@ -2,7 +2,39 @@
 # -*- coding: utf-8 -*-
 """
 PBN LNAV Missed Approach (RNP APCH) Generator
+
+This module implements Performance-Based Navigation (PBN) Lateral Navigation (LNAV) 
+Missed Approach procedures according to ICAO Doc 9613 (PBN Manual) standards.
+
+The module generates obstacle protection surfaces and areas for RNP APCH (Required 
+Navigation Performance Approach) procedures during the missed approach segment.
+
+Key Features:
+- Missed approach segment area calculations
+- Complex multi-segment procedure support
+- Turn and straight leg protection areas
+- Primary and secondary area polygon creation
+- ICAO-compliant geometric calculations
+
+
+Missed Approach Characteristics:
+- Initiated at Missed Approach Point (MAPt)
+- Multiple leg types: straight, turn, hold
+- Altitude considerations: climbing procedure
+- RNP value: Typically 1.0 NM
+- Obstacle clearance: 295 ft minimum in primary area
+
+Critical Safety Considerations:
+- Must provide adequate obstacle clearance during climb
+- Turn radius calculations for missed approach turns
+- Hold pattern entry and protection areas
+- Coordination with departure procedures
+
+Author: QPANSOPY Development Team
+Date: 2025
+Version: 2.0
 """
+
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, 
     QgsCoordinateReferenceSystem, QgsPoint, QgsLineString, 
@@ -17,13 +49,63 @@ import datetime
 
 def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
-    Run LNAV Missed Approach calculation
+    Execute PBN LNAV Missed Approach area calculation and protection surface generation.
     
-    :param iface_param: QGIS interface
-    :param routing_layer: Routing layer 
-    :param export_kml: Whether to export KML
-    :param output_dir: Output directory 
-    :return: Result dictionary or None
+    This function processes missed approach segments of an RNP APCH procedure,
+    calculating primary and secondary protection areas for all segments in the
+    missed approach procedure according to ICAO standards.
+    
+    The missed approach procedure provides a published path for aircraft that cannot
+    complete the approach, ensuring adequate obstacle clearance during the climbing
+    phase back to a safe altitude and navigation fix.
+    
+    Algorithm Overview:
+    1. Automatically selects all missed approach segments in routing layer
+    2. Processes each segment individually (straight legs, turns, holds)
+    3. Calculates corridor widths based on RNP values and segment characteristics
+    4. Generates primary and secondary protection areas for each segment
+    5. Applies turn radius calculations for curved segments
+    6. Creates comprehensive protection envelope
+    
+    Args:
+        iface_param (QgsInterface): QGIS interface instance for UI interactions
+        routing_layer (QgsVectorLayer): Vector layer containing approach routing segments
+        export_kml (bool, optional): Flag to enable KML export functionality. 
+                                   Defaults to False.
+        output_dir (str, optional): Directory path for KML output files. 
+                                  Defaults to None (uses user home directory).
+    
+    Returns:
+        dict or None: Dictionary containing generated layers and calculation results.
+                     Returns None if execution fails or required data is missing.
+                     
+                     Expected return structure:
+                     {
+                         'missed_approach_layer': QgsVectorLayer,
+                         'kml_path': str (if export_kml=True),
+                         'calculation_parameters': dict,
+                         'segments_processed': int
+                     }
+    
+    Raises:
+        RuntimeError: When QGIS interface operations fail
+        ValueError: When routing layer data is invalid or insufficient
+        GeometryError: When segment geometry cannot be processed
+        
+    Notes:
+        - Automatically processes ALL missed approach segments (no manual selection)
+        - Each segment type (straight, turn, hold) has specific area calculations
+        - Turn segments use bank angle and speed considerations
+        - Hold patterns require special entry/exit area calculations
+        - All calculations performed in projected coordinate systems
+        - Supports KML export for external validation and documentation
+        
+    Example:
+        >>> result = run_missed_approach(iface, routing_layer, export_kml=True, output_dir='/path/to/output')
+        >>> if result:
+        ...     print(f"Processed {result['segments_processed']} missed approach segments")
+        ...     if 'kml_path' in result:
+        ...         print(f"KML exported to: {result['kml_path']}")
     """
     try:
         # Use the passed iface parameter

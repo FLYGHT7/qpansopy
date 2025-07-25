@@ -127,14 +127,28 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.tempRefLineEdit.setMinimumHeight(28)
         self.formLayout.addRow("Temperature Reference (°C):", self.tempRefLineEdit)
         
-        # ISA Variation
+        # ISA Variation with Calculator Button
+        isa_layout = QtWidgets.QHBoxLayout()
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
         self.isaVarLineEdit.setValidator(validator)
         self.isaVarLineEdit.setText("0")
         self.isaVarLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('isaVar', text))
         self.isaVarLineEdit.setMinimumHeight(28)
-        self.formLayout.addRow("ISA Variation (°C):", self.isaVarLineEdit)
+        
+        # ISA Calculator Button with calculator icon
+        self.isaCalculatorButton = QtWidgets.QPushButton(self)
+        self.isaCalculatorButton.setText("🧮")  # Calculator emoji as icon
+        self.isaCalculatorButton.setToolTip("Calculate ISA Variation automatically\nfrom Aerodrome Elevation and Temperature Reference")
+        self.isaCalculatorButton.setMaximumWidth(40)
+        self.isaCalculatorButton.setMinimumHeight(28)
+        self.isaCalculatorButton.clicked.connect(self.calculate_isa_variation)
+        
+        isa_layout.addWidget(self.isaVarLineEdit)
+        isa_layout.addWidget(self.isaCalculatorButton)
+        isa_widget = QtWidgets.QWidget()
+        isa_widget.setLayout(isa_layout)
+        self.formLayout.addRow("ISA Variation (°C):", isa_widget)
         
         # IAS
         self.IASLineEdit = QtWidgets.QLineEdit(self)
@@ -365,6 +379,53 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 return False
         
         return True
+
+    def calculate_isa_variation(self):
+        """Calculate ISA Variation automatically from Aerodrome Elevation and Temperature Reference"""
+        try:
+            # Get aerodrome elevation and temperature reference
+            ad_elev_text = self.exact_values.get('adElev', self.adElevLineEdit.text())
+            temp_ref_text = self.exact_values.get('tempRef', self.tempRefLineEdit.text())
+            
+            # Validate inputs
+            if not ad_elev_text or not temp_ref_text:
+                self.log("Error: Please enter both Aerodrome Elevation and Temperature Reference before calculating ISA Variation")
+                self.iface.messageBar().pushMessage("Error", "Please enter both Aerodrome Elevation and Temperature Reference", level=Qgis.Warning)
+                return
+                
+            try:
+                ad_elev = float(ad_elev_text)
+                temp_ref = float(temp_ref_text)
+            except ValueError:
+                self.log("Error: Invalid numeric values for Aerodrome Elevation or Temperature Reference")
+                self.iface.messageBar().pushMessage("Error", "Invalid numeric values", level=Qgis.Warning)
+                return
+            
+            # Convert elevation to feet if needed
+            ad_elev_unit = self.units.get('adElev', 'ft')
+            if ad_elev_unit == 'm':
+                ad_elev_ft = ad_elev * 3.28084
+            else:
+                ad_elev_ft = ad_elev
+            
+            # Calculate ISA temperature at elevation using standard formula
+            # ISA temperature decreases at 1.98°C per 1000 ft (or 0.00198°C per ft)
+            isa_temp = 15 - (0.00198 * ad_elev_ft)
+            
+            # Calculate ISA deviation (actual temperature - ISA temperature)
+            isa_variation = temp_ref - isa_temp
+            
+            # Update the ISA Variation field
+            self.isaVarLineEdit.setText(f"{isa_variation:.2f}")
+            self.store_exact_value('isaVar', f"{isa_variation:.2f}")
+            
+            # Log the calculation
+            self.log(f"ISA Calculation: Elevation {ad_elev} {ad_elev_unit} → ISA Temp {isa_temp:.2f}°C → ISA Variation {isa_variation:.2f}°C")
+            self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.2f}°C", level=Qgis.Info)
+            
+        except Exception as e:
+            self.log(f"Error calculating ISA Variation: {str(e)}")
+            self.iface.messageBar().pushMessage("Error", f"Error calculating ISA Variation: {str(e)}", level=Qgis.Critical)
 
     def calculate(self):
         """Run the calculation"""
