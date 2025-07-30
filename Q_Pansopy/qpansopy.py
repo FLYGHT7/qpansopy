@@ -18,6 +18,7 @@ try:
     from .dockwidgets.ils.qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
     from .dockwidgets.utilities.qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
+    from .dockwidgets.utilities.qpansopy_feature_merge_dockwidget import QPANSOPYFeatureMergeDockWidget
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
@@ -130,6 +131,14 @@ class Qpansopy:
                                     "TOOLTIP": "Filter points based on THR elevation threshold",
                                     "ICON": "point_filter.svg",  # Using the F icon
                                     "DOCK_WIDGET": QPANSOPYPointFilterDockWidget,
+                                    "GUI_INSTANCE": None
+                                },
+                                "FeatureMerge": {
+                                    "TITLE": "QPANSOPY Feature Merge",
+                                    "TOOLBAR": "UTILITIES",
+                                    "TOOLTIP": "Merge multiple vector layers into a single layer",
+                                    "ICON": "feature_merge.svg",  # Using the lightning bolt icon
+                                    "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
                                     "GUI_INSTANCE": None
                                 }}
             
