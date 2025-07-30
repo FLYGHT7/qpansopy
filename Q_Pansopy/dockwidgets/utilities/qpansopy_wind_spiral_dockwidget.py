@@ -25,6 +25,7 @@ import os
 from PyQt5 import QtGui, QtWidgets, uic, QtCore
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
 from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtWidgets import QMessageBox
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
 from qgis.utils import iface
@@ -47,6 +48,17 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Initialize exact_values dictionary BEFORE setupUi to prevent AttributeError
         self.exact_values = {}
+        
+        # Initialize ISA calculation metadata
+        self.isa_calculation_metadata = {
+            'method': 'manual',  # Default to manual input
+            'isa_temperature': None,
+            'elevation_feet': None,
+            'elevation_original': None,
+            'elevation_unit': None,
+            'temperature_reference': None,
+            'isa_variation_calculated': None
+        }
         
         # Initialize units dictionary
         self.units = {
@@ -131,9 +143,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         isa_layout = QtWidgets.QHBoxLayout()
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
         self.isaVarLineEdit.setValidator(validator)
-        self.isaVarLineEdit.setText("0")
+        self.isaVarLineEdit.setText("0.00000")
         self.isaVarLineEdit.textChanged.connect(
-            lambda text: self.store_exact_value('isaVar', text))
+            lambda text: self.handle_isa_manual_change(text))
         self.isaVarLineEdit.setMinimumHeight(28)
         
         # ISA Calculator Button with calculator icon
@@ -234,6 +246,18 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if key in self.exact_values:
                 del self.exact_values[key]
     
+    def handle_isa_manual_change(self, text):
+        """Handle manual changes to ISA Variation field"""
+        self.store_exact_value('isaVar', text)
+        # Reset to manual input when user types manually
+        self.isa_calculation_metadata['method'] = 'manual'
+        self.isa_calculation_metadata['isa_temperature'] = None
+        self.isa_calculation_metadata['elevation_feet'] = None
+        self.isa_calculation_metadata['elevation_original'] = None
+        self.isa_calculation_metadata['elevation_unit'] = None
+        self.isa_calculation_metadata['temperature_reference'] = None
+        self.isa_calculation_metadata['isa_variation_calculated'] = None
+    
     def update_unit(self, param, unit):
         """Update unit for parameter"""
         self.units[param] = unit
@@ -270,6 +294,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         param_names = {
             'adElev': 'Aerodrome Elevation',
             'tempRef': 'Temperature Reference',
+            'isaVar': 'ISA Variation',
             'IAS': 'IAS',
             'altitude': 'Altitude',
             'bankAngle': 'Bank Angle',
@@ -299,7 +324,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 unit = params['adElev_unit']
             elif key == 'altitude':
                 unit = params['altitude_unit']
-            elif key == 'tempRef':
+            elif key == 'tempRef' or key == 'isaVar':
                 unit = "°C"
             elif key == 'IAS':
                 unit = "kt"
@@ -308,6 +333,21 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             elif key == 'w':
                 unit = "kt"
             params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+        
+        # Add ISA calculation details if available
+        if self.isa_calculation_metadata['method'] == 'calculated':
+            params_text += "\n" + "=" * 50 + "\n"
+            params_text += "ISA CALCULATION DETAILS\n"
+            params_text += "-" * 50 + "\n"
+            params_text += f"Method:\t\t\tCalculated\n"
+            params_text += f"ISA Temperature:\t\t{self.isa_calculation_metadata['isa_temperature']:.5f}\t\t°C\n"
+            params_text += f"Elevation Used:\t\t{self.isa_calculation_metadata['elevation_feet']:.0f}\t\tft\n"
+        else:
+            params_text += "\n" + "=" * 50 + "\n"
+            params_text += "ISA CALCULATION DETAILS\n"
+            params_text += "-" * 50 + "\n"
+            params_text += f"Method:\t\t\tManual Input\n"
+        
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_text)
         self.log("Wind Spiral parameters copied to clipboard in Word format. You can now paste them into Word.")
@@ -333,6 +373,16 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
                 'turnDirection': self.turnDirectionCombo.currentText(),
                 'showPoints': self.showPointsCheckBox.isChecked()
+            },
+            "isa_calculation": {
+                'method': self.isa_calculation_metadata['method'],
+                'isa_temperature': self.isa_calculation_metadata['isa_temperature'],
+                'elevation_feet': self.isa_calculation_metadata['elevation_feet'],
+                'elevation_original': self.isa_calculation_metadata['elevation_original'],
+                'elevation_unit': self.isa_calculation_metadata['elevation_unit'],
+                'temperature_reference': self.isa_calculation_metadata['temperature_reference'],
+                'isa_variation_calculated': self.isa_calculation_metadata['isa_variation_calculated'],
+                'isa_variation_used': self.exact_values.get('isaVar', self.isaVarLineEdit.text())
             }
         }
         params_json = json.dumps(params_dict, indent=2)
@@ -415,13 +465,37 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Calculate ISA deviation (actual temperature - ISA temperature)
             isa_variation = temp_ref - isa_temp
             
+            # Store calculation metadata for JSON export
+            self.isa_calculation_metadata = {
+                'method': 'calculated',
+                'isa_temperature': isa_temp,
+                'elevation_feet': ad_elev_ft,
+                'elevation_original': ad_elev,
+                'elevation_unit': ad_elev_unit,
+                'temperature_reference': temp_ref,
+                'isa_variation_calculated': isa_variation
+            }
+            
+            # Show popup dialog with calculation details (like before)
+            msg = QMessageBox()
+            msg.setWindowTitle("ISA Calculator - Wind Spiral")
+            msg.setIcon(QMessageBox.Information)
+            
+            # Two lines that were shown before
+            calculation_text = f"ISA temperature: {isa_temp:.5f}°C (at {ad_elev_ft:.0f} ft)\n"
+            calculation_text += f"ISA variation: {isa_variation:.5f}°C (Temp Ref - ISA Temp)"
+            
+            msg.setText(calculation_text)
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
+            
             # Update the ISA Variation field
-            self.isaVarLineEdit.setText(f"{isa_variation:.2f}")
-            self.store_exact_value('isaVar', f"{isa_variation:.2f}")
+            self.isaVarLineEdit.setText(f"{isa_variation:.5f}")
+            self.store_exact_value('isaVar', f"{isa_variation:.5f}")
             
             # Log the calculation
-            self.log(f"ISA Calculation: Elevation {ad_elev} {ad_elev_unit} → ISA Temp {isa_temp:.2f}°C → ISA Variation {isa_variation:.2f}°C")
-            self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.2f}°C", level=Qgis.Info)
+            self.log(f"ISA Calculation: Elevation {ad_elev} {ad_elev_unit} → ISA Temp {isa_temp:.5f}°C → ISA Variation {isa_variation:.5f}°C")
+            self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.5f}°C", level=Qgis.Info)
             
         except Exception as e:
             self.log(f"Error calculating ISA Variation: {str(e)}")
