@@ -71,6 +71,11 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.update_color_button(self.higherColorButton, self.higher_color)
         self.update_color_button(self.lowerColorButton, self.lower_color)
         
+        # Hide and disable KML export checkbox by default
+        if hasattr(self, 'exportKmlCheckBox'):
+            self.exportKmlCheckBox.setVisible(False)
+            self.exportKmlCheckBox.setChecked(False)
+        
         # Log initial message
         self.log("Point Filter loaded. Select a point layer with 'elev' field as active layer and set THR elevation.")
 

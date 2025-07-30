@@ -54,6 +54,11 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit.setText(self.get_desktop_path())
         
+        # Hide and disable KML export checkbox by default
+        if hasattr(self, 'exportKmlCheckBox'):
+            self.exportKmlCheckBox.setVisible(False)
+            self.exportKmlCheckBox.setChecked(False)
+        
         # Connect signals for existing UI elements
         self.setup_connections()
         
