@@ -102,39 +102,134 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Warning: formLayout not found in UI, creating dynamically")
             return
         
+        # Improve form layout spacing and alignment
+        self.formLayout.setVerticalSpacing(12)
+        self.formLayout.setHorizontalSpacing(10)
+        self.formLayout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.formLayout.setFormAlignment(Qt.AlignLeft)
+        
         # Create validator for numeric inputs
         regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegExpValidator(regex)
         
-        # ISA Variation with Calculator fields (integrated)
-        isa_layout = QtWidgets.QVBoxLayout()
+        # Common styles for consistent UI
+        line_edit_style = """
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+            QLineEdit:hover {
+                border-color: #999;
+            }
+        """
         
-        # ISA Variation field with button
-        isa_row_layout = QtWidgets.QHBoxLayout()
+        combo_box_style = """
+            QComboBox {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                background-color: white;
+                color: black;
+                selection-background-color: #0078d4;
+                selection-color: white;
+            }
+            QComboBox:focus {
+                border-color: #0078d4;
+            }
+            QComboBox:hover {
+                border-color: #999;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+                background-color: transparent;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #666;
+                margin-right: 6px;
+            }
+            QComboBox QAbstractItemView {
+                border: 1px solid #ccc;
+                background-color: white;
+                selection-background-color: #0078d4;
+                selection-color: white;
+                outline: none;
+            }
+            QComboBox QAbstractItemView::item {
+                padding: 4px 8px;
+                border: none;
+                color: black;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QComboBox QAbstractItemView::item:hover {
+                background-color: #e3f2fd;
+                color: black;
+            }
+        """
+        
+        # ISA Variation with Calculator button - aligned with other fields
+        isa_container = QtWidgets.QWidget(self)
+        isa_layout = QtWidgets.QHBoxLayout(isa_container)
+        isa_layout.setContentsMargins(0, 0, 0, 0)
+        isa_layout.setSpacing(8)
+        
+        # ISA Variation LineEdit - same size as other fields
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
         self.isaVarLineEdit.setValidator(validator)
         self.isaVarLineEdit.setText("0.00000")
         self.isaVarLineEdit.textChanged.connect(
             lambda text: self.handle_isa_manual_change(text))
-        self.isaVarLineEdit.setMinimumHeight(25)
-        self.isaVarLineEdit.setMaximumHeight(25)
+        self.isaVarLineEdit.setMinimumHeight(28)
+        self.isaVarLineEdit.setMaximumHeight(28)
+        self.isaVarLineEdit.setStyleSheet(line_edit_style)
         
-        # ISA Calculator Button with calculator icon - directly calculate ISA
+        # ISA Calculator Button - aligned to same height
         self.isaCalculatorButton = QtWidgets.QPushButton(self)
         self.isaCalculatorButton.setText("🧮")  # Calculator emoji as icon
         self.isaCalculatorButton.setToolTip("Calculate ISA Variation")
-        self.isaCalculatorButton.setMaximumWidth(30)
-        self.isaCalculatorButton.setMinimumHeight(25)
-        self.isaCalculatorButton.setMaximumHeight(25)
+        self.isaCalculatorButton.setFixedWidth(34)  # Fixed width for consistency
+        self.isaCalculatorButton.setMinimumHeight(28)
+        self.isaCalculatorButton.setMaximumHeight(28)
         self.isaCalculatorButton.clicked.connect(self.show_isa_calculator_dialog)
+        self.isaCalculatorButton.setStyleSheet("""
+            QPushButton {
+                background-color: #f8f9fa;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #e9ecef;
+                border-color: #0078d4;
+            }
+            QPushButton:pressed {
+                background-color: #dee2e6;
+            }
+        """)
         
-        isa_row_layout.addWidget(self.isaVarLineEdit)
-        isa_row_layout.addWidget(self.isaCalculatorButton)
-        isa_layout.addLayout(isa_row_layout)
+        # Add widgets to layout - LineEdit takes most space, button is fixed
+        isa_layout.addWidget(self.isaVarLineEdit)
+        isa_layout.addWidget(self.isaCalculatorButton)
         
-        isa_main_widget = QtWidgets.QWidget()
-        isa_main_widget.setLayout(isa_layout)
-        self.formLayout.addRow("ISA Variation (°C):", isa_main_widget)
+        # Set the container to have the same height as other form fields
+        isa_container.setMinimumHeight(28)
+        isa_container.setMaximumHeight(28)
+        
+        self.formLayout.addRow("ISA Variation (°C):", isa_container)
         
         # IAS
         self.IASLineEdit = QtWidgets.QLineEdit(self)
@@ -142,8 +237,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.IASLineEdit.setText("205")
         self.IASLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('IAS', text))
-        self.IASLineEdit.setMinimumHeight(25)
-        self.IASLineEdit.setMaximumHeight(25)
+        self.IASLineEdit.setMinimumHeight(28)
+        self.IASLineEdit.setMaximumHeight(28)
+        self.IASLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("IAS (kt):", self.IASLineEdit)
         
         # Altitude with unit selector
@@ -152,22 +248,24 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.altitudeLineEdit.setText("800")
         self.altitudeLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('altitude', text))
-        self.altitudeLineEdit.setMinimumHeight(25)
-        self.altitudeLineEdit.setMaximumHeight(25)
+        self.altitudeLineEdit.setMinimumHeight(28)
+        self.altitudeLineEdit.setMaximumHeight(28)
+        self.altitudeLineEdit.setStyleSheet(line_edit_style)
         
         self.altitudeUnitCombo = QtWidgets.QComboBox(self)
         self.altitudeUnitCombo.addItems(['ft', 'm'])
         self.altitudeUnitCombo.currentTextChanged.connect(
             lambda text: self.update_unit('altitude', text))
-        self.altitudeUnitCombo.setMinimumHeight(25)
-        self.altitudeUnitCombo.setMaximumHeight(25)
-        self.altitudeUnitCombo.setMinimumWidth(40)
-        self.altitudeUnitCombo.setMaximumWidth(50)
+        self.altitudeUnitCombo.setMinimumHeight(28)
+        self.altitudeUnitCombo.setMaximumHeight(28)
+        self.altitudeUnitCombo.setMinimumWidth(50)
+        self.altitudeUnitCombo.setMaximumWidth(60)
+        self.altitudeUnitCombo.setStyleSheet(combo_box_style)
         
         altitudeContainer = QtWidgets.QWidget(self)
         altitudeLayout = QtWidgets.QHBoxLayout(altitudeContainer)
         altitudeLayout.setContentsMargins(0, 0, 0, 0)
-        altitudeLayout.setSpacing(2)
+        altitudeLayout.setSpacing(8)
         altitudeLayout.addWidget(self.altitudeLineEdit)
         altitudeLayout.addWidget(self.altitudeUnitCombo)
         
@@ -179,8 +277,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.bankAngleLineEdit.setText("15")
         self.bankAngleLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('bankAngle', text))
-        self.bankAngleLineEdit.setMinimumHeight(25)
-        self.bankAngleLineEdit.setMaximumHeight(25)
+        self.bankAngleLineEdit.setMinimumHeight(28)
+        self.bankAngleLineEdit.setMaximumHeight(28)
+        self.bankAngleLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("Bank Angle (°):", self.bankAngleLineEdit)
         
         # Wind Speed
@@ -189,29 +288,74 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.windSpeedLineEdit.setText("30")
         self.windSpeedLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('w', text))
-        self.windSpeedLineEdit.setMinimumHeight(25)
-        self.windSpeedLineEdit.setMaximumHeight(25)
+        self.windSpeedLineEdit.setMinimumHeight(28)
+        self.windSpeedLineEdit.setMaximumHeight(28)
+        self.windSpeedLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("Wind Speed (kt):", self.windSpeedLineEdit)
         
         # Turn Direction
         self.turnDirectionCombo = QtWidgets.QComboBox(self)
         self.turnDirectionCombo.addItems(['R', 'L'])
-        self.turnDirectionCombo.setMinimumHeight(25)
-        self.turnDirectionCombo.setMaximumHeight(25)
+        self.turnDirectionCombo.setMinimumHeight(28)
+        self.turnDirectionCombo.setMaximumHeight(28)
+        self.turnDirectionCombo.setStyleSheet(combo_box_style)
         self.formLayout.addRow("Turn Direction:", self.turnDirectionCombo)
         
         # Show Points checkbox
         self.showPointsCheckBox = QtWidgets.QCheckBox("Show intermediate points", self)
+        self.showPointsCheckBox.setStyleSheet("""
+            QCheckBox {
+                font-size: 11px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #0078d4;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0078d4;
+                border-color: #0078d4;
+            }
+        """)
         self.formLayout.addRow("", self.showPointsCheckBox)
         
         # Export KML checkbox
         self.exportKmlCheckBox = QtWidgets.QCheckBox("Export KML", self)
+        self.exportKmlCheckBox.setStyleSheet("""
+            QCheckBox {
+                font-size: 11px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #0078d4;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0078d4;
+                border-color: #0078d4;
+            }
+        """)
         self.formLayout.addRow("", self.exportKmlCheckBox)
         
         # Output folder
         if not hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit = QtWidgets.QLineEdit(self)
             self.outputFolderLineEdit.setText(self.get_desktop_path())
+            self.outputFolderLineEdit.setMinimumHeight(28)
+            self.outputFolderLineEdit.setMaximumHeight(28)
+            self.outputFolderLineEdit.setStyleSheet(line_edit_style)
             self.formLayout.addRow("Output Folder:", self.outputFolderLineEdit)
         
         # Export KML Checkbox (if not in UI)
@@ -411,54 +555,190 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle("ISA Calculator")
         dialog.setModal(True)
-        dialog.resize(350, 200)
+        dialog.setFixedSize(380, 180)  # Fixed size for better layout
+        
+        # Set dialog properties for better appearance
+        dialog.setWindowFlags(dialog.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         
         layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
         
-        # Form layout for inputs
+        # Form layout for inputs with better spacing
         form_layout = QtWidgets.QFormLayout()
+        form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form_layout.setFormAlignment(Qt.AlignLeft)
+        form_layout.setVerticalSpacing(12)
+        form_layout.setHorizontalSpacing(15)
         
         # Create validator for numeric inputs
         regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegExpValidator(regex)
         
-        # Aerodrome Elevation with unit selector
+        # Aerodrome Elevation with unit selector - improved layout
         elev_container = QtWidgets.QWidget()
         elev_layout = QtWidgets.QHBoxLayout(elev_container)
         elev_layout.setContentsMargins(0, 0, 0, 0)
-        elev_layout.setSpacing(5)
+        elev_layout.setSpacing(8)
         
         elev_line_edit = QtWidgets.QLineEdit()
         elev_line_edit.setValidator(validator)
         elev_line_edit.setText(str(self.exact_values.get('adElev', '1000')))
-        elev_line_edit.setMinimumHeight(25)
+        elev_line_edit.setMinimumHeight(28)
+        elev_line_edit.setMinimumWidth(180)
+        elev_line_edit.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+        """)
         
         elev_unit_combo = QtWidgets.QComboBox()
         elev_unit_combo.addItems(['ft', 'm'])
         elev_unit_combo.setCurrentText(self.units.get('adElev', 'ft'))
-        elev_unit_combo.setMinimumHeight(25)
-        elev_unit_combo.setMinimumWidth(50)
+        elev_unit_combo.setMinimumHeight(28)
+        elev_unit_combo.setMinimumWidth(55)
+        elev_unit_combo.setStyleSheet("""
+            QComboBox {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                background-color: white;
+                color: black;
+                selection-background-color: #0078d4;
+                selection-color: white;
+            }
+            QComboBox:focus {
+                border-color: #0078d4;
+            }
+            QComboBox:hover {
+                border-color: #999;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+                background-color: transparent;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #666;
+                margin-right: 6px;
+            }
+            QComboBox QAbstractItemView {
+                border: 1px solid #ccc;
+                background-color: white;
+                selection-background-color: #0078d4;
+                selection-color: white;
+                outline: none;
+            }
+            QComboBox QAbstractItemView::item {
+                padding: 4px 8px;
+                border: none;
+                color: black;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QComboBox QAbstractItemView::item:hover {
+                background-color: #e3f2fd;
+                color: black;
+            }
+        """)
         
         elev_layout.addWidget(elev_line_edit)
         elev_layout.addWidget(elev_unit_combo)
+        elev_layout.addStretch()
         
         form_layout.addRow("Aerodrome Elevation:", elev_container)
         
-        # Temperature Reference
+        # Temperature Reference - improved styling
         temp_line_edit = QtWidgets.QLineEdit()
         temp_line_edit.setValidator(validator)
         temp_line_edit.setText(str(self.exact_values.get('tempRef', '15')))
-        temp_line_edit.setMinimumHeight(25)
+        temp_line_edit.setMinimumHeight(28)
+        temp_line_edit.setMinimumWidth(180)
+        temp_line_edit.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+        """)
+        
         form_layout.addRow("Temperature Ref (°C):", temp_line_edit)
         
         layout.addLayout(form_layout)
         
-        # Buttons
-        button_layout = QtWidgets.QHBoxLayout()
-        calculate_button = QtWidgets.QPushButton("Calculate ISA")
-        cancel_button = QtWidgets.QPushButton("Cancel")
+        # Separator line
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator.setStyleSheet("color: #ddd;")
+        layout.addWidget(separator)
         
+        # Buttons with improved styling
+        button_layout = QtWidgets.QHBoxLayout()
+        button_layout.setSpacing(10)
+        
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.setMinimumHeight(32)
+        cancel_button.setMinimumWidth(80)
+        cancel_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f8f9fa;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 6px 16px;
+                font-size: 11px;
+                font-weight: normal;
+            }
+            QPushButton:hover {
+                background-color: #e9ecef;
+                border-color: #adb5bd;
+            }
+            QPushButton:pressed {
+                background-color: #dee2e6;
+            }
+        """)
+        
+        calculate_button = QtWidgets.QPushButton("Calculate ISA")
+        calculate_button.setMinimumHeight(32)
+        calculate_button.setMinimumWidth(100)
         calculate_button.setDefault(True)
+        calculate_button.setStyleSheet("""
+            QPushButton {
+                background-color: #0078d4;
+                border: 1px solid #0078d4;
+                border-radius: 4px;
+                color: white;
+                padding: 6px 16px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #106ebe;
+                border-color: #106ebe;
+            }
+            QPushButton:pressed {
+                background-color: #005a9e;
+            }
+            QPushButton:default {
+                border: 2px solid #0078d4;
+            }
+        """)
         
         button_layout.addStretch()
         button_layout.addWidget(cancel_button)
