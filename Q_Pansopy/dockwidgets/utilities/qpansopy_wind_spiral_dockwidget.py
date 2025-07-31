@@ -119,72 +119,18 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.isaVarLineEdit.setMinimumHeight(25)
         self.isaVarLineEdit.setMaximumHeight(25)
         
-        # ISA Calculator Button with calculator icon
+        # ISA Calculator Button with calculator icon - directly calculate ISA
         self.isaCalculatorButton = QtWidgets.QPushButton(self)
         self.isaCalculatorButton.setText("🧮")  # Calculator emoji as icon
-        self.isaCalculatorButton.setToolTip("Calculate ISA Variation from Aerodrome Elevation and Temperature Reference")
+        self.isaCalculatorButton.setToolTip("Calculate ISA Variation")
         self.isaCalculatorButton.setMaximumWidth(30)
         self.isaCalculatorButton.setMinimumHeight(25)
         self.isaCalculatorButton.setMaximumHeight(25)
-        self.isaCalculatorButton.clicked.connect(self.toggle_isa_calculator)
+        self.isaCalculatorButton.clicked.connect(self.show_isa_calculator_dialog)
         
         isa_row_layout.addWidget(self.isaVarLineEdit)
         isa_row_layout.addWidget(self.isaCalculatorButton)
         isa_layout.addLayout(isa_row_layout)
-        
-        # ISA Calculator fields (initially hidden)
-        self.isa_calc_widget = QtWidgets.QWidget()
-        isa_calc_layout = QtWidgets.QFormLayout(self.isa_calc_widget)
-        isa_calc_layout.setContentsMargins(10, 1, 1, 1)  # Indent calculator fields
-        isa_calc_layout.setVerticalSpacing(2)
-        isa_calc_layout.setHorizontalSpacing(3)
-        
-        # Aerodrome Elevation with unit selector
-        adElev_container = QtWidgets.QWidget()
-        adElev_layout = QtWidgets.QHBoxLayout(adElev_container)
-        adElev_layout.setContentsMargins(0, 0, 0, 0)
-        adElev_layout.setSpacing(2)
-        
-        self.adElevLineEdit = QtWidgets.QLineEdit()
-        self.adElevLineEdit.setValidator(validator)
-        self.adElevLineEdit.setText("0")
-        self.adElevLineEdit.textChanged.connect(
-            lambda text: self.handle_elevation_change(text))
-        self.adElevLineEdit.setMinimumHeight(25)
-        self.adElevLineEdit.setMaximumHeight(25)
-        
-        self.adElevUnitCombo = QtWidgets.QComboBox()
-        self.adElevUnitCombo.addItems(['ft', 'm'])
-        self.adElevUnitCombo.currentTextChanged.connect(
-            lambda text: self.update_unit('adElev', text))
-        self.adElevUnitCombo.setMinimumHeight(25)
-        self.adElevUnitCombo.setMaximumHeight(25)
-        self.adElevUnitCombo.setMinimumWidth(40)
-        self.adElevUnitCombo.setMaximumWidth(50)
-        
-        adElev_layout.addWidget(self.adElevLineEdit)
-        adElev_layout.addWidget(self.adElevUnitCombo)
-        isa_calc_layout.addRow("  Aerodrome Elevation:", adElev_container)
-        
-        # Temperature Reference
-        self.tempRefLineEdit = QtWidgets.QLineEdit()
-        self.tempRefLineEdit.setValidator(validator)
-        self.tempRefLineEdit.setText("15")
-        self.tempRefLineEdit.textChanged.connect(
-            lambda text: self.handle_temperature_change(text))
-        self.tempRefLineEdit.setMinimumHeight(25)
-        self.tempRefLineEdit.setMaximumHeight(25)
-        isa_calc_layout.addRow("  Temperature Ref (°C):", self.tempRefLineEdit)
-        
-        # Calculate button
-        self.calcIsaButton = QtWidgets.QPushButton("Calculate ISA")
-        self.calcIsaButton.setMinimumHeight(28)
-        self.calcIsaButton.setMaximumHeight(28)
-        self.calcIsaButton.clicked.connect(self.calculate_isa_from_fields)
-        isa_calc_layout.addRow("", self.calcIsaButton)
-        
-        self.isa_calc_widget.setVisible(False)  # Hidden by default
-        isa_layout.addWidget(self.isa_calc_widget)
         
         isa_main_widget = QtWidgets.QWidget()
         isa_main_widget.setLayout(isa_layout)
@@ -287,18 +233,6 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Mark as manual input - no automatic calculations
         self.isa_calculation_metadata['method'] = 'manual'
     
-    def handle_elevation_change(self, text):
-        """Handle manual changes to Aerodrome Elevation field"""
-        self.store_exact_value('adElev', text)
-        # Mark as manual input
-        self.isa_calculation_metadata['method'] = 'manual'
-    
-    def handle_temperature_change(self, text):
-        """Handle manual changes to Temperature Reference field"""
-        self.store_exact_value('tempRef', text)
-        # Mark as manual input
-        self.isa_calculation_metadata['method'] = 'manual'
-    
     def update_unit(self, param, unit):
         """Update unit for parameter"""
         self.units[param] = unit
@@ -343,11 +277,11 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'turn_direction': 'Turn Direction',
             'show_points': 'Show Construction Points'
         }
-        # Usar valores actuales (incluyendo aerodrome elevation y temperature reference)
+        # Usar valores actuales (usando valores almacenados del diálogo)
         params = {
-            'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
+            'adElev': self.exact_values.get('adElev', ''),
             'adElev_unit': self.units.get('adElev', 'ft'),
-            'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+            'tempRef': self.exact_values.get('tempRef', ''),
             'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
             'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
             'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
@@ -404,9 +338,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 "version": "1.0"
             },
             "parameters": {
-                'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
+                'adElev': self.exact_values.get('adElev', ''),
                 'adElev_unit': self.units.get('adElev', 'ft'),
-                'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+                'tempRef': self.exact_values.get('tempRef', ''),
                 'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
                 'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
                 'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
@@ -472,92 +406,142 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         return True
 
-    def toggle_isa_calculator(self):
-        """Toggle the ISA calculator fields visibility"""
-        is_visible = self.isa_calc_widget.isVisible()
-        self.isa_calc_widget.setVisible(not is_visible)
+    def show_isa_calculator_dialog(self):
+        """Show ISA Calculator dialog to input elevation and temperature"""
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("ISA Calculator")
+        dialog.setModal(True)
+        dialog.resize(350, 200)
         
-        # Update button tooltip
-        if not is_visible:
-            self.isaCalculatorButton.setToolTip("Hide ISA Calculator fields")
-            # Focus on aerodrome elevation field when showing calculator
-            self.adElevLineEdit.setFocus()
-        else:
-            self.isaCalculatorButton.setToolTip("Show ISA Calculator fields")
-    
-    def calculate_isa_from_fields(self):
-        """Calculate ISA variation from the integrated fields"""
-        try:
-            # Get input values
-            elevation_text = self.adElevLineEdit.text().strip()
-            temperature_text = self.tempRefLineEdit.text().strip()
-            
-            if not elevation_text or not temperature_text:
-                self.log("Error: Please enter both Aerodrome Elevation and Temperature Reference")
-                self.iface.messageBar().pushMessage("Input Error", 
-                    "Please enter both Aerodrome Elevation and Temperature Reference", level=Qgis.Warning)
-                return
-            
+        layout = QtWidgets.QVBoxLayout(dialog)
+        
+        # Form layout for inputs
+        form_layout = QtWidgets.QFormLayout()
+        
+        # Create validator for numeric inputs
+        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegExpValidator(regex)
+        
+        # Aerodrome Elevation with unit selector
+        elev_container = QtWidgets.QWidget()
+        elev_layout = QtWidgets.QHBoxLayout(elev_container)
+        elev_layout.setContentsMargins(0, 0, 0, 0)
+        elev_layout.setSpacing(5)
+        
+        elev_line_edit = QtWidgets.QLineEdit()
+        elev_line_edit.setValidator(validator)
+        elev_line_edit.setText(str(self.exact_values.get('adElev', '1000')))
+        elev_line_edit.setMinimumHeight(25)
+        
+        elev_unit_combo = QtWidgets.QComboBox()
+        elev_unit_combo.addItems(['ft', 'm'])
+        elev_unit_combo.setCurrentText(self.units.get('adElev', 'ft'))
+        elev_unit_combo.setMinimumHeight(25)
+        elev_unit_combo.setMinimumWidth(50)
+        
+        elev_layout.addWidget(elev_line_edit)
+        elev_layout.addWidget(elev_unit_combo)
+        
+        form_layout.addRow("Aerodrome Elevation:", elev_container)
+        
+        # Temperature Reference
+        temp_line_edit = QtWidgets.QLineEdit()
+        temp_line_edit.setValidator(validator)
+        temp_line_edit.setText(str(self.exact_values.get('tempRef', '15')))
+        temp_line_edit.setMinimumHeight(25)
+        form_layout.addRow("Temperature Ref (°C):", temp_line_edit)
+        
+        layout.addLayout(form_layout)
+        
+        # Buttons
+        button_layout = QtWidgets.QHBoxLayout()
+        calculate_button = QtWidgets.QPushButton("Calculate ISA")
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        
+        calculate_button.setDefault(True)
+        
+        button_layout.addStretch()
+        button_layout.addWidget(cancel_button)
+        button_layout.addWidget(calculate_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect buttons
+        cancel_button.clicked.connect(dialog.reject)
+        
+        def calculate_and_close():
             try:
-                elevation = float(elevation_text)
-                temperature = float(temperature_text)
-            except ValueError:
-                self.log("Error: Please enter valid numeric values")
-                self.iface.messageBar().pushMessage("Input Error", 
-                    "Please enter valid numeric values", level=Qgis.Warning)
-                return
-            
-            # Convert elevation to feet if needed
-            elevation_unit = self.adElevUnitCombo.currentText()
-            if elevation_unit == 'm':
-                elevation_ft = elevation * 3.28084
-            else:
-                elevation_ft = elevation
-            
-            # Calculate ISA temperature at elevation
-            # ISA temperature decreases at 1.98°C per 1000 ft (or 0.00198°C per ft)
-            isa_temp = 15 - (0.00198 * elevation_ft)
-            
-            # Calculate ISA variation (actual temperature - ISA temperature)
-            isa_variation = temperature - isa_temp
-            
-            # Update the ISA Variation field
-            self.isaVarLineEdit.setText(f"{isa_variation:.5f}")
-            self.store_exact_value('isaVar', f"{isa_variation:.5f}")
-            
-            # Store calculation metadata
-            self.isa_calculation_metadata = {
-                'method': 'calculated',
-                'isa_temperature': isa_temp,
-                'elevation_feet': elevation_ft,
-                'elevation_original': elevation,
-                'elevation_unit': elevation_unit,
-                'temperature_reference': temperature,
-                'isa_variation_calculated': isa_variation
-            }
-            
-            # Log the calculation
-            elev_info = f"{elevation} {elevation_unit}"
-            self.log(f"ISA Calculator: Elevation {elev_info} → ISA Temp {isa_temp:.5f}°C → ISA Variation {isa_variation:.5f}°C")
-            self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.5f}°C", level=Qgis.Info)
-            
-            # Keep calculator fields visible after calculation (don't auto-hide)
-            # User can manually close them if desired
-            
-        except Exception as e:
-            self.log(f"Error calculating ISA Variation: {str(e)}")
-            self.iface.messageBar().pushMessage("Error", f"Error calculating ISA Variation: {str(e)}", level=Qgis.Critical)
-
-    def calculate_isa_variation(self):
-        """Calculate ISA Variation from integrated calculator fields"""
-        # Show calculator fields if hidden and focus on them
-        if not self.isa_calc_widget.isVisible():
-            self.isa_calc_widget.setVisible(True)
-            self.isaCalculatorButton.setToolTip("Hide ISA Calculator fields")
+                # Get values
+                elevation_text = elev_line_edit.text().strip()
+                temperature_text = temp_line_edit.text().strip()
+                
+                if not elevation_text or not temperature_text:
+                    QtWidgets.QMessageBox.warning(dialog, "Input Error", 
+                        "Please enter both Aerodrome Elevation and Temperature Reference")
+                    return
+                
+                try:
+                    elevation = float(elevation_text)
+                    temperature = float(temperature_text)
+                except ValueError:
+                    QtWidgets.QMessageBox.warning(dialog, "Input Error", 
+                        "Please enter valid numeric values")
+                    return
+                
+                # Store values for future use
+                self.store_exact_value('adElev', elevation_text)
+                self.store_exact_value('tempRef', temperature_text)
+                
+                # Update unit
+                elevation_unit = elev_unit_combo.currentText()
+                self.units['adElev'] = elevation_unit
+                
+                # Convert elevation to feet if needed
+                if elevation_unit == 'm':
+                    elevation_ft = elevation * 3.28084
+                else:
+                    elevation_ft = elevation
+                
+                # Calculate ISA temperature at elevation
+                # ISA temperature decreases at 1.98°C per 1000 ft (or 0.00198°C per ft)
+                isa_temp = 15 - (0.00198 * elevation_ft)
+                
+                # Calculate ISA variation (actual temperature - ISA temperature)
+                isa_variation = temperature - isa_temp
+                
+                # Update the ISA Variation field in main UI
+                self.isaVarLineEdit.setText(f"{isa_variation:.5f}")
+                self.store_exact_value('isaVar', f"{isa_variation:.5f}")
+                
+                # Store calculation metadata
+                self.isa_calculation_metadata = {
+                    'method': 'calculated',
+                    'isa_temperature': isa_temp,
+                    'elevation_feet': elevation_ft,
+                    'elevation_original': elevation,
+                    'elevation_unit': elevation_unit,
+                    'temperature_reference': temperature,
+                    'isa_variation_calculated': isa_variation
+                }
+                
+                # Log the calculation
+                elev_info = f"{elevation} {elevation_unit}"
+                self.log(f"ISA Calculator: Elevation {elev_info} → ISA Temp {isa_temp:.5f}°C → ISA Variation {isa_variation:.5f}°C")
+                self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.5f}°C", level=Qgis.Info)
+                
+                dialog.accept()
+                
+            except Exception as e:
+                self.log(f"Error calculating ISA Variation: {str(e)}")
+                QtWidgets.QMessageBox.critical(dialog, "Error", f"Error calculating ISA Variation: {str(e)}")
         
-        # Focus on aerodrome elevation field
-        self.adElevLineEdit.setFocus()
-
+        calculate_button.clicked.connect(calculate_and_close)
+        
+        # Focus on elevation field
+        elev_line_edit.setFocus()
+        
+        # Show dialog
+        dialog.exec_()
     def calculate(self):
         """Run the calculation"""
         self.log("Starting calculation...")
@@ -635,11 +619,11 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def copy_parameters(self):
         """Copy parameters to clipboard"""
         try:
-            # Get parameters
+            # Get parameters - use stored values for elevation and temperature from dialog
             params = {
-                'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
-                'adElev_unit': self.adElevUnitCombo.currentText(),
-                'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+                'adElev': self.exact_values.get('adElev', ''),
+                'adElev_unit': self.units.get('adElev', 'ft'),
+                'tempRef': self.exact_values.get('tempRef', ''),
                 'isa_var': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
                 'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
                 'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
