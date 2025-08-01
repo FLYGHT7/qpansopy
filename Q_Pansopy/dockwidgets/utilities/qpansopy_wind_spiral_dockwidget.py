@@ -102,65 +102,134 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Warning: formLayout not found in UI, creating dynamically")
             return
         
+        # Improve form layout spacing and alignment
+        self.formLayout.setVerticalSpacing(12)
+        self.formLayout.setHorizontalSpacing(10)
+        self.formLayout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.formLayout.setFormAlignment(Qt.AlignLeft)
+        
         # Create validator for numeric inputs
         regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegExpValidator(regex)
         
-        # Aerodrome Elevation with unit selector
-        self.adElevLineEdit = QtWidgets.QLineEdit(self)
-        self.adElevLineEdit.setValidator(validator)
-        self.adElevLineEdit.setText("0")
-        self.adElevLineEdit.textChanged.connect(
-            lambda text: self.store_exact_value('adElev', text))
-        self.adElevLineEdit.setMinimumHeight(28)
+        # Common styles for consistent UI
+        line_edit_style = """
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                background-color: white;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+            QLineEdit:hover {
+                border-color: #999;
+            }
+        """
         
-        self.adElevUnitCombo = QtWidgets.QComboBox(self)
-        self.adElevUnitCombo.addItems(['ft', 'm'])
-        self.adElevUnitCombo.currentTextChanged.connect(
-            lambda text: self.update_unit('adElev', text))
-        self.adElevUnitCombo.setMinimumHeight(28)
-        self.adElevUnitCombo.setFixedWidth(45)
+        combo_box_style = """
+            QComboBox {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                background-color: white;
+                color: black;
+                selection-background-color: #0078d4;
+                selection-color: white;
+            }
+            QComboBox:focus {
+                border-color: #0078d4;
+            }
+            QComboBox:hover {
+                border-color: #999;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+                background-color: transparent;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #666;
+                margin-right: 6px;
+            }
+            QComboBox QAbstractItemView {
+                border: 1px solid #ccc;
+                background-color: white;
+                selection-background-color: #0078d4;
+                selection-color: white;
+                outline: none;
+            }
+            QComboBox QAbstractItemView::item {
+                padding: 4px 8px;
+                border: none;
+                color: black;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QComboBox QAbstractItemView::item:hover {
+                background-color: #e3f2fd;
+                color: black;
+            }
+        """
         
-        adElevContainer = QtWidgets.QWidget(self)
-        adElevLayout = QtWidgets.QHBoxLayout(adElevContainer)
-        adElevLayout.setContentsMargins(0, 0, 0, 0)
-        adElevLayout.setSpacing(5)
-        adElevLayout.addWidget(self.adElevLineEdit)
-        adElevLayout.addWidget(self.adElevUnitCombo)
+        # ISA Variation with Calculator button - aligned with other fields
+        isa_container = QtWidgets.QWidget(self)
+        isa_layout = QtWidgets.QHBoxLayout(isa_container)
+        isa_layout.setContentsMargins(0, 0, 0, 0)
+        isa_layout.setSpacing(8)
         
-        self.formLayout.addRow("Aerodrome Elevation:", adElevContainer)
-        
-        # Temperature Reference
-        self.tempRefLineEdit = QtWidgets.QLineEdit(self)
-        self.tempRefLineEdit.setValidator(validator)
-        self.tempRefLineEdit.setText("15")
-        self.tempRefLineEdit.textChanged.connect(
-            lambda text: self.store_exact_value('tempRef', text))
-        self.tempRefLineEdit.setMinimumHeight(28)
-        self.formLayout.addRow("Temperature Reference (°C):", self.tempRefLineEdit)
-        
-        # ISA Variation with Calculator Button
-        isa_layout = QtWidgets.QHBoxLayout()
+        # ISA Variation LineEdit - same size as other fields
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
         self.isaVarLineEdit.setValidator(validator)
         self.isaVarLineEdit.setText("0.00000")
         self.isaVarLineEdit.textChanged.connect(
             lambda text: self.handle_isa_manual_change(text))
         self.isaVarLineEdit.setMinimumHeight(28)
+        self.isaVarLineEdit.setMaximumHeight(28)
+        self.isaVarLineEdit.setStyleSheet(line_edit_style)
         
-        # ISA Calculator Button with calculator icon
+        # ISA Calculator Button - aligned to same height
         self.isaCalculatorButton = QtWidgets.QPushButton(self)
         self.isaCalculatorButton.setText("🧮")  # Calculator emoji as icon
-        self.isaCalculatorButton.setToolTip("Calculate ISA Variation automatically\nfrom Aerodrome Elevation and Temperature Reference")
-        self.isaCalculatorButton.setMaximumWidth(40)
+        self.isaCalculatorButton.setToolTip("Calculate ISA Variation")
+        self.isaCalculatorButton.setFixedWidth(34)  # Fixed width for consistency
         self.isaCalculatorButton.setMinimumHeight(28)
-        self.isaCalculatorButton.clicked.connect(self.calculate_isa_variation)
+        self.isaCalculatorButton.setMaximumHeight(28)
+        self.isaCalculatorButton.clicked.connect(self.show_isa_calculator_dialog)
+        self.isaCalculatorButton.setStyleSheet("""
+            QPushButton {
+                background-color: #f8f9fa;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #e9ecef;
+                border-color: #0078d4;
+            }
+            QPushButton:pressed {
+                background-color: #dee2e6;
+            }
+        """)
         
+        # Add widgets to layout - LineEdit takes most space, button is fixed
         isa_layout.addWidget(self.isaVarLineEdit)
         isa_layout.addWidget(self.isaCalculatorButton)
-        isa_widget = QtWidgets.QWidget()
-        isa_widget.setLayout(isa_layout)
-        self.formLayout.addRow("ISA Variation (°C):", isa_widget)
+        
+        # Set the container to have the same height as other form fields
+        isa_container.setMinimumHeight(28)
+        isa_container.setMaximumHeight(28)
+        
+        self.formLayout.addRow("ISA Variation (°C):", isa_container)
         
         # IAS
         self.IASLineEdit = QtWidgets.QLineEdit(self)
@@ -169,6 +238,8 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.IASLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('IAS', text))
         self.IASLineEdit.setMinimumHeight(28)
+        self.IASLineEdit.setMaximumHeight(28)
+        self.IASLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("IAS (kt):", self.IASLineEdit)
         
         # Altitude with unit selector
@@ -178,18 +249,23 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.altitudeLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('altitude', text))
         self.altitudeLineEdit.setMinimumHeight(28)
+        self.altitudeLineEdit.setMaximumHeight(28)
+        self.altitudeLineEdit.setStyleSheet(line_edit_style)
         
         self.altitudeUnitCombo = QtWidgets.QComboBox(self)
         self.altitudeUnitCombo.addItems(['ft', 'm'])
         self.altitudeUnitCombo.currentTextChanged.connect(
             lambda text: self.update_unit('altitude', text))
         self.altitudeUnitCombo.setMinimumHeight(28)
-        self.altitudeUnitCombo.setFixedWidth(45)
+        self.altitudeUnitCombo.setMaximumHeight(28)
+        self.altitudeUnitCombo.setMinimumWidth(50)
+        self.altitudeUnitCombo.setMaximumWidth(60)
+        self.altitudeUnitCombo.setStyleSheet(combo_box_style)
         
         altitudeContainer = QtWidgets.QWidget(self)
         altitudeLayout = QtWidgets.QHBoxLayout(altitudeContainer)
         altitudeLayout.setContentsMargins(0, 0, 0, 0)
-        altitudeLayout.setSpacing(5)
+        altitudeLayout.setSpacing(8)
         altitudeLayout.addWidget(self.altitudeLineEdit)
         altitudeLayout.addWidget(self.altitudeUnitCombo)
         
@@ -202,6 +278,8 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.bankAngleLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('bankAngle', text))
         self.bankAngleLineEdit.setMinimumHeight(28)
+        self.bankAngleLineEdit.setMaximumHeight(28)
+        self.bankAngleLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("Bank Angle (°):", self.bankAngleLineEdit)
         
         # Wind Speed
@@ -211,26 +289,73 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.windSpeedLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('w', text))
         self.windSpeedLineEdit.setMinimumHeight(28)
+        self.windSpeedLineEdit.setMaximumHeight(28)
+        self.windSpeedLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("Wind Speed (kt):", self.windSpeedLineEdit)
         
         # Turn Direction
         self.turnDirectionCombo = QtWidgets.QComboBox(self)
         self.turnDirectionCombo.addItems(['R', 'L'])
         self.turnDirectionCombo.setMinimumHeight(28)
+        self.turnDirectionCombo.setMaximumHeight(28)
+        self.turnDirectionCombo.setStyleSheet(combo_box_style)
         self.formLayout.addRow("Turn Direction:", self.turnDirectionCombo)
         
         # Show Points checkbox
         self.showPointsCheckBox = QtWidgets.QCheckBox("Show intermediate points", self)
+        self.showPointsCheckBox.setStyleSheet("""
+            QCheckBox {
+                font-size: 11px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #0078d4;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0078d4;
+                border-color: #0078d4;
+            }
+        """)
         self.formLayout.addRow("", self.showPointsCheckBox)
         
         # Export KML checkbox
         self.exportKmlCheckBox = QtWidgets.QCheckBox("Export KML", self)
+        self.exportKmlCheckBox.setStyleSheet("""
+            QCheckBox {
+                font-size: 11px;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #0078d4;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0078d4;
+                border-color: #0078d4;
+            }
+        """)
         self.formLayout.addRow("", self.exportKmlCheckBox)
         
         # Output folder
         if not hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit = QtWidgets.QLineEdit(self)
             self.outputFolderLineEdit.setText(self.get_desktop_path())
+            self.outputFolderLineEdit.setMinimumHeight(28)
+            self.outputFolderLineEdit.setMaximumHeight(28)
+            self.outputFolderLineEdit.setStyleSheet(line_edit_style)
             self.formLayout.addRow("Output Folder:", self.outputFolderLineEdit)
         
         # Export KML Checkbox (if not in UI)
@@ -249,14 +374,8 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def handle_isa_manual_change(self, text):
         """Handle manual changes to ISA Variation field"""
         self.store_exact_value('isaVar', text)
-        # Reset to manual input when user types manually
+        # Mark as manual input - no automatic calculations
         self.isa_calculation_metadata['method'] = 'manual'
-        self.isa_calculation_metadata['isa_temperature'] = None
-        self.isa_calculation_metadata['elevation_feet'] = None
-        self.isa_calculation_metadata['elevation_original'] = None
-        self.isa_calculation_metadata['elevation_unit'] = None
-        self.isa_calculation_metadata['temperature_reference'] = None
-        self.isa_calculation_metadata['isa_variation_calculated'] = None
     
     def update_unit(self, param, unit):
         """Update unit for parameter"""
@@ -302,11 +421,11 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'turn_direction': 'Turn Direction',
             'show_points': 'Show Construction Points'
         }
-        # Usar valores actuales
+        # Usar valores actuales (usando valores almacenados del diálogo)
         params = {
-            'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
+            'adElev': self.exact_values.get('adElev', ''),
             'adElev_unit': self.units.get('adElev', 'ft'),
-            'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+            'tempRef': self.exact_values.get('tempRef', ''),
             'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
             'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
             'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
@@ -339,9 +458,10 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             params_text += "\n" + "=" * 50 + "\n"
             params_text += "ISA CALCULATION DETAILS\n"
             params_text += "-" * 50 + "\n"
-            params_text += f"Method:\t\t\tCalculated\n"
+            params_text += f"Method:\t\t\tCalculated from Elevation and Temperature\n"
             params_text += f"ISA Temperature:\t\t{self.isa_calculation_metadata['isa_temperature']:.5f}\t\t°C\n"
             params_text += f"Elevation Used:\t\t{self.isa_calculation_metadata['elevation_feet']:.0f}\t\tft\n"
+            params_text += f"Temperature Reference:\t\t{self.isa_calculation_metadata['temperature_reference']}\t\t°C\n"
         else:
             params_text += "\n" + "=" * 50 + "\n"
             params_text += "ISA CALCULATION DETAILS\n"
@@ -362,9 +482,9 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 "version": "1.0"
             },
             "parameters": {
-                'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
+                'adElev': self.exact_values.get('adElev', ''),
                 'adElev_unit': self.units.get('adElev', 'ft'),
-                'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+                'tempRef': self.exact_values.get('tempRef', ''),
                 'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
                 'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
                 'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
@@ -430,77 +550,278 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         return True
 
-    def calculate_isa_variation(self):
-        """Calculate ISA Variation automatically from Aerodrome Elevation and Temperature Reference"""
-        try:
-            # Get aerodrome elevation and temperature reference
-            ad_elev_text = self.exact_values.get('adElev', self.adElevLineEdit.text())
-            temp_ref_text = self.exact_values.get('tempRef', self.tempRefLineEdit.text())
-            
-            # Validate inputs
-            if not ad_elev_text or not temp_ref_text:
-                self.log("Error: Please enter both Aerodrome Elevation and Temperature Reference before calculating ISA Variation")
-                self.iface.messageBar().pushMessage("Error", "Please enter both Aerodrome Elevation and Temperature Reference", level=Qgis.Warning)
-                return
-                
-            try:
-                ad_elev = float(ad_elev_text)
-                temp_ref = float(temp_ref_text)
-            except ValueError:
-                self.log("Error: Invalid numeric values for Aerodrome Elevation or Temperature Reference")
-                self.iface.messageBar().pushMessage("Error", "Invalid numeric values", level=Qgis.Warning)
-                return
-            
-            # Convert elevation to feet if needed
-            ad_elev_unit = self.units.get('adElev', 'ft')
-            if ad_elev_unit == 'm':
-                ad_elev_ft = ad_elev * 3.28084
-            else:
-                ad_elev_ft = ad_elev
-            
-            # Calculate ISA temperature at elevation using standard formula
-            # ISA temperature decreases at 1.98°C per 1000 ft (or 0.00198°C per ft)
-            isa_temp = 15 - (0.00198 * ad_elev_ft)
-            
-            # Calculate ISA deviation (actual temperature - ISA temperature)
-            isa_variation = temp_ref - isa_temp
-            
-            # Store calculation metadata for JSON export
-            self.isa_calculation_metadata = {
-                'method': 'calculated',
-                'isa_temperature': isa_temp,
-                'elevation_feet': ad_elev_ft,
-                'elevation_original': ad_elev,
-                'elevation_unit': ad_elev_unit,
-                'temperature_reference': temp_ref,
-                'isa_variation_calculated': isa_variation
+    def show_isa_calculator_dialog(self):
+        """Show ISA Calculator dialog to input elevation and temperature"""
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("ISA Calculator")
+        dialog.setModal(True)
+        dialog.setFixedSize(380, 180)  # Fixed size for better layout
+        
+        # Set dialog properties for better appearance
+        dialog.setWindowFlags(dialog.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Form layout for inputs with better spacing
+        form_layout = QtWidgets.QFormLayout()
+        form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form_layout.setFormAlignment(Qt.AlignLeft)
+        form_layout.setVerticalSpacing(12)
+        form_layout.setHorizontalSpacing(15)
+        
+        # Create validator for numeric inputs
+        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegExpValidator(regex)
+        
+        # Aerodrome Elevation with unit selector - improved layout
+        elev_container = QtWidgets.QWidget()
+        elev_layout = QtWidgets.QHBoxLayout(elev_container)
+        elev_layout.setContentsMargins(0, 0, 0, 0)
+        elev_layout.setSpacing(8)
+        
+        elev_line_edit = QtWidgets.QLineEdit()
+        elev_line_edit.setValidator(validator)
+        elev_line_edit.setText(str(self.exact_values.get('adElev', '1000')))
+        elev_line_edit.setMinimumHeight(28)
+        elev_line_edit.setMinimumWidth(180)
+        elev_line_edit.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
             }
-            
-            # Show popup dialog with calculation details (like before)
-            msg = QMessageBox()
-            msg.setWindowTitle("ISA Calculator - Wind Spiral")
-            msg.setIcon(QMessageBox.Information)
-            
-            # Two lines that were shown before
-            calculation_text = f"ISA temperature: {isa_temp:.5f}°C (at {ad_elev_ft:.0f} ft)\n"
-            calculation_text += f"ISA variation: {isa_variation:.5f}°C (Temp Ref - ISA Temp)"
-            
-            msg.setText(calculation_text)
-            msg.setStandardButtons(QMessageBox.Ok)
-            msg.exec_()
-            
-            # Update the ISA Variation field
-            self.isaVarLineEdit.setText(f"{isa_variation:.5f}")
-            self.store_exact_value('isaVar', f"{isa_variation:.5f}")
-            
-            # Log the calculation
-            self.log(f"ISA Calculation: Elevation {ad_elev} {ad_elev_unit} → ISA Temp {isa_temp:.5f}°C → ISA Variation {isa_variation:.5f}°C")
-            self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.5f}°C", level=Qgis.Info)
-            
-        except Exception as e:
-            self.log(f"Error calculating ISA Variation: {str(e)}")
-            self.iface.messageBar().pushMessage("Error", f"Error calculating ISA Variation: {str(e)}", level=Qgis.Critical)
-
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+        """)
+        
+        elev_unit_combo = QtWidgets.QComboBox()
+        elev_unit_combo.addItems(['ft', 'm'])
+        elev_unit_combo.setCurrentText(self.units.get('adElev', 'ft'))
+        elev_unit_combo.setMinimumHeight(28)
+        elev_unit_combo.setMinimumWidth(55)
+        elev_unit_combo.setStyleSheet("""
+            QComboBox {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                background-color: white;
+                color: black;
+                selection-background-color: #0078d4;
+                selection-color: white;
+            }
+            QComboBox:focus {
+                border-color: #0078d4;
+            }
+            QComboBox:hover {
+                border-color: #999;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+                background-color: transparent;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #666;
+                margin-right: 6px;
+            }
+            QComboBox QAbstractItemView {
+                border: 1px solid #ccc;
+                background-color: white;
+                selection-background-color: #0078d4;
+                selection-color: white;
+                outline: none;
+            }
+            QComboBox QAbstractItemView::item {
+                padding: 4px 8px;
+                border: none;
+                color: black;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #0078d4;
+                color: white;
+            }
+            QComboBox QAbstractItemView::item:hover {
+                background-color: #e3f2fd;
+                color: black;
+            }
+        """)
+        
+        elev_layout.addWidget(elev_line_edit)
+        elev_layout.addWidget(elev_unit_combo)
+        elev_layout.addStretch()
+        
+        form_layout.addRow("Aerodrome Elevation:", elev_container)
+        
+        # Temperature Reference - improved styling
+        temp_line_edit = QtWidgets.QLineEdit()
+        temp_line_edit.setValidator(validator)
+        temp_line_edit.setText(str(self.exact_values.get('tempRef', '15')))
+        temp_line_edit.setMinimumHeight(28)
+        temp_line_edit.setMinimumWidth(180)
+        temp_line_edit.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+        """)
+        
+        form_layout.addRow("Temperature Ref (°C):", temp_line_edit)
+        
+        layout.addLayout(form_layout)
+        
+        # Separator line
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator.setStyleSheet("color: #ddd;")
+        layout.addWidget(separator)
+        
+        # Buttons with improved styling
+        button_layout = QtWidgets.QHBoxLayout()
+        button_layout.setSpacing(10)
+        
+        cancel_button = QtWidgets.QPushButton("Cancel")
+        cancel_button.setMinimumHeight(32)
+        cancel_button.setMinimumWidth(80)
+        cancel_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f8f9fa;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 6px 16px;
+                font-size: 11px;
+                font-weight: normal;
+            }
+            QPushButton:hover {
+                background-color: #e9ecef;
+                border-color: #adb5bd;
+            }
+            QPushButton:pressed {
+                background-color: #dee2e6;
+            }
+        """)
+        
+        calculate_button = QtWidgets.QPushButton("Calculate ISA")
+        calculate_button.setMinimumHeight(32)
+        calculate_button.setMinimumWidth(100)
+        calculate_button.setDefault(True)
+        calculate_button.setStyleSheet("""
+            QPushButton {
+                background-color: #0078d4;
+                border: 1px solid #0078d4;
+                border-radius: 4px;
+                color: white;
+                padding: 6px 16px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #106ebe;
+                border-color: #106ebe;
+            }
+            QPushButton:pressed {
+                background-color: #005a9e;
+            }
+            QPushButton:default {
+                border: 2px solid #0078d4;
+            }
+        """)
+        
+        button_layout.addStretch()
+        button_layout.addWidget(cancel_button)
+        button_layout.addWidget(calculate_button)
+        
+        layout.addLayout(button_layout)
+        
+        # Connect buttons
+        cancel_button.clicked.connect(dialog.reject)
+        
+        def calculate_and_close():
+            try:
+                # Get values
+                elevation_text = elev_line_edit.text().strip()
+                temperature_text = temp_line_edit.text().strip()
+                
+                if not elevation_text or not temperature_text:
+                    QtWidgets.QMessageBox.warning(dialog, "Input Error", 
+                        "Please enter both Aerodrome Elevation and Temperature Reference")
+                    return
+                
+                try:
+                    elevation = float(elevation_text)
+                    temperature = float(temperature_text)
+                except ValueError:
+                    QtWidgets.QMessageBox.warning(dialog, "Input Error", 
+                        "Please enter valid numeric values")
+                    return
+                
+                # Store values for future use
+                self.store_exact_value('adElev', elevation_text)
+                self.store_exact_value('tempRef', temperature_text)
+                
+                # Update unit
+                elevation_unit = elev_unit_combo.currentText()
+                self.units['adElev'] = elevation_unit
+                
+                # Convert elevation to feet if needed
+                if elevation_unit == 'm':
+                    elevation_ft = elevation * 3.28084
+                else:
+                    elevation_ft = elevation
+                
+                # Calculate ISA temperature at elevation
+                # ISA temperature decreases at 1.98°C per 1000 ft (or 0.00198°C per ft)
+                isa_temp = 15 - (0.00198 * elevation_ft)
+                
+                # Calculate ISA variation (actual temperature - ISA temperature)
+                isa_variation = temperature - isa_temp
+                
+                # Update the ISA Variation field in main UI
+                self.isaVarLineEdit.setText(f"{isa_variation:.5f}")
+                self.store_exact_value('isaVar', f"{isa_variation:.5f}")
+                
+                # Store calculation metadata
+                self.isa_calculation_metadata = {
+                    'method': 'calculated',
+                    'isa_temperature': isa_temp,
+                    'elevation_feet': elevation_ft,
+                    'elevation_original': elevation,
+                    'elevation_unit': elevation_unit,
+                    'temperature_reference': temperature,
+                    'isa_variation_calculated': isa_variation
+                }
+                
+                # Log the calculation
+                elev_info = f"{elevation} {elevation_unit}"
+                self.log(f"ISA Calculator: Elevation {elev_info} → ISA Temp {isa_temp:.5f}°C → ISA Variation {isa_variation:.5f}°C")
+                self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.5f}°C", level=Qgis.Info)
+                
+                dialog.accept()
+                
+            except Exception as e:
+                self.log(f"Error calculating ISA Variation: {str(e)}")
+                QtWidgets.QMessageBox.critical(dialog, "Error", f"Error calculating ISA Variation: {str(e)}")
+        
+        calculate_button.clicked.connect(calculate_and_close)
+        
+        # Focus on elevation field
+        elev_line_edit.setFocus()
+        
+        # Show dialog
+        dialog.exec_()
     def calculate(self):
         """Run the calculation"""
         self.log("Starting calculation...")
@@ -509,15 +830,17 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.validate_inputs():
             return
         
-        # Usar el valor de ISA Variation directamente
+        # Get parameters (no longer need aerodrome elevation and temperature reference)
+        point_layer = self.pointLayerComboBox.currentLayer()
+        reference_layer = self.referenceLayerComboBox.currentLayer()
+        
+        # Use ISA Variation directly from field
         isa_var = self.exact_values.get('isaVar', self.isaVarLineEdit.text())
         try:
             isa_var = float(isa_var)
         except Exception:
             isa_var = 0
-        # Get parameters
-        point_layer = self.pointLayerComboBox.currentLayer()
-        reference_layer = self.referenceLayerComboBox.currentLayer()
+        
         IAS = self.exact_values.get('IAS', self.IASLineEdit.text())
         altitude = self.exact_values.get('altitude', self.altitudeLineEdit.text())
         bankAngle = self.exact_values.get('bankAngle', self.bankAngleLineEdit.text())
@@ -527,19 +850,12 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
         
-        # Get aerodrome elevation and temperature reference for ISA calculation
-        adElev = self.exact_values.get('adElev', self.adElevLineEdit.text())
-        tempRef = self.exact_values.get('tempRef', self.tempRefLineEdit.text())
-        
         # Unidades
         altitude_unit = self.units.get('altitude', 'ft')
-        adElev_unit = self.units.get('adElev', 'ft')
         
-        # Prepare parameters
+        # Prepare parameters (simplified - no aerodrome elevation or temperature reference)
         params = {
-            'adElev': adElev,
-            'adElev_unit': adElev_unit,
-            'tempRef': tempRef,
+            'isaVar': isa_var,
             'IAS': IAS,
             'altitude': altitude,
             'altitude_unit': altitude_unit,
@@ -551,8 +867,15 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'output_dir': output_dir
         }
         
+        # Log ISA calculation method
+        if self.isa_calculation_metadata['method'] == 'calculated':
+            self.log(f"Using calculated ISA Variation: {isa_var}°C")
+            self.log(f"ISA calculation source: {self.isa_calculation_metadata['elevation_original']} {self.isa_calculation_metadata['elevation_unit']} elevation, {self.isa_calculation_metadata['temperature_reference']}°C reference")
+        else:
+            self.log(f"Using manual ISA Variation: {isa_var}°C")
+        
         # Registrar las unidades utilizadas
-        self.log(f"Using units - Aerodrome Elevation: {self.units.get('adElev', 'ft')}, Altitude: {self.units.get('altitude', 'ft')}")
+        self.log(f"Using units - Altitude: {self.units.get('altitude', 'ft')}")
         
         try:
             # Import here to avoid circular imports
@@ -562,7 +885,6 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Log results
             if result:
                 if export_kml:
-                    # Corregido: usar 'spiral_path' en lugar de 'kml_path'
                     self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
                 self.log("Calculation completed successfully!")
                 self.log("You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
@@ -577,11 +899,11 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def copy_parameters(self):
         """Copy parameters to clipboard"""
         try:
-            # Get parameters
+            # Get parameters - use stored values for elevation and temperature from dialog
             params = {
-                'adElev': self.exact_values.get('adElev', self.adElevLineEdit.text()),
-                'adElev_unit': self.adElevUnitCombo.currentText(),
-                'tempRef': self.exact_values.get('tempRef', self.tempRefLineEdit.text()),
+                'adElev': self.exact_values.get('adElev', ''),
+                'adElev_unit': self.units.get('adElev', 'ft'),
+                'tempRef': self.exact_values.get('tempRef', ''),
                 'isa_var': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
                 'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
                 'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
