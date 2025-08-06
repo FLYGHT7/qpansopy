@@ -341,16 +341,17 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Error: Please select a runway layer")
             return False
         
-        # Check if point layer is in WGS84
+        # Check point and runway layer CRS compatibility
         point_layer = self.pointLayerComboBox.currentLayer()
-        if not point_layer.crs().authid() == 'EPSG:4326':
-            self.log("Warning: Point layer should be in WGS84 (EPSG:4326)")
-            # Continue anyway, but warn the user
+        runway_layer = self.runwayLayerComboBox.currentLayer()
+        
+        # Log CRS information for user reference
+        self.log(f"Point layer CRS: {point_layer.crs().authid()} ({point_layer.crs().description()})")
+        self.log(f"Runway layer CRS: {runway_layer.crs().authid()} ({runway_layer.crs().description()})")
         
         # Check if runway layer is in a projected CRS
-        runway_layer = self.runwayLayerComboBox.currentLayer()
         if runway_layer.crs().isGeographic():
-            self.log("Warning: Runway layer should be in a projected coordinate system")
+            self.log("Warning: Runway layer should be in a projected coordinate system for accurate calculations")
             # Continue anyway, but warn the user
         
         # Check if output folder exists

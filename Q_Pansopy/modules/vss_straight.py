@@ -99,12 +99,16 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
     
-    # Transform the point to projected CRS
-    source_crs = QgsCoordinateReferenceSystem("EPSG:4326")  # WGS84
+    # Transform the point to projected CRS (detect source CRS automatically)
+    source_crs = point_layer.crs()  # Use actual CRS of point layer
     dest_crs = runway_layer.crs()
-    transform = QgsCoordinateTransform(source_crs, dest_crs, QgsProject.instance())
     
-    new_geom = transform.transform(point_geom)
+    # Only transform if CRS are different
+    if source_crs.authid() != dest_crs.authid():
+        transform = QgsCoordinateTransform(source_crs, dest_crs, QgsProject.instance())
+        new_geom = transform.transform(point_geom)
+    else:
+        new_geom = point_geom
     
     # Calculate azimuth
     start_point = QgsPoint(runway_geom[-1])
