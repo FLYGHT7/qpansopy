@@ -23,8 +23,8 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     Create ILS LOC APV Surface
     
     :param iface: QGIS interface
-    :param point_layer: Point layer with the reference point (WGS84)
-    :param runway_layer: Runway layer (projected CRS)
+    :param point_layer: Point layer with the reference point (projected CRS)
+    :param runway_layer: Runway layer (projected CRS, same as point layer)
     :param params: Dictionary with calculation parameters
     :return: Dictionary with results
     """
@@ -90,25 +90,22 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     if not runway_feature:
         return None
     
-    # Get the reference point (in WGS84)
+    # Get the reference point (in projected CRS, same as runway)
     point_geom = point_feature.geometry().asPoint()
     
-    # Get the runway line (in projected system)
+    # Get the runway line (in same projected CRS as point)
     runway_geom = runway_feature.geometry().asPolyline()
     
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
     
-    # Transform the point to projected CRS (detect source CRS automatically)
-    source_crs = point_layer.crs()  # Use actual CRS of point layer
+    # Verify both layers use the same projected CRS (validation should be done in dockwidget)
+    source_crs = point_layer.crs()
     dest_crs = runway_layer.crs()
     
-    # Only transform if CRS are different
-    if source_crs.authid() != dest_crs.authid():
-        transform = QgsCoordinateTransform(source_crs, dest_crs, QgsProject.instance())
-        new_geom = transform.transform(point_geom)
-    else:
-        new_geom = point_geom
+    # Both layers should have the same CRS at this point (validated by dockwidget)
+    # No transformation needed - use point geometry directly
+    new_geom = point_geom
     
     # Calculate azimuth
     start_point = QgsPoint(runway_geom[-1])

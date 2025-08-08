@@ -341,7 +341,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Error: Please select a runway layer")
             return False
         
-        # Check point and runway layer CRS compatibility
+        # Check point and runway layer CRS compatibility - STRICT MODE
         point_layer = self.pointLayerComboBox.currentLayer()
         runway_layer = self.runwayLayerComboBox.currentLayer()
         
@@ -349,10 +349,25 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log(f"Point layer CRS: {point_layer.crs().authid()} ({point_layer.crs().description()})")
         self.log(f"Runway layer CRS: {runway_layer.crs().authid()} ({runway_layer.crs().description()})")
         
-        # Check if runway layer is in a projected CRS
+        # Check if ANY layer is in a geographic CRS - BLOCK calculation
+        if point_layer.crs().isGeographic():
+            self.log("ERROR: Point layer is in a geographic coordinate system")
+            self.log("ERROR: Calculation will not be performed. Please reproject point layer to a projected CRS")
+            return False
+            
         if runway_layer.crs().isGeographic():
-            self.log("Warning: Runway layer should be in a projected coordinate system for accurate calculations")
-            # Continue anyway, but warn the user
+            self.log("ERROR: Runway layer is in a geographic coordinate system")
+            self.log("ERROR: Calculation will not be performed. Please reproject runway layer to a projected CRS")
+            return False
+        
+        # Check if both layers are in the SAME projected CRS - BLOCK if different
+        if point_layer.crs().authid() != runway_layer.crs().authid():
+            self.log("ERROR: Point and runway layers have different coordinate systems")
+            self.log(f"ERROR: Point layer: {point_layer.crs().authid()}, Runway layer: {runway_layer.crs().authid()}")
+            self.log("ERROR: Calculation will not be performed. Both layers must use the same projected CRS")
+            return False
+            
+        self.log(f"SUCCESS: Both layers use compatible projected CRS: {point_layer.crs().authid()}")
         
         # Check if output folder exists
         output_folder = self.outputFolderLineEdit.text()
