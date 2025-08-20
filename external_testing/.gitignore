@@ -1,0 +1,19 @@
+# Ignore test result files
+results/*.json
+results/*.txt
+results/*.log
+
+# Keep the results directory structure
+!results/.gitkeep
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
