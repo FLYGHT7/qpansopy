@@ -56,14 +56,17 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'RDH': 'm'
         }
         
-        # Configure the dock widget to be resizable
+        # Configure the dock widget to be resizable without forcing main window resize
         self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
                          QtWidgets.QDockWidget.DockWidgetFloatable |
                          QtWidgets.QDockWidget.DockWidgetClosable)
-        
-        # Set minimum and maximum sizes
-        self.setMinimumHeight(600)
-        self.setMaximumHeight(800)
+        # Allow docking left/right and avoid aggressive size constraints
+        try:
+            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        except Exception:
+            pass
+        # Prefer modest minimum height and no explicit maximum to avoid geometry jumps
+        self.setMinimumHeight(300)
         
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
@@ -91,7 +94,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.exportKmlCheckBox.setChecked(True)
             self.verticalLayout.addWidget(self.exportKmlCheckBox)
         
-        # Log message
+    # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
 
     def setup_copy_button(self):

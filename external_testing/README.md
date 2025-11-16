@@ -119,4 +119,19 @@ external_testing/
 - **Validates calculation logic independently**
 - **All tests currently passing (100% success rate)**
 - **Ready for continuous integration**
+
+## KML altitude validation helper
+
+To verify a generated KML is exported with absolute altitudes (not clamped to ground):
+
+1. Use the helper script:
+
+```pwsh
+python .\kml_altitude_checker.py "C:\\path\\to\\generated.kml"
+```
+
+2. Open the KML in Google Earth and ensure 3D surfaces show above terrain. The checker validates:
+
+- All geometry nodes contain `<altitudeMode>absolute</altitudeMode>`
+- Coordinates include Z values (lon,lat,alt)
 - **Test cases based on aeronautical standards**

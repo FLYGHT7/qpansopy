@@ -5,7 +5,7 @@ QPANSOPY Plugin for QGIS
 import os
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePolicy
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
 
 
@@ -179,8 +179,9 @@ class Qpansopy:
                 QIcon(icon_path),
                 properties["TITLE"], 
                 self.iface.mainWindow())
-                # Modificar la conexión de la señal usando lambda
-                new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n))
+                # Conectar asegurando compatibilidad con triggered(bool)
+                # La ranura acepta (name, checked=False), por lo que ignoramos 'checked'
+                new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
                 new_action.setToolTip(properties['TOOLTIP'])
                 toolbar_name = properties['TOOLBAR']
                 self.toolbars[toolbar_name].addAction(new_action)
@@ -247,7 +248,7 @@ class Qpansopy:
                 self.modules[name]["GUI_INSTANCE"] = None
 
 
-    def toggle_dock(self, name=None):
+    def toggle_dock(self, name=None, checked=False):
         """Toggle the requested dock widget
         :param str name: key name from self.module for the module to toggle 
         """
@@ -259,6 +260,21 @@ class Qpansopy:
             dock_widget = self.modules[name]["DOCK_WIDGET"]
             # Create the dock widget
             module_dock = self.modules[name]["GUI_INSTANCE"] = dock_widget(self.iface)
+            # Asegurar nombre y título visibles para el panel
+            title = self.modules[name].get("TITLE", name)
+            try:
+                module_dock.setObjectName(f"QPANSOPY_{name}")
+            except Exception:
+                pass
+            try:
+                module_dock.setWindowTitle(f"QPANSOPY - {title}")
+            except Exception:
+                pass
+            # Limitar áreas permitidas sin forzar geometría del main window
+            try:
+                module_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            except Exception:
+                pass
             # Aplicar configuración
             try:
                 module_dock.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
@@ -266,6 +282,14 @@ class Qpansopy:
                 QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error","This Widget has no KML Export Button")
             if hasattr(module_dock, "logTextEdit"):
                 module_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
+                # Ensure log panel is resizable by giving it an expanding size policy
+                try:
+                    module_dock.logTextEdit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+                    # Provide a sensible minimum so it can be grabbed & resized
+                    if module_dock.logTextEdit.minimumHeight() < 80:
+                        module_dock.logTextEdit.setMinimumHeight(80)
+                except Exception:
+                    pass
             
             # Connect the closing signal usando lambda
             module_dock.closingPlugin.connect(lambda: self.on_dock_closed(name))
