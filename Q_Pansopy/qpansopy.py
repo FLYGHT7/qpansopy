@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 QPANSOPY Plugin for QGIS
+Aviation surfaces plugin for QGIS developed by FLYGHT7
+Copyright (C) 2020-2025 FLYGHT7
 """
 import os
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
