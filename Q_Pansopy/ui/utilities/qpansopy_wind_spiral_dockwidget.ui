@@ -307,11 +307,11 @@ QPushButton:pressed {
             <height>140</height>
            </size>
           </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>160</height>
-           </size>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <layout class="QVBoxLayout" name="logLayout">
            <property name="spacing">
@@ -319,17 +319,14 @@ QPushButton:pressed {
            </property>
            <item>
             <widget class="QTextEdit" name="logTextEdit">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>100</height>
-              </size>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>1</verstretch>
+              </sizepolicy>
              </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>120</height>
-              </size>
+             <property name="minimumHeight">
+              <number>100</number>
              </property>
              <property name="font">
               <font>
