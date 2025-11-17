@@ -256,55 +256,59 @@ class Qpansopy:
         if name is None:
             return
             
-        if self.modules[name]["GUI_INSTANCE"] is None:
-            dock_widget = self.modules[name]["DOCK_WIDGET"]
-            # Create the dock widget
-            module_dock = self.modules[name]["GUI_INSTANCE"] = dock_widget(self.iface)
-            # Asegurar nombre y título visibles para el panel
+        instance = self.modules[name]["GUI_INSTANCE"]
+        if instance is None:
+            # Create and register the dock widget once; later toggles just show/hide
+            dock_widget_cls = self.modules[name]["DOCK_WIDGET"]
+            instance = self.modules[name]["GUI_INSTANCE"] = dock_widget_cls(self.iface)
             title = self.modules[name].get("TITLE", name)
+            # Basic metadata (ignore failures silently)
             try:
-                module_dock.setObjectName(f"QPANSOPY_{name}")
+                instance.setObjectName(f"QPANSOPY_{name}")
             except Exception:
                 pass
             try:
-                module_dock.setWindowTitle(f"QPANSOPY - {title}")
+                instance.setWindowTitle(f"QPANSOPY - {title}")
             except Exception:
                 pass
-            # Limitar áreas permitidas sin forzar geometría del main window
             try:
-                module_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+                instance.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
             except Exception:
                 pass
-            # Aplicar configuración
+            # Initial configuration
             try:
-                module_dock.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
             except AttributeError:
-                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error","This Widget has no KML Export Button")
-            if hasattr(module_dock, "logTextEdit"):
-                module_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
-                # Ensure log panel is resizable by giving it an expanding size policy
+                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
+            if hasattr(instance, "logTextEdit"):
+                instance.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 try:
-                    module_dock.logTextEdit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-                    # Provide a sensible minimum so it can be grabbed & resized
-                    if module_dock.logTextEdit.minimumHeight() < 80:
-                        module_dock.logTextEdit.setMinimumHeight(80)
+                    instance.logTextEdit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+                    if instance.logTextEdit.minimumHeight() < 80:
+                        instance.logTextEdit.setMinimumHeight(80)
                 except Exception:
                     pass
-            
-            # Connect the closing signal usando lambda
-            module_dock.closingPlugin.connect(lambda: self.on_dock_closed(name))
-            # Add the dock widget to the interface
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, module_dock)
-
-            #Close all other module dock if open
-            for other_name,other_properties in self.modules.items():
-                if other_properties["GUI_INSTANCE"] and other_name != name:
-                    self.iface.removeDockWidget(other_properties["GUI_INSTANCE"])
-                    self.modules[other_name]["GUI_INSTANCE"] = None
+            instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
+            self.iface.addDockWidget(Qt.RightDockWidgetArea, instance)
+            # Hide other docks instead of removing to reduce geometry churn
+            for other_name, other_properties in self.modules.items():
+                if other_name == name:
+                    continue
+                other_instance = other_properties["GUI_INSTANCE"]
+                if other_instance and other_instance.isVisible():
+                    other_instance.hide()
         else:
-            module_dock = self.modules[name]["GUI_INSTANCE"]
-            self.iface.removeDockWidget(module_dock)
-            self.modules[name]["GUI_INSTANCE"] = None
+            # Toggle visibility of existing instance; hide siblings when showing
+            if instance.isVisible():
+                instance.hide()
+            else:
+                instance.show()
+                for other_name, other_properties in self.modules.items():
+                    if other_name == name:
+                        continue
+                    other_instance = other_properties["GUI_INSTANCE"]
+                    if other_instance and other_instance.isVisible():
+                        other_instance.hide()
 
 
     def on_dock_closed(self,name):
