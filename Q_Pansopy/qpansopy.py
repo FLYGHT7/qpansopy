@@ -257,9 +257,16 @@ class Qpansopy:
 
         # Remove the actions from the Toolbar
         for name,properties in self.modules.items():
-            if properties["GUI_INSTANCE"] is not None:
-                self.iface.removeDockWidget(properties["GUI_INSTANCE"])
-                self.modules[name]["GUI_INSTANCE"] = None
+            try:
+                gi = properties.get("GUI_INSTANCE") if isinstance(properties, dict) else None
+            except Exception:
+                gi = None
+            if gi is not None:
+                self.iface.removeDockWidget(gi)
+                try:
+                    self.modules[name]["GUI_INSTANCE"] = None
+                except Exception:
+                    pass
 
 
     def toggle_dock(self, name=None, checked=False):
@@ -303,11 +310,15 @@ class Qpansopy:
                     pass
             instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
             self.iface.addDockWidget(Qt.RightDockWidgetArea, instance)
-            # Hide other docks instead of removing to reduce geometry churn
+            # Hide other dock-type modules instead of removing to reduce geometry churn
             for other_name, other_properties in self.modules.items():
                 if other_name == name:
                     continue
-                other_instance = other_properties["GUI_INSTANCE"]
+                if not isinstance(other_properties, dict):
+                    continue
+                if "DOCK_WIDGET" not in other_properties:
+                    continue
+                other_instance = other_properties.get("GUI_INSTANCE")
                 if other_instance and other_instance.isVisible():
                     other_instance.hide()
         else:
@@ -319,7 +330,11 @@ class Qpansopy:
                 for other_name, other_properties in self.modules.items():
                     if other_name == name:
                         continue
-                    other_instance = other_properties["GUI_INSTANCE"]
+                    if not isinstance(other_properties, dict):
+                        continue
+                    if "DOCK_WIDGET" not in other_properties:
+                        continue
+                    other_instance = other_properties.get("GUI_INSTANCE")
                     if other_instance and other_instance.isVisible():
                         other_instance.hide()
 
