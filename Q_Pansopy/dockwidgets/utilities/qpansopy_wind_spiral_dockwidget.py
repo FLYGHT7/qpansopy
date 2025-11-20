@@ -406,68 +406,62 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def copy_parameters_for_word(self):
         """Copiar los parámetros en formato tabla para Word"""
-        params_text = "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n"
-        params_text += "=" * 50 + "\n\n"
-        params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
-        params_text += "-" * 50 + "\n"
-        param_names = {
-            'adElev': 'Aerodrome Elevation',
-            'tempRef': 'Temperature Reference',
-            'isaVar': 'ISA Variation',
-            'IAS': 'IAS',
-            'altitude': 'Altitude',
-            'bankAngle': 'Bank Angle',
-            'w': 'Wind Speed',
-            'turn_direction': 'Turn Direction',
-            'show_points': 'Show Construction Points'
-        }
-        # Usar valores actuales (usando valores almacenados del diálogo)
-        params = {
-            'adElev': self.exact_values.get('adElev', ''),
-            'adElev_unit': self.units.get('adElev', 'ft'),
-            'tempRef': self.exact_values.get('tempRef', ''),
-            'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
-            'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
-            'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
-            'altitude_unit': self.units.get('altitude', 'ft'),
-            'bankAngle': self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()),
-            'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
-            'turn_direction': self.turnDirectionCombo.currentText(),
-            'show_points': self.showPointsCheckBox.isChecked()
-        }
-        for key in ['adElev', 'tempRef', 'isaVar', 'IAS', 'altitude', 'bankAngle', 'w', 'turn_direction', 'show_points']:
-            display_name = param_names.get(key, key.replace('_', ' ').title())
-            value = params[key]
-            unit = ""
-            if key == 'adElev':
-                unit = params['adElev_unit']
-            elif key == 'altitude':
-                unit = params['altitude_unit']
-            elif key == 'tempRef' or key == 'isaVar':
-                unit = "°C"
-            elif key == 'IAS':
-                unit = "kt"
-            elif key == 'bankAngle':
-                unit = "°"
-            elif key == 'w':
-                unit = "kt"
-            params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
-        
-        # Add ISA calculation details if available
-        if self.isa_calculation_metadata['method'] == 'calculated':
-            params_text += "\n" + "=" * 50 + "\n"
-            params_text += "ISA CALCULATION DETAILS\n"
-            params_text += "-" * 50 + "\n"
-            params_text += f"Method:\t\t\tCalculated from Elevation and Temperature\n"
-            params_text += f"ISA Temperature:\t\t{self.isa_calculation_metadata['isa_temperature']:.5f}\t\t°C\n"
-            params_text += f"Elevation Used:\t\t{self.isa_calculation_metadata['elevation_feet']:.0f}\t\tft\n"
-            params_text += f"Temperature Reference:\t\t{self.isa_calculation_metadata['temperature_reference']}\t\t°C\n"
-        else:
-            params_text += "\n" + "=" * 50 + "\n"
-            params_text += "ISA CALCULATION DETAILS\n"
-            params_text += "-" * 50 + "\n"
-            params_text += f"Method:\t\t\tManual Input\n"
-        
+        layers = QgsProject.instance().mapLayers().values()
+        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
+        params_text = ""
+        found_params = False
+
+        for layer in vector_layers:
+            if 'parameters' not in [field.name() for field in layer.fields()]:
+                continue
+
+            for feature in layer.getFeatures():
+                params_json = feature.attribute('parameters')
+                if not params_json:
+                    continue
+
+                try:
+                    params_dict = json.loads(params_json)
+                except json.JSONDecodeError:
+                    continue
+
+                calculation_type = params_dict.get('calculation_type', '')
+                if 'Wind Spiral' not in calculation_type:
+                    continue
+
+                found_params = True
+
+                sanitized_params = params_dict.copy()
+                for key in ['adElev', 'tempRef', 'IAS', 'altitude', 'bankAngle', 'w']:
+                    value = sanitized_params.get(key)
+                    try:
+                        sanitized_params[key] = float(value)
+                    except (TypeError, ValueError):
+                        sanitized_params[key] = 0
+
+                try:
+                    from ...modules.wind_spiral import copy_parameters_table
+                    formatted_table = copy_parameters_table(sanitized_params)
+                except Exception as e:
+                    self.log(f"Error formatting parameters for layer {layer.name()}: {str(e)}")
+                    formatted_table = None
+
+                params_text += f"LAYER: {layer.name()}\n{'-' * 30}\n"
+                if formatted_table:
+                    params_text += formatted_table + "\n"
+                else:
+                    params_text += "Unable to format parameters for this layer.\n\n"
+
+                break  # Process only the first matching feature per layer
+
+            if found_params:
+                params_text += "\n"
+
+        if not found_params:
+            params_text += "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n"
+            params_text += "=" * 50 + "\n\n"
+            params_text += "No Wind Spiral parameters found in any layer. Please run a calculation first.\n"
+
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_text)
         self.log("Wind Spiral parameters copied to clipboard in Word format. You can now paste them into Word.")

@@ -22,14 +22,16 @@ Procedure Analysis and Obstacle Protection Surfaces - ILS Module
 """
 
 import os
+import json
+import datetime
+from collections import OrderedDict
 from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.utils import iface
 from qgis.core import Qgis
-import json
-import datetime
+from ...utils import format_parameters_table
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -177,95 +179,69 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
    
    def copy_parameters_for_word(self):
        """Copiar los parámetros en formato tabla para Word"""
-       # Obtener todas las capas del proyecto
        layers = QgsProject.instance().mapLayers().values()
-       
-       # Filtrar solo las capas vectoriales que podrían contener nuestros parámetros
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-       
-       # Buscar capas que tengan el campo 'parameters' y sean de tipo ILS
-       params_text = "QPANSOPY BASIC ILS CALCULATION PARAMETERS\n"
-       params_text += "=" * 50 + "\n\n"
-       
+       params_text = ""
        found_params = False
-       
+
        for layer in vector_layers:
-           # Asegurar inicialización para evitar UnboundLocalError
            has_ils_params = False
-           if 'parameters' in [field.name() for field in layer.fields()]:
-               # Verificar si es una capa ILS
-               for feature in layer.getFeatures():
-                   params_json = feature.attribute('parameters')
-                   if params_json:
-                       try:
-                           params_dict = json.loads(params_json)
-                           if 'calculation_type' in params_dict and 'Basic ILS' in params_dict['calculation_type']:
-                               has_ils_params = True
-                               break
-                       except json.JSONDecodeError:
-                           pass
-        
+           if 'parameters' not in [field.name() for field in layer.fields()]:
+               continue
+
+           for feature in layer.getFeatures():
+               params_json = feature.attribute('parameters')
+               if not params_json:
+                   continue
+
+               try:
+                   params_dict = json.loads(params_json)
+               except json.JSONDecodeError:
+                   continue
+
+               calculation_type = params_dict.get('calculation_type', '')
+               if calculation_type and 'Basic ILS' in calculation_type:
+                   has_ils_params = True
+                   layer_params = OrderedDict()
+                   layer_sections = {}
+
+                   thr_value = params_dict.get('thr_elev', '')
+                   thr_unit = params_dict.get('thr_elev_unit', 'm')
+                   layer_params['thr_elev'] = {'value': thr_value, 'unit': thr_unit}
+                   layer_sections['thr_elev'] = 'Runway Data'
+
+                   layer_params['calculation_date'] = {'value': params_dict.get('calculation_date', ''), 'unit': ''}
+                   layer_sections['calculation_date'] = 'Calculation Info'
+
+                   layer_params['calculation_type'] = {'value': calculation_type, 'unit': ''}
+                   layer_sections['calculation_type'] = 'Calculation Info'
+
+                   if 'ILS_surface' in [field.name() for field in layer.fields()]:
+                       surface_type = feature.attribute('ILS_surface') or ''
+                       layer_params['surface_type'] = {'value': surface_type, 'unit': ''}
+                       layer_sections['surface_type'] = 'Surface Information'
+
+                   formatted_table = format_parameters_table(
+                       "QPANSOPY BASIC ILS PARAMETERS",
+                       layer_params,
+                       layer_sections
+                   )
+
+                   params_text += f"LAYER: {layer.name()}\n{'-'*30}\n"
+                   params_text += formatted_table + "\n"
+                   found_params = True
+                   break
+
            if has_ils_params:
-               params_text += f"LAYER: {layer.name()}\n"
-               params_text += "-" * 30 + "\n\n"
-               
-               # Obtener los parámetros de la primera feature (todos deberían tener los mismos parámetros)
-               for feature in layer.getFeatures():
-                   params_json = feature.attribute('parameters')
-                   if params_json:
-                       found_params = True
-                       try:
-                           params_dict = json.loads(params_json)
-                           
-                           # Crear tabla formateada
-                           params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
-                           params_text += "-" * 50 + "\n"
-                           
-                           # Mapear parámetros a nombres más legibles
-                           param_names = {
-                               'thr_elev': 'Threshold Elevation',
-                               'calculation_type': 'Calculation Type',
-                               'calculation_date': 'Calculation Date',
-                               'thr_elev_unit': 'Threshold Elevation Unit'
-                           }
-                           
-                           # Formatear parámetros en tabla
-                           for key, value in params_dict.items():
-                               if key.endswith('_unit'):
-                                   continue  # Skip unit fields, they'll be handled with their main parameter
-                                
-                               display_name = param_names.get(key, key.replace('_', ' ').title())
-                               unit = ""
-                               
-                               # Obtener unidad si existe
-                               unit_key = key + '_unit'
-                               if unit_key in params_dict:
-                                   unit = params_dict[unit_key]
-                               
-                               # Formatear la línea
-                               params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
-                           
-                           # Añadir información de la superficie si está disponible
-                           if 'ILS_surface' in [field.name() for field in layer.fields()]:
-                               surface_type = feature.attribute('ILS_surface')
-                               if surface_type:
-                                   params_text += f"\nSurface Type: {surface_type}\n"
-                           
-                           params_text += "\n"
-                           break  # Solo necesitamos los parámetros de una feature
-                       except json.JSONDecodeError:
-                           params_text += "Error: Could not parse parameters JSON\n\n"
-                
                params_text += "\n"
-    
+
        if not found_params:
+           params_text += "QPANSOPY BASIC ILS CALCULATION PARAMETERS\n"
+           params_text += "=" * 50 + "\n\n"
            params_text += "No Basic ILS parameters found in any layer. Please run a calculation first.\n"
-    
-       # Copiar al portapapeles
+
        clipboard = QtWidgets.QApplication.clipboard()
        clipboard.setText(params_text)
-    
-       # Mostrar mensaje de éxito
        self.log("Parameters copied to clipboard in Word format. You can now paste them into Word.")
        self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard in Word format", level=Qgis.Success)
 
