@@ -188,8 +188,9 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        found_params = False
        
        for layer in vector_layers:
+           # Asegurar inicialización para evitar UnboundLocalError
+           has_oas_params = False
            if 'parameters' in [field.name() for field in layer.fields()]:
-               has_oas_params = False
                for feature in layer.getFeatures():
                    params_json = feature.attribute('parameters')
                    if params_json:
