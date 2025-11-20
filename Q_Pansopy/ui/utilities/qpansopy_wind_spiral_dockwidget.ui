@@ -16,12 +16,12 @@
     <height>650</height>
    </size>
   </property>
-  <property name="maximumSize">
-   <size>
-    <width>520</width>
-    <height>16777215</height>
-   </size>
-  </property>
+    <property name="minimumSize">
+     <size>
+        <width>0</width>
+        <height>0</height>
+     </size>
+    </property>
   <property name="windowTitle">
    <string>QPANSOPY Wind Spiral</string>
   </property>
@@ -88,21 +88,21 @@
          <height>650</height>
         </rect>
        </property>
-       <layout class="QVBoxLayout" name="scrollContentLayout">
+       <layout class="QVBoxLayout" name="outputLayout">
         <property name="spacing">
-         <number>8</number>
+         <number>4</number>
         </property>
         <property name="leftMargin">
-         <number>5</number>
+         <number>3</number>
         </property>
         <property name="topMargin">
-         <number>5</number>
+         <number>3</number>
         </property>
         <property name="rightMargin">
-         <number>5</number>
+         <number>3</number>
         </property>
         <property name="bottomMargin">
-         <number>5</number>
+         <number>3</number>
         </property>
         <item>
          <widget class="QGroupBox" name="layersGroupBox">
@@ -111,7 +111,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>9</pointsize>
+            <pointsize>8</pointsize>
             <weight>75</weight>
             <bold>true</bold>
            </font>
@@ -120,9 +120,9 @@
            <property name="fieldGrowthPolicy">
             <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
            </property>
-           <property name="verticalSpacing">
-            <number>6</number>
-           </property>
+          <property name="verticalSpacing">
+           <number>4</number>
+          </property>
            <item row="0" column="0">
             <widget class="QLabel" name="pointLayerLabel">
              <property name="text">
@@ -177,7 +177,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>9</pointsize>
+            <pointsize>8</pointsize>
             <weight>75</weight>
             <bold>true</bold>
            </font>
@@ -187,7 +187,7 @@
             <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
            </property>
            <property name="verticalSpacing">
-            <number>6</number>
+            <number>4</number>
            </property>
           </layout>
          </widget>
@@ -199,7 +199,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>9</pointsize>
+            <pointsize>8</pointsize>
             <weight>75</weight>
             <bold>true</bold>
            </font>
@@ -296,7 +296,7 @@ QPushButton:pressed {
           </property>
           <property name="font">
            <font>
-            <pointsize>9</pointsize>
+            <pointsize>8</pointsize>
             <weight>75</weight>
             <bold>true</bold>
            </font>
@@ -315,7 +315,7 @@ QPushButton:pressed {
           </property>
           <layout class="QVBoxLayout" name="logLayout">
            <property name="spacing">
-            <number>5</number>
+            <number>3</number>
            </property>
            <item>
             <widget class="QTextEdit" name="logTextEdit">
@@ -353,13 +353,13 @@ QPushButton:pressed {
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>30</height>
+            <height>24</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
             <width>16777215</width>
-            <height>30</height>
+            <height>24</height>
            </size>
           </property>
           <property name="text">
@@ -367,7 +367,7 @@ QPushButton:pressed {
           </property>
           <property name="font">
            <font>
-            <pointsize>9</pointsize>
+            <pointsize>8</pointsize>
            </font>
           </property>
           <property name="styleSheet">

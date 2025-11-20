@@ -62,9 +62,6 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
        except Exception:
            pass
-       # Prefer modest minimum height and no hard maximum to avoid geometry jumps
-       self.setMinimumHeight(260)
-       
        # Connect signals
        self.calculateButton.clicked.connect(self.calculate)
        self.browseButton.clicked.connect(self.browse_output_folder)
