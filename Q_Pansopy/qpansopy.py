@@ -8,6 +8,7 @@ import os
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePolicy
+from qgis.PyQt import sip
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
 
 
@@ -24,7 +25,7 @@ try:
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
-    from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
+    from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui
@@ -58,6 +59,10 @@ class Qpansopy:
             'PBN': None,
             'UTILITIES': None
         }
+
+        # Track a reference dock to keep geometry stable
+        self.dock_anchor = None
+        self.dock_anchor_name = None
         
         # Verificar que exista la carpeta de iconos
         self.icons_dir = os.path.join(self.plugin_dir, 'icons')
@@ -74,6 +79,9 @@ class Qpansopy:
             "enable_kml": self.settings.value("qpansopy/enable_kml", False, type=bool),
             "show_log": self.settings.value("qpansopy/show_log", True, type=bool)
         }
+
+        # Initialize modules dictionary
+        self.modules = {}
 
 
     def initGui(self):
@@ -116,7 +124,7 @@ class Qpansopy:
                                     "TOOLBAR": "CONV",
                                     "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
                                     "ICON": os.path.join(self.icons_dir, 'conv_corridor.svg'),
-                                    "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
+                                    "DOCK_WIDGET": QPANSOPYConvInitialDockWidget,
                                     "GUI_INSTANCE": None
                                 },
                                 "ObjectSelection": {
@@ -236,18 +244,17 @@ class Qpansopy:
         if self.menu:
             menuBar = self.iface.mainWindow().menuBar()
             menuBar.removeAction(self.menu.menuAction())
-        
         # Eliminar barras de herramientas
         for toolbar_name, toolbar in self.toolbars.items():
             if toolbar:
                 self.iface.mainWindow().removeToolBar(toolbar)
                 toolbar.deleteLater()
-
         # Remove the actions from the Toolbar
-        for name,properties in self.modules.items():
-            if properties["GUI_INSTANCE"] is not None:
-                self.iface.removeDockWidget(properties["GUI_INSTANCE"])
-                self.modules[name]["GUI_INSTANCE"] = None
+        if hasattr(self, 'modules') and self.modules:
+            for name,properties in self.modules.items():
+                if properties["GUI_INSTANCE"] is not None:
+                    self.iface.removeDockWidget(properties["GUI_INSTANCE"])
+                    self.modules[name]["GUI_INSTANCE"] = None
 
 
     def toggle_dock(self, name=None, checked=False):
@@ -292,25 +299,19 @@ class Qpansopy:
                     pass
             instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
             self.iface.addDockWidget(Qt.RightDockWidgetArea, instance)
-            # Hide other docks instead of removing to reduce geometry churn
-            for other_name, other_properties in self.modules.items():
-                if other_name == name:
-                    continue
-                other_instance = other_properties["GUI_INSTANCE"]
-                if other_instance and other_instance.isVisible():
-                    other_instance.hide()
+            self._ensure_dock_anchor(name, instance)
+            instance.show()
+            instance.raise_()
+            self._hide_other_docks(name)
         else:
             # Toggle visibility of existing instance; hide siblings when showing
             if instance.isVisible():
                 instance.hide()
             else:
+                self._ensure_dock_anchor(name, instance)
                 instance.show()
-                for other_name, other_properties in self.modules.items():
-                    if other_name == name:
-                        continue
-                    other_instance = other_properties["GUI_INSTANCE"]
-                    if other_instance and other_instance.isVisible():
-                        other_instance.hide()
+                instance.raise_()
+                self._hide_other_docks(name)
 
 
     def on_dock_closed(self,name):
@@ -318,6 +319,57 @@ class Qpansopy:
         :param str name: key name from self.module for the module to close 
         """
         self.modules[name]["GUI_INSTANCE"] = None
+        if self.dock_anchor_name == name:
+            self._promote_anchor()
+
+
+    def _hide_other_docks(self, active_name):
+        for other_name, other_properties in self.modules.items():
+            if other_name == active_name:
+                continue
+            other_instance = other_properties["GUI_INSTANCE"]
+            if other_instance and other_instance.isVisible():
+                other_instance.hide()
+
+
+    def _ensure_dock_anchor(self, name, instance):
+        if self._is_deleted(instance):
+            return
+
+        if self._is_deleted(self.dock_anchor):
+            self.dock_anchor = instance
+            self.dock_anchor_name = name
+            return
+
+        if self.dock_anchor is not instance:
+            try:
+                self.iface.mainWindow().tabifyDockWidget(self.dock_anchor, instance)
+            except Exception:
+                pass
+
+        self.dock_anchor = instance
+        self.dock_anchor_name = name
+
+
+    def _promote_anchor(self):
+        for candidate_name, properties in self.modules.items():
+            candidate = properties.get("GUI_INSTANCE")
+            if candidate and not self._is_deleted(candidate):
+                self.dock_anchor = candidate
+                self.dock_anchor_name = candidate_name
+                return
+        self.dock_anchor = None
+        self.dock_anchor_name = None
+
+
+    @staticmethod
+    def _is_deleted(widget):
+        if widget is None:
+            return True
+        try:
+            return sip.isdeleted(widget)
+        except Exception:
+            return False
 
 
     def show_about_dialog(self):

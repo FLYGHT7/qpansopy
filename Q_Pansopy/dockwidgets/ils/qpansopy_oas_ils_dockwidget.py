@@ -66,10 +66,6 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
        except Exception:
            pass
-       # Prefer modest minimum dimensions and no hard maximum to avoid QGIS window jumps
-       self.setMinimumWidth(360)
-       self.setMinimumHeight(320)
-       
        # Aumentar el espaciado en los layouts
        self.verticalLayout.setSpacing(8)
        self.verticalLayout.setContentsMargins(8, 8, 8, 8)
