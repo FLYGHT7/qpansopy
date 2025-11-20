@@ -90,7 +90,6 @@ class Qpansopy:
 
     def initGui(self):
         try:
-<<<<<<< HEAD
             # Declare available modules and their UI metadata
             self.modules = {
                 "ILS": {
@@ -187,7 +186,6 @@ class Qpansopy:
             self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None}
 
             # Create QPANSOPY menu
-=======
             # Verificar que los módulos necesarios estén disponibles
             if 'QPANSOPYVSSDockWidget' not in globals():
                 QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Warning", 
@@ -258,7 +256,6 @@ class Qpansopy:
             self.submenus:dict = {"CONV":None,"ILS":None,"PBN":None,"UTILITIES":None}
             
             # Crear el menú QPANSOPY
->>>>>>> fix/issue-39
             menuBar = self.iface.mainWindow().menuBar()
             self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
             menuBar.addMenu(self.menu)
