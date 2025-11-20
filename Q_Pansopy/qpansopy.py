@@ -17,15 +17,15 @@ try:
     # Import dock widgets from new organized structure
     from .dockwidgets.utilities.qpansopy_vss_dockwidget import QPANSOPYVSSDockWidget
     from .dockwidgets.ils.qpansopy_ils_dockwidget import QPANSOPYILSDockWidget
-    from .dockwidgets.utilities.qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidget
-    from .dockwidgets.ils.qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidget
+    from .dockwidgets.utilities.qpansopy_wind_spiral_dockwidget import QPANSOPYWindSpiralDockWidgetBase
+    from .dockwidgets.ils.qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidgetBase
     from .dockwidgets.utilities.qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
     from .dockwidgets.utilities.qpansopy_feature_merge_dockwidget import QPANSOPYFeatureMergeDockWidget
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
-    from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
+    from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui
@@ -101,7 +101,7 @@ class Qpansopy:
                     "TOOLBAR": "ILS",
                     "TOOLTIP": "Obstacle Assessment Surfaces for ILS",
                     "ICON": "oas_ils.svg",
-                    "DOCK_WIDGET": QPANSOPYOASILSDockWidget,
+                    "DOCK_WIDGET": QPANSOPYOASILSDockWidgetBase,
                     "GUI_INSTANCE": None,
                 },
                 "LNAV_APCH": {
@@ -141,7 +141,7 @@ class Qpansopy:
                     "TOOLBAR": "UTILITIES",
                     "TOOLTIP": "Calculate and visualize wind spirals",
                     "ICON": "wind_spiral.svg",
-                    "DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,
+                    "DOCK_WIDGET": QPANSOPYWindSpiralDockWidgetBase,
                     "GUI_INSTANCE": None,
                 },
                 "VSS": {
@@ -188,8 +188,8 @@ class Qpansopy:
                                    "Some modules could not be imported. The plugin may not work correctly.")            #Configure Modules NAME:PROPERTIES (STR:DICT)
             self.modules:dict = {"VSS": {"TITLE":"VSS Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"vss.svg","DOCK_WIDGET": QPANSOPYVSSDockWidget,"GUI_INSTANCE":None},
                                 "ILS_BASIC": {"TITLE":"ILS Tool","TOOLBAR":"ILS","TOOLTIP":"ILS Basic Surface Tool","ICON":"basic_ils.svg","DOCK_WIDGET": QPANSOPYILSDockWidget,"GUI_INSTANCE":None},
-                                "WindSpiral": {"TITLE":"Wind Spiral Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Wind Spiral Tool - Calculate and visualize wind spirals for procedure design","ICON":"wind_spiral.svg","DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,"GUI_INSTANCE":None},
-                                "ILS_OAS": {"TITLE":"OAS ILS Tool","TOOLBAR":"ILS","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"oas_ils.svg","DOCK_WIDGET": QPANSOPYOASILSDockWidget,"GUI_INSTANCE":None},
+                                "WindSpiral": {"TITLE":"Wind Spiral Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Wind Spiral Tool - Calculate and visualize wind spirals for procedure design","ICON":"wind_spiral.svg","DOCK_WIDGET": QPANSOPYWindSpiralDockWidgetBase,"GUI_INSTANCE":None},
+                                "ILS_OAS": {"TITLE":"OAS ILS Tool","TOOLBAR":"ILS","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"oas_ils.svg","DOCK_WIDGET": QPANSOPYOASILSDockWidgetBase,"GUI_INSTANCE":None},
                                 "LNAV_APCH": {
                                     "TITLE": "LNAV",
                                     "TOOLBAR": "PBN",
@@ -219,7 +219,7 @@ class Qpansopy:
                                     "TOOLBAR": "CONV",
                                     "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
                                     "ICON": os.path.join(self.icons_dir, 'conv_corridor.svg'),
-                                    "DOCK_WIDGET": QPANSOPYConvInitialDockWidget,
+                                    "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
                                     "GUI_INSTANCE": None
                                 },
                                 "ObjectSelection": {

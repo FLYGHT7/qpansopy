@@ -7,11 +7,11 @@ import datetime
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'conv', 'qpansopy_conv_initial_dockwidget.ui'))
 
-class QPANSOPYConvInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
+class QPANSOPYCONVInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
 
     def __init__(self, iface):
-        super(QPANSOPYConvInitialDockWidget, self).__init__(iface.mainWindow())
+        super(QPANSOPYCONVInitialDockWidget, self).__init__(iface.mainWindow())
         self.setupUi(self)
         self.iface = iface
 

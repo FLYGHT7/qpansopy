@@ -38,13 +38,13 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_wind_spiral_dockwidget.ui'))
 
 
-class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
+class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
 
     def __init__(self, iface):
         """Constructor."""
-        super(QPANSOPYWindSpiralDockWidget, self).__init__(iface.mainWindow())
+        super(QPANSOPYWindSpiralDockWidgetBase, self).__init__(iface.mainWindow())
         
         # Initialize exact_values dictionary BEFORE setupUi to prevent AttributeError
         self.exact_values = {}

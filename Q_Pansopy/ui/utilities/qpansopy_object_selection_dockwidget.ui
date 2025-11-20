@@ -14,8 +14,6 @@
     <height>16777215</height>
    </size>
   </property>
-     </size>
-    </property>
   <property name="windowTitle">
    <string>QPANSOPY Object Selection</string>
   </property>

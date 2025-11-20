@@ -37,13 +37,13 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
    os.path.dirname(__file__), '..', '..', 'ui', 'ils', 'qpansopy_oas_ils_dockwidget.ui'))
 
 
-class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
+class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
    closingPlugin = pyqtSignal()
 
    def __init__(self, iface):
        """Constructor."""
-       super(QPANSOPYOASILSDockWidget, self).__init__(iface.mainWindow())
+       super(QPANSOPYOASILSDockWidgetBase, self).__init__(iface.mainWindow())
        # Set up the user interface from Designer.
        self.setupUi(self)
        self.iface = iface
