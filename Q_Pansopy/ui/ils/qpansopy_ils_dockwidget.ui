@@ -10,23 +10,18 @@
     <height>500</height>
    </rect>
   </property>
-<<<<<<< HEAD
   <property name="minimumSize">
    <size>
     <width>300</width>
     <height>300</height>
    </size>
   </property>
-    <property name="maximumSize">
-     <size>
-        <width>16777215</width>
-        <height>16777215</height>
-=======
-    <property name="minimumSize">
-     <size>
-        <width>0</width>
-        <height>0</height>
->>>>>>> fix/issue-39
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
+  </property>
      </size>
     </property>
   <property name="windowTitle">
@@ -173,7 +168,6 @@
            <item>
             <widget class="QTextEdit" name="logTextEdit">
              <property name="sizePolicy">
-<<<<<<< HEAD
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
                <verstretch>1</verstretch>
@@ -181,18 +175,6 @@
              </property>
              <property name="minimumHeight">
               <number>100</number>
-=======
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumHeight">
-              <number>70</number>
-             </property>
-             <property name="maximumHeight">
-              <number>140</number>
->>>>>>> fix/issue-39
              </property>
              <property name="readOnly">
               <bool>true</bool>

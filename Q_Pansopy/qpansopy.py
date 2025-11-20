@@ -8,11 +8,7 @@ import os
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePolicy
-<<<<<<< HEAD
-from qgis.PyQt import QtWidgets, QtCore
-=======
-from qgis.PyQt import sip
->>>>>>> fix/issue-39
+from qgis.PyQt import QtWidgets, QtCore, sip
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
 
 

@@ -2,23 +2,18 @@
 <ui version="4.0">
  <class>QPANSOPYObjectSelectionDockWidget</class>
  <widget class="QDockWidget" name="QPANSOPYObjectSelectionDockWidget">
-<<<<<<< HEAD
   <property name="minimumSize">
    <size>
     <width>250</width>
     <height>150</height>
    </size>
   </property>
-    <property name="maximumSize">
-     <size>
-        <width>16777215</width>
-        <height>16777215</height>
-=======
-    <property name="minimumSize">
-     <size>
-        <width>0</width>
-        <height>0</height>
->>>>>>> fix/issue-39
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
+   </size>
+  </property>
      </size>
     </property>
   <property name="windowTitle">
@@ -166,7 +161,6 @@
        </property>
        <item>
         <widget class="QTextEdit" name="logTextEdit">
-<<<<<<< HEAD
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -176,20 +170,6 @@
          <property name="minimumHeight">
           <number>100</number>
          </property>
-=======
-             <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-             </property>
-             <property name="minimumHeight">
-               <number>60</number>
-             </property>
-             <property name="maximumHeight">
-               <number>120</number>
-             </property>
->>>>>>> fix/issue-39
          <property name="readOnly">
           <bool>true</bool>
          </property>
