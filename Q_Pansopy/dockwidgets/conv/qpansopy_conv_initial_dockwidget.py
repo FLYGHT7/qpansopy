@@ -25,6 +25,17 @@ class QPANSOPYCONVInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
 
+        # Defaults for new parameters
+        # Guard against missing widgets if UI not yet updated
+        if hasattr(self, 'procAltSpinBox'):
+            self.procAltSpinBox.setValue(1000.0)
+        if hasattr(self, 'mocSpinBox'):
+            self.mocSpinBox.setValue(300.0)
+        if hasattr(self, 'mocUnitComboBox'):
+            self.mocUnitComboBox.clear()
+            self.mocUnitComboBox.addItems(["ft", "m"])
+            self.mocUnitComboBox.setCurrentText("ft")
+
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
@@ -66,7 +77,21 @@ class QPANSOPYCONVInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         try:
             self.log("Calculating CONV Initial Approach Areas...")
             from ...modules.conv.conv_initial_approach import run_conv_initial_approach
-            result = run_conv_initial_approach(self.iface, routing_layer)
+            params = {}
+            if hasattr(self, 'procAltSpinBox'):
+                params['procedure_altitude_ft'] = float(self.procAltSpinBox.value())
+            else:
+                params['procedure_altitude_ft'] = 1000.0
+            if hasattr(self, 'mocSpinBox'):
+                params['moc_value'] = float(self.mocSpinBox.value())
+            else:
+                params['moc_value'] = 300.0
+            if hasattr(self, 'mocUnitComboBox'):
+                params['moc_unit'] = self.mocUnitComboBox.currentText()
+            else:
+                params['moc_unit'] = 'ft'
+
+            result = run_conv_initial_approach(self.iface, routing_layer, params)
 
             # Log results
             if result:

@@ -26,11 +26,9 @@ from PyQt5 import QtGui, QtWidgets, uic, QtCore
 from PyQt5.QtCore import pyqtSignal, QRegExp
 from PyQt5.QtGui import QRegExpValidator, QColor
 from PyQt5.QtWidgets import QColorDialog
-from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel, QgsVectorFileWriter
-from qgis.gui import QgsMapLayerComboBox
+from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem
 from qgis.utils import iface
 from qgis.core import Qgis
-import json
 import datetime
 
 # Use __file__ to get the current script path
@@ -49,7 +47,10 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Initialize exact_values dictionary
         self.exact_values = {}
         
-        # Initialize symbology settings
+        # Initialize unit and symbology settings
+        self.units = {
+            'thrElev': 'm'
+        }
         self.higher_color = QColor("red")
         self.lower_color = QColor("green")
         
@@ -57,9 +58,14 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
         
-        # Set default output folder
-        if hasattr(self, 'outputFolderLineEdit'):
-            self.outputFolderLineEdit.setText(self.get_desktop_path())
+        # Hide output/KML/JSON controls not needed for this tool (per #67)
+        if hasattr(self, 'outputGroup'):
+            self.outputGroup.setVisible(False)
+        if hasattr(self, 'exportKmlCheckBox'):
+            self.exportKmlCheckBox.setVisible(False)
+            self.exportKmlCheckBox.setChecked(False)
+        if hasattr(self, 'copyParamsButton'):
+            self.copyParamsButton.setVisible(False)
         
         # Setup numeric validator for THR elevation
         self.setup_validators()
@@ -71,13 +77,11 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.update_color_button(self.higherColorButton, self.higher_color)
         self.update_color_button(self.lowerColorButton, self.lower_color)
         
-        # Hide and disable KML export checkbox by default
-        if hasattr(self, 'exportKmlCheckBox'):
-            self.exportKmlCheckBox.setVisible(False)
-            self.exportKmlCheckBox.setChecked(False)
-        
+        # Add unit combo next to threshold field
+        self.setup_thr_elev_with_units()
+
         # Log initial message
-        self.log("Point Filter loaded. Select a point layer with 'elev' field as active layer and set THR elevation.")
+        self.log("Point Filter loaded. Select a point layer with 'elev' field as active layer and set Filter Elevation.")
 
     def setup_validators(self):
         """Setup validators for numeric inputs"""
@@ -90,14 +94,36 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.thrElevLineEdit.textChanged.connect(
                 lambda text: self.store_exact_value('thrElev', text))
 
+    def setup_thr_elev_with_units(self):
+        """Wrap the Filter Elevation QLineEdit with a unit combo (m/ft) in the same row"""
+        if not (hasattr(self, 'thrElevLineEdit') and hasattr(self, 'parametersLayout')):
+            return
+        # Create unit combo
+        self.thrElevUnitCombo = QtWidgets.QComboBox(self)
+        self.thrElevUnitCombo.addItems(['m', 'ft'])
+        self.thrElevUnitCombo.setCurrentText(self.units.get('thrElev', 'm'))
+        self.thrElevUnitCombo.currentTextChanged.connect(lambda u: self.units.__setitem__('thrElev', u))
+
+        # Create a container to hold line edit + unit combo
+        container = QtWidgets.QWidget(self)
+        h = QtWidgets.QHBoxLayout(container)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+        h.addWidget(self.thrElevLineEdit)
+        h.addWidget(self.thrElevUnitCombo)
+
+        # Replace the original field in the form layout (row 0, column 1)
+        try:
+            self.parametersLayout.removeWidget(self.thrElevLineEdit)
+            self.parametersLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, container)
+        except Exception:
+            pass
+
     def setup_connections(self):
         """Setup signal/slot connections"""
         if hasattr(self, 'calculateButton'):
             self.calculateButton.clicked.connect(self.filter_points)
-        if hasattr(self, 'browseButton'):
-            self.browseButton.clicked.connect(self.browse_output_folder)
-        if hasattr(self, 'copyParamsButton'):
-            self.copyParamsButton.clicked.connect(self.copy_parameters_as_json)
+        # Output folder / JSON are hidden; do not wire their actions
         
         # Note: exportKmlCheckBox doesn't need connection - it's checked during filter execution
         
@@ -121,12 +147,7 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         except:
             return ""
 
-    def browse_output_folder(self):
-        """Browse for output folder"""
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
-            self, "Select Output Folder", self.outputFolderLineEdit.text())
-        if folder:
-            self.outputFolderLineEdit.setText(folder)
+    # Output folder selection removed per #67
 
     def choose_higher_color(self):
         """Choose color for points above threshold"""
@@ -149,7 +170,13 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Determine text color based on background brightness
         text_color = "white" if color.lightness() < 128 else "black"
         button.setStyleSheet(f"background-color: {color.name()}; color: {text_color};")
-        button.setText(color.name().upper())
+        # Do not show hex value; keep a neutral label
+        if button is self.higherColorButton:
+            button.setText("Higher")
+        elif button is self.lowerColorButton:
+            button.setText("Lower")
+        else:
+            button.setText("")
 
     def log(self, message):
         """Log a message"""
@@ -176,16 +203,16 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage("Error", "Active layer must be a point layer", level=Qgis.Warning)
             return False
         
-        # Check if THR elevation is provided
+        # Check if Filter elevation is provided
         if not self.thrElevLineEdit.text():
-            self.log("Error: Please enter THR Elevation value")
+            self.log("Error: Please enter Filter Elevation value")
             return False
         
         # Validate THR elevation is numeric
         try:
             float(self.thrElevLineEdit.text())
         except ValueError:
-            self.log("Error: THR Elevation must be a valid number")
+            self.log("Error: Filter Elevation must be a valid number")
             return False
         
         # Check if layer has 'elev' field
@@ -193,16 +220,6 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Error: Active layer must have an 'elev' field")
             self.iface.messageBar().pushMessage("Error", "The 'elev' field is not present in the active layer", level=Qgis.Warning)
             return False
-        
-        # Check if output folder exists
-        output_folder = self.outputFolderLineEdit.text()
-        if not os.path.exists(output_folder):
-            try:
-                os.makedirs(output_folder)
-                self.log(f"Created output folder: {output_folder}")
-            except Exception as e:
-                self.log(f"Error creating output folder: {str(e)}")
-                return False
         
         return True
 
@@ -216,24 +233,22 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Get active layer instead of selected layer
         layer = self.iface.activeLayer()
-        thr_elev = self.exact_values.get('thrElev', float(self.thrElevLineEdit.text()))
-        output_dir = self.outputFolderLineEdit.text()
+        thr_elev_input = self.exact_values.get('thrElev', float(self.thrElevLineEdit.text()))
+        unit = self.units.get('thrElev', 'm')
+        thr_elev_m = float(thr_elev_input) * 0.3048 if unit == 'ft' else float(thr_elev_input)
         
         # Get symbology parameters
         point_size = self.pointSizeSpinBox.value()
         
-        # Check if KML export is requested
-        export_kml = self.exportKmlCheckBox.isChecked() if hasattr(self, 'exportKmlCheckBox') else False
-        
         # Log the operation
         self.log(f"Using active layer: {layer.name()}")
-        self.log(f"THR Elevation threshold: {thr_elev}m")
+        self.log(f"Filter Elevation threshold: {thr_elev_input}{unit} (converted: {thr_elev_m:.3f} m)")
         self.log(f"Symbology - Higher color: {self.higher_color.name()}, Lower color: {self.lower_color.name()}, Size: {point_size}")
         
         try:
             # Import and run the point filter module
             from ...modules.utilities.point_filter import filter_points_by_elevation
-            result = filter_points_by_elevation(self.iface, layer, thr_elev, output_dir, 
+            result = filter_points_by_elevation(self.iface, layer, thr_elev_m, None, 
                                                self.higher_color, self.lower_color, point_size)
             
             # Log results
@@ -246,14 +261,7 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.log("Layers added to project with custom symbology")
                 self.log("Fields added: x_dist, y_dist, z_height (elevation - threshold)")
                 
-                # Handle KML export if requested
-                if export_kml:
-                    try:
-                        self.export_results_to_kml(result.get('higher_layer'), result.get('lower_layer'), output_dir)
-                    except Exception as kml_error:
-                        self.log(f"Warning: KML export failed: {str(kml_error)}")
-                
-                self.log("You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
+                # KML/JSON export removed per #67
                 
                 # Show success message
                 self.iface.messageBar().pushMessage("QPANSOPY", 
@@ -268,95 +276,9 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log(traceback.format_exc())
             self.iface.messageBar().pushMessage("Error", f"Point filtering failed: {str(e)}", level=Qgis.Critical)
 
-    def copy_parameters_as_json(self):
-        """Copy current parameters to clipboard as JSON"""
-        # Get active layer
-        active_layer = self.iface.activeLayer()
-        point_size = self.pointSizeSpinBox.value()
-        
-        params_dict = {
-            "metadata": {
-                "plugin": "QPANSOPY Point Filter",
-                "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "version": "1.0"
-            },
-            "parameters": {
-                'active_layer_name': active_layer.name() if active_layer else None,
-                'layer_type': 'Point Layer' if active_layer else None,
-                'thr_elevation': self.exact_values.get('thrElev', self.thrElevLineEdit.text()),
-                'output_folder': self.outputFolderLineEdit.text()
-            },
-            "symbology": {
-                'higher_color': self.higher_color.name(),
-                'lower_color': self.lower_color.name(),
-                'point_size': point_size
-            },
-            "processing_info": {
-                'description': 'Filters points based on THR (Threshold) elevation',
-                'higher_points': f'Points with elevation >= threshold (colored {self.higher_color.name()})',
-                'lower_points': f'Points with elevation < threshold (colored {self.lower_color.name()})',
-                'calculated_fields': ['x_dist', 'y_dist', 'z_height'],
-                'z_height_formula': 'elevation - thr_elevation'
-            }
-        }
-        params_json = json.dumps(params_dict, indent=2)
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(params_json)
-        self.log("Point Filter parameters copied to clipboard as JSON.")
-        self.iface.messageBar().pushMessage("QPANSOPY", "Point Filter parameters copied to clipboard as JSON", level=Qgis.Success)
+    # JSON copy functionality removed per #67
 
-    def export_results_to_kml(self, higher_layer, lower_layer, output_dir):
-        """Export filtered results to KML format"""
-        if not output_dir or not os.path.exists(output_dir):
-            output_dir = self.get_desktop_path()
-        
-        try:
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            exported_files = []
-            
-            # Export higher layer if exists
-            if higher_layer:
-                higher_kml_path = os.path.join(output_dir, f"point_filter_higher_{timestamp}.kml")
-                error = QgsVectorFileWriter.writeAsVectorFormat(
-                    higher_layer,
-                    higher_kml_path,
-                    "utf-8",
-                    higher_layer.crs(),
-                    "KML"
-                )
-                if error[0] == QgsVectorFileWriter.NoError:
-                    exported_files.append(higher_kml_path)
-                    self.log(f"Higher points exported to KML: {higher_kml_path}")
-                else:
-                    self.log(f"Error exporting higher layer: {error[1]}")
-            
-            # Export lower layer if exists
-            if lower_layer:
-                lower_kml_path = os.path.join(output_dir, f"point_filter_lower_{timestamp}.kml")
-                error = QgsVectorFileWriter.writeAsVectorFormat(
-                    lower_layer,
-                    lower_kml_path,
-                    "utf-8",
-                    lower_layer.crs(),
-                    "KML"
-                )
-                if error[0] == QgsVectorFileWriter.NoError:
-                    exported_files.append(lower_kml_path)
-                    self.log(f"Lower points exported to KML: {lower_kml_path}")
-                else:
-                    self.log(f"Error exporting lower layer: {error[1]}")
-            
-            if exported_files:
-                self.log(f"KML export completed successfully! {len(exported_files)} file(s) exported.")
-                self.iface.messageBar().pushMessage("QPANSOPY", 
-                    f"Point Filter results exported to KML: {len(exported_files)} file(s)", 
-                    level=Qgis.Success)
-            else:
-                self.log("Warning: No KML files were exported.")
-                
-        except Exception as e:
-            self.log(f"Error during KML export: {str(e)}")
-            raise e
+    # KML export functionality removed per #67
 
     def closeEvent(self, event):
         self.closingPlugin.emit()

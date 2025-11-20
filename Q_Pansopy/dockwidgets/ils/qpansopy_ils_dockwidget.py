@@ -56,14 +56,16 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            'thr_elev': 'm'
        }
        
-       # Configure the dock widget to be resizable
+       # Configure the dock widget to be resizable without forcing main window geometry
        self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
                         QtWidgets.QDockWidget.DockWidgetFloatable |
                         QtWidgets.QDockWidget.DockWidgetClosable)
-       
-       # Set minimum and maximum sizes
-       self.setMinimumHeight(300)
-       self.setMaximumHeight(600)
+       try:
+           self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+       except Exception:
+           pass
+       # Prefer modest minimum height and no hard maximum to avoid geometry jumps
+       self.setMinimumHeight(260)
        
        # Connect signals
        self.calculateButton.clicked.connect(self.calculate)
