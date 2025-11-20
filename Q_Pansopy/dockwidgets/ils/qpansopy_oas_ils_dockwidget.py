@@ -58,15 +58,17 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            'THR_elev': 'm'
        }
        
-       # Configure the dock widget to be resizable
+       # Configure the dock widget to be resizable without forcing main window geometry
        self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
                         QtWidgets.QDockWidget.DockWidgetFloatable |
                         QtWidgets.QDockWidget.DockWidgetClosable)
-       
-       # Set minimum and maximum sizes
-       self.setMinimumWidth(400)
-       self.setMinimumHeight(450)
-       self.setMaximumHeight(700)
+       try:
+           self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+       except Exception:
+           pass
+       # Prefer modest minimum dimensions and no hard maximum to avoid QGIS window jumps
+       self.setMinimumWidth(360)
+       self.setMinimumHeight(320)
        
        # Aumentar el espaciado en los layouts
        self.verticalLayout.setSpacing(8)
@@ -94,7 +96,11 @@ class QPANSOPYOASILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        
        # Limitar el tamaño del área de log
        if hasattr(self, 'logTextEdit') and self.logTextEdit is not None:
-           self.logTextEdit.setMaximumHeight(120)
+           # Use a preferred height but don't enforce a hard maximum
+           try:
+               self.logTextEdit.setMaximumHeight(0)  # 0 means no max; layout manages size
+           except Exception:
+               pass
            self.logTextEdit.setVisible(True)  # El valor real lo pone qpansopy.py
        
        # Asegura que el checkbox de KML existe

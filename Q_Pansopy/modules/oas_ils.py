@@ -20,6 +20,60 @@ import json
 import numpy as np
 import re
 from ..utils import get_selected_feature
+from xml.etree import ElementTree as ET
+
+
+def _ensure_kml_altitude_absolute(kml_path: str) -> None:
+    """Ensure KML uses altitudeMode=absolute for all geometries.
+
+    This post-processing makes KML 3D visualization consistent across viewers by:
+    - Setting <altitudeMode>absolute</altitudeMode> where missing or different
+    - Normalizing any gx:altitudeMode occurrences to altitudeMode
+    The function is best-effort and silently returns on parse issues.
+    """
+    try:
+        # Parse XML with namespace awareness
+        with open(kml_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Replace gx:altitudeMode if present to simplify handling
+        content = content.replace('<gx:altitudeMode>', '<altitudeMode>').replace('</gx:altitudeMode>', '</altitudeMode>')
+
+        root = ET.fromstring(content)
+
+        # Common KML namespaces
+        ns = {
+            'kml': 'http://www.opengis.net/kml/2.2',
+        }
+
+        # Geometry tags to update
+        geom_tags = ['Polygon', 'MultiGeometry', 'LineString', 'LinearRing', 'Point']
+
+        def _findall(elem, tag):
+            return elem.findall(f'.//{{{ns["kml"]}}}{tag}')
+
+        # Iterate over all geometry elements and ensure altitudeMode absolute
+        for tag in geom_tags:
+            for geom in _findall(root, tag):
+                # Check if altitudeMode exists
+                am = geom.find(f'{{{ns["kml"]}}}altitudeMode')
+                if am is None:
+                    am = ET.Element('altitudeMode')
+                    am.text = 'absolute'
+                    # Insert as first child for readability
+                    geom.insert(0, am)
+                else:
+                    am.text = 'absolute'
+
+        # Write back pretty raw string (ElementTree minimal formatting)
+        ET.register_namespace('', ns['kml'])
+        new_content = ET.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
+
+        with open(kml_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+    except Exception:
+        # Non-fatal: leave original file as-is if any issue occurs
+        return
 
 # Global variables to store computed values
 OAS_template = None
@@ -476,19 +530,30 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
             # Export to KML
             crs = QgsCoordinateReferenceSystem("EPSG:4326")
             
-            # Export OAS layer
+            # Export OAS layer with altitude mode absolute to avoid clampToGround
+            # Notes:
+            # - Geometry is created as PolygonZ, ensuring Z values are written.
+            # - AltitudeMode=absolute instructs viewers to respect Z elevations.
+            # - MODE=2 keeps single-layer export behavior consistent with previous versions.
+            layer_options = [
+                'MODE=2',
+                'AltitudeMode=absolute'
+            ]
+
             oas_error = QgsVectorFileWriter.writeAsVectorFormat(
                 v_layer,
                 oas_export_path,
                 'utf-8',
                 crs,
                 'KML',
-                layerOptions=['MODE=2']
+                layerOptions=layer_options
             )
             
             # Apply corrections to KML file
             if oas_error[0] == QgsVectorFileWriter.NoError:
                 result[f'oas_path_{key.lower()}'] = oas_export_path
+                # Post-process to ensure explicit altitudeMode=absolute tags
+                _ensure_kml_altitude_absolute(oas_export_path)
     
     # Zoom to the first layer
     if result:

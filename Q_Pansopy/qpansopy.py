@@ -5,7 +5,7 @@ QPANSOPY Plugin for QGIS
 import os
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePolicy
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
 
 
@@ -179,8 +179,9 @@ class Qpansopy:
                 QIcon(icon_path),
                 properties["TITLE"], 
                 self.iface.mainWindow())
-                # Modificar la conexión de la señal usando lambda
-                new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n))
+                # Conectar asegurando compatibilidad con triggered(bool)
+                # La ranura acepta (name, checked=False), por lo que ignoramos 'checked'
+                new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
                 new_action.setToolTip(properties['TOOLTIP'])
                 toolbar_name = properties['TOOLBAR']
                 self.toolbars[toolbar_name].addAction(new_action)
@@ -247,7 +248,7 @@ class Qpansopy:
                 self.modules[name]["GUI_INSTANCE"] = None
 
 
-    def toggle_dock(self, name=None):
+    def toggle_dock(self, name=None, checked=False):
         """Toggle the requested dock widget
         :param str name: key name from self.module for the module to toggle 
         """
@@ -255,32 +256,59 @@ class Qpansopy:
         if name is None:
             return
             
-        if self.modules[name]["GUI_INSTANCE"] is None:
-            dock_widget = self.modules[name]["DOCK_WIDGET"]
-            # Create the dock widget
-            module_dock = self.modules[name]["GUI_INSTANCE"] = dock_widget(self.iface)
-            # Aplicar configuración
+        instance = self.modules[name]["GUI_INSTANCE"]
+        if instance is None:
+            # Create and register the dock widget once; later toggles just show/hide
+            dock_widget_cls = self.modules[name]["DOCK_WIDGET"]
+            instance = self.modules[name]["GUI_INSTANCE"] = dock_widget_cls(self.iface)
+            title = self.modules[name].get("TITLE", name)
+            # Basic metadata (ignore failures silently)
             try:
-                module_dock.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                instance.setObjectName(f"QPANSOPY_{name}")
+            except Exception:
+                pass
+            try:
+                instance.setWindowTitle(f"QPANSOPY - {title}")
+            except Exception:
+                pass
+            try:
+                instance.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            except Exception:
+                pass
+            # Initial configuration
+            try:
+                instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
             except AttributeError:
-                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error","This Widget has no KML Export Button")
-            if hasattr(module_dock, "logTextEdit"):
-                module_dock.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
-            
-            # Connect the closing signal usando lambda
-            module_dock.closingPlugin.connect(lambda: self.on_dock_closed(name))
-            # Add the dock widget to the interface
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, module_dock)
-
-            #Close all other module dock if open
-            for other_name,other_properties in self.modules.items():
-                if other_properties["GUI_INSTANCE"] and other_name != name:
-                    self.iface.removeDockWidget(other_properties["GUI_INSTANCE"])
-                    self.modules[other_name]["GUI_INSTANCE"] = None
+                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
+            if hasattr(instance, "logTextEdit"):
+                instance.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
+                try:
+                    instance.logTextEdit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+                    if instance.logTextEdit.minimumHeight() < 80:
+                        instance.logTextEdit.setMinimumHeight(80)
+                except Exception:
+                    pass
+            instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
+            self.iface.addDockWidget(Qt.RightDockWidgetArea, instance)
+            # Hide other docks instead of removing to reduce geometry churn
+            for other_name, other_properties in self.modules.items():
+                if other_name == name:
+                    continue
+                other_instance = other_properties["GUI_INSTANCE"]
+                if other_instance and other_instance.isVisible():
+                    other_instance.hide()
         else:
-            module_dock = self.modules[name]["GUI_INSTANCE"]
-            self.iface.removeDockWidget(module_dock)
-            self.modules[name]["GUI_INSTANCE"] = None
+            # Toggle visibility of existing instance; hide siblings when showing
+            if instance.isVisible():
+                instance.hide()
+            else:
+                instance.show()
+                for other_name, other_properties in self.modules.items():
+                    if other_name == name:
+                        continue
+                    other_instance = other_properties["GUI_INSTANCE"]
+                    if other_instance and other_instance.isVisible():
+                        other_instance.hide()
 
 
     def on_dock_closed(self,name):

@@ -10,11 +10,32 @@ from qgis.PyQt.QtCore import QVariant
 from math import *
 import os
 
-def run_conv_initial_approach(iface, routing_layer):
+def run_conv_initial_approach(iface, routing_layer, params=None):
     """
-    Generate CONV Initial Approach areas (primary and secondary) following the pattern of PBN modules
+    Generate CONV Initial Approach areas (primary and secondary) with true 3D Z values.
+
+    Parameters (via params dict):
+    - procedure_altitude_ft (float): Procedure altitude in feet. Default 1000.
+    - moc_value (float): MOC value numeric. Default 300.
+    - moc_unit (str): 'ft' or 'm'. Default 'ft'.
+
+    Z calculation rules:
+    - Primary area Z (meters) = Procedure Altitude (ft) -> m - MOC (converted to m)
+    - Secondary areas: inner edge Z = Primary Z; outer edge Z = Primary Z + MOC (i.e., equals Procedure Altitude in meters)
     """
     try:
+        params = params or {}
+        # Inputs and conversions
+        procedure_altitude_ft = float(params.get('procedure_altitude_ft', 1000))
+        moc_value = float(params.get('moc_value', 300))
+        moc_unit = str(params.get('moc_unit', 'ft')).lower()
+
+        ft_to_m = 0.3048
+        proc_alt_m = procedure_altitude_ft * ft_to_m
+        moc_m = moc_value * ft_to_m if moc_unit == 'ft' else moc_value
+        z_primary = proc_alt_m - moc_m
+        z_outer = z_primary + moc_m  # equals proc_alt_m
+
         # Get Projected Coordinate System for the QGIS Project 
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
         
@@ -110,34 +131,95 @@ def run_conv_initial_approach(iface, routing_layer):
 
             # Create memory layer
             v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "CONV Initial Approach Areas", "memory")
-            myField = QgsField('Symbol', QVariant.String)
-            v_layer.dataProvider().addAttributes([myField])
+            fields = [
+                QgsField('Symbol', QVariant.String),
+                QgsField('proc_alt_ft', QVariant.Double),
+                QgsField('moc', QVariant.Double),
+                QgsField('moc_unit', QVariant.String),
+                QgsField('z_primary_m', QVariant.Double),
+                QgsField('z_outer_m', QVariant.Double)
+            ]
+            v_layer.dataProvider().addAttributes(fields)
             v_layer.updateFields()
 
             # Define areas as polygons exactly as in the original code
             # Primary Area
-            primary_area = ([pts["m2"], pts["m0"], pts["m4"], pts["m8"], pts["m1"], pts["m6"]], 'Primary Area')
+            primary_ring = [pts["m2"], pts["m0"], pts["m4"], pts["m8"], pts["m1"], pts["m6"]]
+            primary_area = (primary_ring, 'Primary Area')
             
             # Secondary Area Left
-            secondary_area_left = ([pts["m3"], pts["m2"], pts["m6"], pts["m7"]], 'Secondary Area')
+            sec_left_ring = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
+            secondary_area_left = (sec_left_ring, 'Secondary Area (Left)')
             
             # Secondary Area Right
-            secondary_area_right = ([pts["m4"], pts["m5"], pts["m9"], pts["m8"]], 'Secondary Area')
+            sec_right_ring = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+            secondary_area_right = (sec_right_ring, 'Secondary Area (Right)')
             
             areas = (primary_area, secondary_area_left, secondary_area_right)
 
             # Create polygon features
             pr = v_layer.dataProvider()
             features_created = 0
-            for area in areas:
-                try:
-                    seg = QgsFeature()
-                    seg.setGeometry(QgsPolygon(QgsLineString(area[0]), rings=[]))
-                    seg.setAttributes([area[1]])
-                    pr.addFeatures([seg])
-                    features_created += 1
-                except Exception as area_error:
-                    iface.messageBar().pushMessage("Error creating area:", str(area_error), level=Qgis.Warning)
+
+            def elevate_ring(ring_points, z_values):
+                # Ensure z_values length matches ring_points, fallback to uniform if single value
+                if not isinstance(z_values, (list, tuple)):
+                    z_values = [z_values] * len(ring_points)
+                return [QgsPoint(p.x(), p.y(), z) for p, z in zip(ring_points, z_values)]
+
+            try:
+                # Primary area: all vertices at z_primary
+                primary_ring_z = elevate_ring(primary_area[0], z_primary)
+                f = QgsFeature()
+                f.setGeometry(QgsPolygon(QgsLineString(primary_ring_z), rings=[]))
+                f.setAttributes([
+                    primary_area[1],
+                    procedure_altitude_ft,
+                    moc_value,
+                    moc_unit,
+                    z_primary,
+                    z_outer
+                ])
+                pr.addFeatures([f])
+                features_created += 1
+            except Exception as area_error:
+                iface.messageBar().pushMessage("Error creating primary area:", str(area_error), level=Qgis.Warning)
+
+            try:
+                # Secondary left: [outer(+5), inner(+2.5), inner(+2.5), outer(+5)]
+                sec_left_ring_z = elevate_ring(secondary_area_left[0], [z_outer, z_primary, z_primary, z_outer])
+                f = QgsFeature()
+                f.setGeometry(QgsPolygon(QgsLineString(sec_left_ring_z), rings=[]))
+                f.setAttributes([
+                    secondary_area_left[1],
+                    procedure_altitude_ft,
+                    moc_value,
+                    moc_unit,
+                    z_primary,
+                    z_outer
+                ])
+                pr.addFeatures([f])
+                features_created += 1
+            except Exception as area_error:
+                iface.messageBar().pushMessage("Error creating secondary left area:", str(area_error), level=Qgis.Warning)
+
+            try:
+                # Secondary right: [inner(-2.5), outer(-5), outer(-5), inner(-2.5)]
+                sec_right_ring_z = elevate_ring(secondary_area_right[0], [z_primary, z_outer, z_outer, z_primary])
+                f = QgsFeature()
+                f.setGeometry(QgsPolygon(QgsLineString(sec_right_ring_z), rings=[]))
+                f.setAttributes([
+                    secondary_area_right[1],
+                    procedure_altitude_ft,
+                    moc_value,
+                    moc_unit,
+                    z_primary,
+                    z_outer
+                ])
+                pr.addFeatures([f])
+                features_created += 1
+            except Exception as area_error:
+                iface.messageBar().pushMessage("Error creating secondary right area:", str(area_error), level=Qgis.Warning)
 
             v_layer.updateExtents()
             QgsProject.instance().addMapLayers([v_layer])
@@ -155,7 +237,11 @@ def run_conv_initial_approach(iface, routing_layer):
             canvas.zoomToSelected(v_layer)
             v_layer.removeSelection()
 
-            iface.messageBar().pushMessage("QPANSOPY:", f"Finished CONV Initial Approach Segment - {features_created} areas created for {features_processed} features", level=Qgis.Success)
+            iface.messageBar().pushMessage(
+                "QPANSOPY:",
+                f"Finished CONV Initial Approach Segment - {features_created} areas created for {features_processed} features (Z_primary={z_primary:.2f} m, Z_outer={z_outer:.2f} m)",
+                level=Qgis.Success
+            )
             features_processed += 1
             
         return True
