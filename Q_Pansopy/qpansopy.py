@@ -297,10 +297,13 @@ class Qpansopy:
             except Exception:
                 pass
             # Initial configuration
-            try:
-                instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
-            except AttributeError:
-                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
+            # PointFilter is an exception - it doesn't have a KML export button by design
+            if name != "PointFilter":
+                try:
+                    if hasattr(instance, "exportKmlCheckBox"):
+                        instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                except AttributeError:
+                    QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
             if hasattr(instance, "logTextEdit"):
                 instance.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 # Ensure the log panel is actually resizable regardless of UI max heights
