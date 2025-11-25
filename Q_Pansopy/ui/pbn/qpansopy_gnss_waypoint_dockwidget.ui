@@ -199,8 +199,8 @@
        </property>
        <item>
         <widget class="QTextEdit" name="logTextEdit">
-         <property name="maximumHeight">
-          <number>80</number>
+         <property name="minimumHeight">
+          <number>60</number>
          </property>
          <property name="readOnly">
           <bool>true</bool>
@@ -209,19 +209,6 @@
        </item>
       </layout>
      </widget>
-    </item>
-    <item>
-     <spacer name="verticalSpacer">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>40</height>
-       </size>
-      </property>
-     </spacer>
     </item>
    </layout>
   </widget>
