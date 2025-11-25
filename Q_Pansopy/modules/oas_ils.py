@@ -19,7 +19,7 @@ import datetime
 import json
 import numpy as np
 import re
-from ..utils import get_selected_feature
+from ..utils import get_selected_feature, fix_kml_altitude_mode
 
 # Global variables to store computed values
 OAS_template = None
@@ -53,6 +53,7 @@ def solve_plane_intersection(plane1, plane2, target_height):
         return (X, Y, target_height)
     except np.linalg.LinAlgError:
         return None
+
 
 def csv_to_structured_json(THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS_extension_height):
     """
@@ -486,9 +487,16 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
                 layerOptions=['MODE=2']
             )
             
-            # Apply corrections to KML file
+            # Apply corrections to KML file - Fix altitude mode to absolute for 3D display
             if oas_error[0] == QgsVectorFileWriter.NoError:
+                # Fix the KML to use absolute altitude mode instead of clampToGround
+                if fix_kml_altitude_mode(oas_export_path):
+                    iface.messageBar().pushMessage("Success", f"KML exported with absolute altitude: {oas_export_path}", level=Qgis.Success)
+                else:
+                    iface.messageBar().pushMessage("Warning", f"KML exported but altitude mode fix failed: {oas_export_path}", level=Qgis.Warning)
                 result[f'oas_path_{key.lower()}'] = oas_export_path
+            else:
+                iface.messageBar().pushMessage("Error", f"Failed to export KML: {oas_error[1]}", level=Qgis.Warning)
     
     # Zoom to the first layer
     if result:
