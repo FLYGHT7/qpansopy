@@ -20,6 +20,7 @@ try:
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
     from .dockwidgets.utilities.qpansopy_feature_merge_dockwidget import QPANSOPYFeatureMergeDockWidget
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
+    from .dockwidgets.pbn.qpansopy_gnss_waypoint_dockwidget import QPANSOPYGNSSWaypointDockWidget
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
@@ -91,6 +92,14 @@ class Qpansopy:
                                     "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
                                     "ICON": os.path.join(self.icons_dir, 'PBN.png'),
                                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
+                                    "GUI_INSTANCE": None
+                                },
+                                "GNSS_WAYPOINT": {
+                                    "TITLE": "GNSS Waypoint",
+                                    "TOOLBAR": "PBN",
+                                    "TOOLTIP": "GNSS Waypoint Tolerance Tool - Create fix tolerance polygons",
+                                    "ICON": os.path.join(self.icons_dir, 'gnss_waypoint.svg'),
+                                    "DOCK_WIDGET": QPANSOPYGNSSWaypointDockWidget,
                                     "GUI_INSTANCE": None
                                 },
                                 "VOR_CONV": {

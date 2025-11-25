@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background rectangle with GNSS/satellite theme color -->
+  <rect width="24" height="24" fill="#2196F3" stroke="#1565C0" stroke-width="1" rx="2" ry="2"/>
+  <!-- Stylized waypoint/fix symbol (rotated square with center dot) -->
+  <rect x="8" y="8" width="8" height="8" fill="none" stroke="white" stroke-width="1.5" transform="rotate(45 12 12)"/>
+  <circle cx="12" cy="12" r="2" fill="white"/>
+  <!-- Small satellite antenna indication at top -->
+  <line x1="12" y1="2" x2="12" y2="5" stroke="white" stroke-width="1"/>
+  <circle cx="12" cy="2.5" r="1" fill="white"/>
+</svg>
