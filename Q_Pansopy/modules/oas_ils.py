@@ -108,6 +108,7 @@ def solve_plane_intersection(plane1, plane2, target_height):
     except np.linalg.LinAlgError:
         return None
 
+
 def csv_to_structured_json(THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS_extension_height):
     """
     Read OAS constants from a CSV file and convert to structured JSON
@@ -549,11 +550,14 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
                 layerOptions=layer_options
             )
             
-            # Apply corrections to KML file
+            # Apply corrections to KML file - Fix altitude mode to absolute for 3D display
             if oas_error[0] == QgsVectorFileWriter.NoError:
                 result[f'oas_path_{key.lower()}'] = oas_export_path
                 # Post-process to ensure explicit altitudeMode=absolute tags
                 _ensure_kml_altitude_absolute(oas_export_path)
+                iface.messageBar().pushMessage("Success", f"KML exported with absolute altitude: {oas_export_path}", level=Qgis.Success)
+            else:
+                iface.messageBar().pushMessage("Error", f"Failed to export KML: {oas_error[1]}", level=Qgis.Warning)
     
     # Zoom to the first layer
     if result:

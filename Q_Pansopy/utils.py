@@ -22,6 +22,7 @@ Procedure Analysis and Obstacle Protection Surfaces
 """
 
 from qgis.core import Qgis
+from xml.etree import ElementTree as ET
 
 def get_selected_feature(layer, show_error):
     """
@@ -114,6 +115,7 @@ def format_parameters_table(title, params_dict, sections=None):
 
     # Build output grouped by section preserving insertion order
     table = f"{title}\n{'='*50}\n\n"
+
 
     if not entries:
         # Fallback: print raw dict if nothing was recognized
