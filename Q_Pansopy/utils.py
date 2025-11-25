@@ -23,6 +23,98 @@ Procedure Analysis and Obstacle Protection Surfaces
 
 from qgis.core import Qgis
 from xml.etree import ElementTree as ET
+import re
+
+
+def fix_kml_altitude_mode(kml_path):
+    """
+    Fix KML file to use absolute altitude mode instead of clampToGround.
+    This ensures 3D surfaces display at their correct elevations in Google Earth.
+    
+    This function addresses Issue #87: KML exports were being clamped to ground,
+    preventing proper 3D visualization of obstacle assessment surfaces.
+    
+    :param kml_path: Path to the KML file to fix
+    :return: True if successful, False otherwise
+    """
+    try:
+        # Define KML namespace
+        KML_NS = 'http://www.opengis.net/kml/2.2'
+        GX_NS = 'http://www.google.com/kml/ext/2.2'
+        
+        # Register namespaces to avoid ns0 prefix in output
+        ET.register_namespace('', KML_NS)
+        ET.register_namespace('gx', GX_NS)
+        
+        # Parse the KML file
+        tree = ET.parse(kml_path)
+        root = tree.getroot()
+        
+        # Find all geometry elements that need altitude mode fix
+        geometry_tags = ['Polygon', 'MultiGeometry', 'LineString', 'LinearRing', 'Point']
+        
+        for tag in geometry_tags:
+            for geom in root.findall(f'.//{{{KML_NS}}}{tag}'):
+                # Check if altitudeMode already exists
+                altitude_mode = geom.find(f'{{{KML_NS}}}altitudeMode')
+                
+                if altitude_mode is not None:
+                    # Change existing altitudeMode to absolute
+                    altitude_mode.text = 'absolute'
+                else:
+                    # Add altitudeMode element as first child
+                    altitude_mode = ET.Element('altitudeMode')
+                    altitude_mode.text = 'absolute'
+                    geom.insert(0, altitude_mode)
+                
+                # Also handle gx:altitudeMode if present (Google Earth extension)
+                gx_altitude_mode = geom.find(f'{{{GX_NS}}}altitudeMode')
+                if gx_altitude_mode is not None:
+                    gx_altitude_mode.text = 'absolute'
+        
+        # Write the modified KML back to file
+        tree.write(kml_path, encoding='utf-8', xml_declaration=True)
+        
+        # Read the file and ensure proper structure
+        with open(kml_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Ensure proper XML declaration at the beginning
+        if not content.startswith('<?xml'):
+            content = '<?xml version="1.0" encoding="UTF-8"?>\n' + content
+        
+        with open(kml_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return True
+        
+    except Exception as e:
+        # If XML parsing fails, try regex fallback
+        try:
+            with open(kml_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Replace clampToGround and relativeToGround with absolute
+            content = re.sub(
+                r'<altitudeMode>\s*(clampToGround|relativeToGround)\s*</altitudeMode>',
+                '<altitudeMode>absolute</altitudeMode>',
+                content
+            )
+            
+            # Also handle gx:altitudeMode
+            content = re.sub(
+                r'<gx:altitudeMode>\s*(clampToSeaFloor|relativeToSeaFloor|clampToGround|relativeToGround)\s*</gx:altitudeMode>',
+                '<altitudeMode>absolute</altitudeMode>',
+                content
+            )
+            
+            with open(kml_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            return True
+        except:
+            return False
+
 
 def get_selected_feature(layer, show_error):
     """

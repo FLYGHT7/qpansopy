@@ -19,7 +19,7 @@ import datetime
 import json
 import numpy as np
 import re
-from ..utils import get_selected_feature
+from ..utils import get_selected_feature, fix_kml_altitude_mode
 
 # Global variables to store computed values
 OAS_template = None
