@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <rect width="24" height="24" fill="#9C27B0" stroke="#7B1FA2" stroke-width="1" rx="2" ry="2"/>
-  <!-- Arrow pointing down/arrival -->
-  <path d="M12 4 L12 16 M7 12 L12 17 L17 12" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Runway/destination line -->
-  <line x1="6" y1="20" x2="18" y2="20" stroke="white" stroke-width="2" stroke-linecap="round"/>
-</svg>

@@ -41,6 +41,13 @@
         <number>4</number>
        </property>
        <item>
+        <widget class="QRadioButton" name="arrivalRadioButton">
+         <property name="text">
+          <string>Arrival</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QRadioButton" name="initialRadioButton">
          <property name="text">
           <string>Initial Approach</string>
