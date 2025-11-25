@@ -81,20 +81,19 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
             )
             return None
 
-        # Find arrival segment in the user's selection
-        arrival_features = [
-            feat for feat in selected_features 
-            if feat.attribute('segment') == 'arrival'
-        ]
+        # Try to find arrival segment, but don't fail if attribute doesn't exist
+        arrival_features = []
+        try:
+            arrival_features = [
+                feat for feat in selected_features 
+                if feat.attribute('segment') == 'arrival'
+            ]
+        except:
+            pass  # Attribute doesn't exist, use all selected
         
         if not arrival_features:
-            # If no 'arrival' segment, use all selected features
+            # Use all selected features if no 'arrival' attribute found
             arrival_features = selected_features
-            iface.messageBar().pushMessage(
-                "Info", 
-                "No 'arrival' segment attribute found, using selected segment", 
-                level=Qgis.Info
-            )
 
         # Process the first valid feature
         start_point = None
