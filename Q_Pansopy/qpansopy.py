@@ -20,6 +20,7 @@ try:
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
     from .dockwidgets.utilities.qpansopy_feature_merge_dockwidget import QPANSOPYFeatureMergeDockWidget
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
+    from .dockwidgets.pbn.qpansopy_rnav1_arrival_dockwidget import QPANSOPYRnav1ArrivalDockWidget
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
@@ -91,6 +92,14 @@ class Qpansopy:
                                     "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
                                     "ICON": os.path.join(self.icons_dir, 'PBN.png'),
                                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
+                                    "GUI_INSTANCE": None
+                                },
+                                "RNAV1_ARRIVAL": {
+                                    "TITLE": "RNAV 1 Arrival",
+                                    "TOOLBAR": "PBN",
+                                    "TOOLTIP": "RNAV 1/2 Arrival Segment Tool (<30NM)",
+                                    "ICON": os.path.join(self.icons_dir, 'rnav1_arrival.svg'),
+                                    "DOCK_WIDGET": QPANSOPYRnav1ArrivalDockWidget,
                                     "GUI_INSTANCE": None
                                 },
                                 "VOR_CONV": {
