@@ -226,7 +226,7 @@
       <property name="maximumSize">
        <size>
         <width>16777215</width>
-        <height>80</height>
+        <height>95</height>
        </size>
       </property>
       <layout class="QVBoxLayout" name="logLayout">
