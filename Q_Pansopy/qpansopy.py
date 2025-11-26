@@ -23,6 +23,7 @@ try:
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
+    from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui
@@ -54,6 +55,7 @@ class Qpansopy:
             'CONV': None,
             'ILS': None,
             'PBN': None,
+            'DEPARTURES': None,
             'UTILITIES': None
         }
         
@@ -140,11 +142,19 @@ class Qpansopy:
                                     "ICON": "feature_merge.svg",  # Using the lightning bolt icon
                                     "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
                                     "GUI_INSTANCE": None
+                                },
+                                "OMNIDIRECTIONAL_SID": {
+                                    "TITLE": "Omnidirectional SID",
+                                    "TOOLBAR": "DEPARTURES",
+                                    "TOOLTIP": "Omnidirectional SID Departure Surface Tool",
+                                    "ICON": "omnidirectional_sid.svg",
+                                    "DOCK_WIDGET": QPANSOPYOmnidirectionalDockWidget,
+                                    "GUI_INSTANCE": None
                                 }}
             
             ##If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
             #self.submenus:dict = {}
-            self.submenus:dict = {"CONV":None,"ILS":None,"PBN":None,"UTILITIES":None}
+            self.submenus:dict = {"CONV":None,"ILS":None,"PBN":None,"DEPARTURES":None,"UTILITIES":None}
             
             # Crear el menú QPANSOPY
             menuBar = self.iface.mainWindow().menuBar()
@@ -160,6 +170,9 @@ class Qpansopy:
             
             self.toolbars['PBN'] = self.iface.addToolBar("QPANSOPY - PBN")
             self.toolbars['PBN'].setObjectName("QPANSOPYPBNToolBar")
+            
+            self.toolbars['DEPARTURES'] = self.iface.addToolBar("QPANSOPY - DEPARTURES")
+            self.toolbars['DEPARTURES'].setObjectName("QPANSOPYDEPARTURESToolBar")
             
             self.toolbars['UTILITIES'] = self.iface.addToolBar("QPANSOPY - UTILITIES")
             self.toolbars['UTILITIES'].setObjectName("QPANSOPYUTILITIESToolBar")
