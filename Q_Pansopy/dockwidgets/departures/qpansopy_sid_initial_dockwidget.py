@@ -27,7 +27,7 @@ import json
 import datetime
 
 from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt, QRegExp
+from PyQt5.QtCore import pyqtSignal, Qt, QRegExp, QMimeData
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsMapLayerProxyModel, Qgis
 
@@ -144,12 +144,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.directionButton.setText("Start → End")
 
     def copy_parameters_for_word(self):
-        """Copy SID Initial parameters in Word-friendly table format."""
-        params_text = "SID INITIAL CLIMB CALCULATION PARAMETERS\n"
-        params_text += "=" * 50 + "\n\n"
-        params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
-        params_text += "-" * 50 + "\n"
-        
+        """Copy SID Initial parameters as HTML table for Word."""
         params = self.get_parameters()
         
         param_list = [
@@ -165,15 +160,35 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             ('Direction', 'End → Start' if self.direction_reversed else 'Start → End', '')
         ]
         
+        # Create HTML table
+        html = '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">\n'
+        html += '<tr><th colspan="3" style="background-color: #4472C4; color: white; text-align: center; font-weight: bold;">SID INITIAL CLIMB CALCULATION PARAMETERS</th></tr>\n'
+        html += '<tr style="background-color: #D9E1F2; font-weight: bold;"><th>PARAMETER</th><th>VALUE</th><th>UNIT</th></tr>\n'
+        
+        for i, (name, value, unit) in enumerate(param_list):
+            bg_color = '#FFFFFF' if i % 2 == 0 else '#F2F2F2'
+            html += f'<tr style="background-color: {bg_color};"><td>{name}</td><td style="text-align: right;">{value}</td><td>{unit}</td></tr>\n'
+        
+        html += '</table>'
+        
+        # Set both HTML and plain text to clipboard
+        mime_data = QMimeData()
+        mime_data.setHtml(html)
+        
+        # Also set plain text as fallback
+        plain_text = "SID INITIAL CLIMB CALCULATION PARAMETERS\n"
+        plain_text += "=" * 50 + "\n\n"
         for name, value, unit in param_list:
-            params_text += f"{name:<25}\t{value}\t\t{unit}\n"
+            plain_text += f"{name}\t{value}\t{unit}\n"
+        mime_data.setText(plain_text)
         
         clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(params_text)
-        self.log("Parameters copied to clipboard in Word format.")
+        clipboard.setMimeData(mime_data)
+        
+        self.log("Parameters copied as table for Word.")
         self.iface.messageBar().pushMessage(
             "QPANSOPY", 
-            "SID Initial parameters copied to clipboard in Word format", 
+            "SID Initial parameters copied as table - paste in Word", 
             level=Qgis.Success
         )
 
