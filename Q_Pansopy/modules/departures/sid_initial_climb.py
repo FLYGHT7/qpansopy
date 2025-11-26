@@ -56,6 +56,24 @@ MAX_RATE_OF_TURN = 3
 
 
 # =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def point_with_z(point, z=0.0):
+    """
+    Ensure a QgsPoint has a valid Z value.
+    
+    Args:
+        point (QgsPoint): Input point (may have nan Z).
+        z (float): Z value to set (default 0.0).
+        
+    Returns:
+        QgsPoint: Point with valid Z coordinate.
+    """
+    return QgsPoint(point.x(), point.y(), z)
+
+
+# =============================================================================
 # CALCULATION FUNCTIONS
 # =============================================================================
 
@@ -285,23 +303,26 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     log(f"Direction: {'End → Start' if reverse_direction == 'YES' else 'Start → End'}")
     
     # -------------------------------------------------------------------------
-    # Calculate construction points
+    # Calculate construction points (all with Z=0)
     # -------------------------------------------------------------------------
+    # Ensure end_point has Z=0
+    end_point = point_with_z(end_point, 0.0)
+    
     # TNA Start points (at DER)
-    tna_start_left = end_point.project(INITIAL_SEMI_WIDTH, azimuth - 90)
-    tna_start_right = end_point.project(INITIAL_SEMI_WIDTH, azimuth + 90)
+    tna_start_left = point_with_z(end_point.project(INITIAL_SEMI_WIDTH, azimuth - 90), 0.0)
+    tna_start_right = point_with_z(end_point.project(INITIAL_SEMI_WIDTH, azimuth + 90), 0.0)
     
     # TNA End points (at TNA/H reached)
-    tna_end_center = end_point.project(tna_distance_m, azimuth)
+    tna_end_center = point_with_z(end_point.project(tna_distance_m, azimuth), 0.0)
     width_at_tna = INITIAL_SEMI_WIDTH + tna_distance_m * tan(radians(SPLAY_ANGLE))
-    tna_end_left = tna_end_center.project(width_at_tna, azimuth - 90)
-    tna_end_right = tna_end_center.project(width_at_tna, azimuth + 90)
+    tna_end_left = point_with_z(tna_end_center.project(width_at_tna, azimuth - 90), 0.0)
+    tna_end_right = point_with_z(tna_end_center.project(width_at_tna, azimuth + 90), 0.0)
     
     # c Point (pilot reaction distance beyond TNA)
-    c_point_center = tna_end_center.project(pilot_reaction_m, azimuth)
+    c_point_center = point_with_z(tna_end_center.project(pilot_reaction_m, azimuth), 0.0)
     width_at_c = INITIAL_SEMI_WIDTH + (tna_distance_m + pilot_reaction_m) * tan(radians(SPLAY_ANGLE))
-    c_point_left = c_point_center.project(width_at_c, azimuth - 90)
-    c_point_right = c_point_center.project(width_at_c, azimuth + 90)
+    c_point_left = point_with_z(c_point_center.project(width_at_c, azimuth - 90), 0.0)
+    c_point_right = point_with_z(c_point_center.project(width_at_c, azimuth + 90), 0.0)
     
     # -------------------------------------------------------------------------
     # Create protection areas layer
