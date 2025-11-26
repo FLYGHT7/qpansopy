@@ -26,6 +26,7 @@ try:
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
+    from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
     # No lanzamos el error aquí, lo manejaremos en initGui
@@ -57,6 +58,7 @@ class Qpansopy:
             'CONV': None,
             'ILS': None,
             'PBN': None,
+            'DEPARTURES': None,
             'UTILITIES': None
         }
         
