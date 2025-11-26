@@ -139,9 +139,9 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def update_direction_button(self):
         """Update direction button text based on current state."""
         if self.direction_reversed:
-            self.directionButton.setText("Direction: End → Start")
+            self.directionButton.setText("End → Start")
         else:
-            self.directionButton.setText("Direction: Start → End")
+            self.directionButton.setText("Start → End")
 
     def copy_parameters_for_word(self):
         """Copy SID Initial parameters in Word-friendly table format."""

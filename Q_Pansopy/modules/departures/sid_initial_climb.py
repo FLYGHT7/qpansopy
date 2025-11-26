@@ -427,27 +427,27 @@ def generate_results_text(altitude_ft, pdg_percent, tna_distance_nm, ias_kt,
                           tas_values, bank_angle_deg, wind_kt, 
                           pilot_reaction_nm, wind_effect_nm):
     """
-    Generate formatted results text for clipboard.
+    Generate formatted results text for clipboard (tab-separated for Excel/Word paste).
     
     Args:
         Various calculation results.
         
     Returns:
-        str: Formatted text string.
+        str: Tab-separated text string for easy paste into spreadsheets.
     """
     lines = [
         'Turn Construction Parameters\t\n',
         'Type of Turn\tTNA/H\n',
         f'Turn Altitude (ft)\t{altitude_ft}\n',
         f'PDG (%)\t{pdg_percent}\n',
-        f'Distance to TNA/H in NM\t{round(tna_distance_nm, 4)}\n',
-        f'IAS (KT)\t{ias_kt}\n',
+        f'Distance to TNA/H (NM)\t{round(tna_distance_nm, 4)}\n',
+        f'IAS (kt)\t{ias_kt}\n',
         f'Conversion factor - k\t{round(tas_values["k_factor"], 4)}\n',
-        f'TAS (KT)\t{round(tas_values["tas_kt"], 4)}\n',
+        f'TAS (kt)\t{round(tas_values["tas_kt"], 4)}\n',
         f'Bank Angle (°)\t{bank_angle_deg}\n',
         f'Rate of Turn – R (°/s)\t{round(tas_values["rate_of_turn"], 4)}\n',
         f'Radius of turn – r (NM)\t{round(tas_values["radius_of_turn_nm"], 4)}\n',
-        f'Wind (KT)\t{wind_kt}\n',
+        f'Wind (kt)\t{wind_kt}\n',
         f'c (NM)\t{round(pilot_reaction_nm, 4)}\n',
         f'E90 (NM)\t{round(wind_effect_nm, 4)}\n'
     ]
