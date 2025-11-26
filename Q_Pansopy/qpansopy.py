@@ -144,7 +144,7 @@ class Qpansopy:
                                     "GUI_INSTANCE": None
                                 },
                                 "OMNIDIRECTIONAL_SID": {
-                                    "TITLE": "Omnidirectional SID",
+                                    "TITLE": "OMNI",
                                     "TOOLBAR": "DEPARTURES",
                                     "TOOLTIP": "Omnidirectional SID Departure Surface Tool",
                                     "ICON": "omnidirectional_sid.svg",
