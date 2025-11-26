@@ -305,10 +305,12 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     cwy_distance_m = float(params.get('cwy_distance_m', 0))
     allow_turns_before_der = params.get('allow_turns_before_der', 'NO')
     include_construction_points = params.get('include_construction_points', 'NO')
+    reverse_direction = params.get('reverse_direction', 'NO')
     
     log(f"Parameters: DER Elev={der_elevation_m}m, PDG={pdg_percent}%, "
         f"TNA={tna_ft}ft, MSA={msa_ft}ft")
     log(f"CWY Distance={cwy_distance_m}m, Turns before DER={allow_turns_before_der}")
+    log(f"Direction: {'End → Start (reversed)' if reverse_direction == 'YES' else 'Start → End (normal)'}")
     
     # -------------------------------------------------------------------------
     # Calculate area distances and elevations
@@ -358,8 +360,17 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     # -------------------------------------------------------------------------
     for feature in selected_features:
         runway_geometry = feature.geometry().asPolyline()
-        threshold_point = QgsPoint(runway_geometry[0])
-        der_point = QgsPoint(runway_geometry[1])
+        
+        # Apply direction based on user selection
+        if reverse_direction == 'YES':
+            # Reversed: End to Start (DER at start of line, threshold at end)
+            threshold_point = QgsPoint(runway_geometry[1])
+            der_point = QgsPoint(runway_geometry[0])
+        else:
+            # Normal: Start to End (threshold at start, DER at end)
+            threshold_point = QgsPoint(runway_geometry[0])
+            der_point = QgsPoint(runway_geometry[1])
+        
         runway_azimuth = threshold_point.azimuth(der_point)
     
     log(f"Runway azimuth: {runway_azimuth:.2f}°")

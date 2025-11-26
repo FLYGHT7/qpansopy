@@ -55,9 +55,13 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
+        self.directionButton.clicked.connect(self.toggle_direction)
         
         # Filter layers in comboboxes - Runway layer should be a line
         self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        
+        # Direction state: False = Start to End, True = End to Start
+        self.is_reversed = False
         
         # Set default values
         self.derElevationSpinBox.setValue(0.0)
@@ -78,6 +82,16 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
+
+    def toggle_direction(self):
+        """Toggle the runway direction between Start→End and End→Start"""
+        self.is_reversed = not self.is_reversed
+        if self.is_reversed:
+            self.directionButton.setText("End → Start")
+            self.log("Direction changed: End to Start (reversed)")
+        else:
+            self.directionButton.setText("Start → End")
+            self.log("Direction changed: Start to End (normal)")
 
     def log(self, message):
         """Add a message to the log"""
@@ -139,7 +153,8 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'msa_ft': self.msaSpinBox.value(),
             'cwy_distance_m': self.cwyDistanceSpinBox.value(),
             'allow_turns_before_der': 'YES' if self.turnsBeforeDerCheckBox.isChecked() else 'NO',
-            'include_construction_points': 'YES' if self.constructionPointsCheckBox.isChecked() else 'NO'
+            'include_construction_points': 'YES' if self.constructionPointsCheckBox.isChecked() else 'NO',
+            'reverse_direction': 'YES' if self.is_reversed else 'NO'
         }
         
         try:
