@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>280</width>
-    <height>480</height>
+    <width>260</width>
+    <height>420</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>250</width>
-    <height>400</height>
+    <width>240</width>
+    <height>380</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>350</width>
+    <width>320</width>
     <height>16777215</height>
    </size>
   </property>
@@ -34,7 +34,7 @@
      <number>4</number>
     </property>
     <property name="topMargin">
-     <number>4</number>
+     <number>2</number>
     </property>
     <property name="rightMargin">
      <number>4</number>
@@ -46,7 +46,7 @@
      <widget class="QLabel" name="titleLabel">
       <property name="font">
        <font>
-        <pointsize>10</pointsize>
+        <pointsize>9</pointsize>
         <weight>75</weight>
         <bold>true</bold>
        </font>
@@ -62,16 +62,16 @@
     <item>
      <widget class="QGroupBox" name="layerGroupBox">
       <property name="title">
-       <string>Input Layer</string>
+       <string>Input</string>
       </property>
       <layout class="QFormLayout" name="layerFormLayout">
        <property name="verticalSpacing">
-        <number>2</number>
+        <number>1</number>
        </property>
        <item row="0" column="0">
         <widget class="QLabel" name="runwayLayerLabel">
          <property name="text">
-          <string>Runway/DER:</string>
+          <string>Layer:</string>
          </property>
         </widget>
        </item>
@@ -88,12 +88,12 @@
       </property>
       <layout class="QFormLayout" name="elevationFormLayout">
        <property name="verticalSpacing">
-        <number>2</number>
+        <number>1</number>
        </property>
        <item row="0" column="0">
         <widget class="QLabel" name="adElevLabel">
          <property name="text">
-          <string>AD Elev (m):</string>
+          <string>AD (m):</string>
          </property>
         </widget>
        </item>
@@ -116,7 +116,7 @@
        <item row="1" column="0">
         <widget class="QLabel" name="derElevLabel">
          <property name="text">
-          <string>DER Elev (m):</string>
+          <string>DER (m):</string>
          </property>
         </widget>
        </item>
@@ -142,11 +142,11 @@
     <item>
      <widget class="QGroupBox" name="parametersGroupBox">
       <property name="title">
-       <string>Flight Parameters</string>
+       <string>Parameters</string>
       </property>
       <layout class="QFormLayout" name="parametersFormLayout">
        <property name="verticalSpacing">
-        <number>2</number>
+        <number>1</number>
        </property>
        <item row="0" column="0">
         <widget class="QLabel" name="pdgLabel">
@@ -220,7 +220,7 @@
        <item row="3" column="0">
         <widget class="QLabel" name="altitudeLabel">
          <property name="text">
-          <string>Altitude (ft):</string>
+          <string>Alt (ft):</string>
          </property>
         </widget>
        </item>
@@ -331,58 +331,41 @@
      </layout>
     </item>
     <item>
-     <widget class="QGroupBox" name="logGroupBox">
+     <widget class="QLabel" name="logLabel">
+      <property name="text">
+       <string>Log:</string>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="logTextEdit">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <property name="title">
-       <string>Log</string>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>50</height>
+       </size>
       </property>
-      <layout class="QVBoxLayout" name="logLayout">
-       <property name="spacing">
-        <number>2</number>
-       </property>
-       <property name="leftMargin">
-        <number>4</number>
-       </property>
-       <property name="topMargin">
-        <number>4</number>
-       </property>
-       <property name="rightMargin">
-        <number>4</number>
-       </property>
-       <property name="bottomMargin">
-        <number>4</number>
-       </property>
-       <item>
-        <widget class="QTextEdit" name="logTextEdit">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>60</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>80</height>
-          </size>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>60</height>
+       </size>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
      </widget>
     </item>
    </layout>

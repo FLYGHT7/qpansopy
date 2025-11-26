@@ -292,7 +292,7 @@ class Qpansopy:
             try:
                 instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
             except AttributeError:
-                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
+                pass  # Widget doesn't have KML export, silently ignore
             if hasattr(instance, "logTextEdit"):
                 instance.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 try:
