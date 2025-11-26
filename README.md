@@ -12,9 +12,15 @@ An opensource PANS OPS software implementation based on QGIS
 ***main initial focus is area creation, evaluation to be added at later stage***
 
 ### Utilities 
-- VSS NPA
-- Wind Spiral Utility
+- VSS Tool
+- Wind Spiral Tool
 - Object Selection (Extract points intersecting area)
+- Point Filter
+- Flash Feature Merge
+### Conventional Approach
+- VOR template
+- NDB template
+- Conventional Initial Template
 ### Precision Approach
 - ILS Basic Surfaces
 - ILS OAS CAT I
@@ -22,11 +28,9 @@ An opensource PANS OPS software implementation based on QGIS
 - PBN LNAV (straight to runway)
 - PBN intermediate (aligned)
 - PBN initial (without automatic connection to the intermediate)
-
+- PBN Missed Approach (simple straight ahead)
 ## Next Steps 
-- CONV VOR Template
-- CONV NDB Template
-- CONV Initial Approach (Straight)
+- PBN 15 NM and 30 NM targets
 
 ## Roadmap
 - Initial focus in correct area creation
