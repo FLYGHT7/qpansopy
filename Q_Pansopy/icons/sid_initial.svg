@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- SID Initial Climb Icon -->
+  <!-- Represents an aircraft climbing with splay/turn areas -->
+  
+  <!-- Ground/Runway line -->
+  <line x1="2" y1="20" x2="22" y2="20" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- DER point -->
+  <circle cx="6" cy="20" r="2" fill="#ff6b35"/>
+  
+  <!-- Climb path (dashed) -->
+  <line x1="6" y1="20" x2="18" y2="6" stroke="#2196f3" stroke-width="1.5" stroke-dasharray="3,2"/>
+  
+  <!-- Turn/TNA point -->
+  <circle cx="18" cy="6" r="2" fill="#4caf50"/>
+  
+  <!-- Splay area left -->
+  <line x1="6" y1="20" x2="14" y2="4" stroke="#ff9800" stroke-width="1" opacity="0.7"/>
+  
+  <!-- Splay area right -->
+  <line x1="6" y1="20" x2="22" y2="8" stroke="#ff9800" stroke-width="1" opacity="0.7"/>
+  
+  <!-- Aircraft symbol at TNA -->
+  <polygon points="18,4 16,8 18,7 20,8" fill="#2196f3"/>
+  
+  <!-- Upward arrow indicating climb -->
+  <line x1="20" y1="14" x2="20" y2="10" stroke="#4caf50" stroke-width="1.5"/>
+  <polyline points="18,12 20,10 22,12" fill="none" stroke="#4caf50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
