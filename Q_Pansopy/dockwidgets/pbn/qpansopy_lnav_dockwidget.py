@@ -67,8 +67,14 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         output_dir = self.outputFolderLineEdit.text()
 
         try:
-            # Determine which approach to calculate - usar solo la selección actual del usuario
-            if self.initialRadioButton.isChecked():
+            # Determine which approach to calculate
+            if self.arrivalRadioButton.isChecked():
+                self.log("Calculating Arrival...")
+                from ...modules.pbn.pbn_rnav1_arrival import run_rnav1_arrival
+                params = {'export_kml': export_kml, 'output_dir': output_dir}
+                result = run_rnav1_arrival(self.iface, routing_layer, params)
+                approach_type = "Arrival"
+            elif self.initialRadioButton.isChecked():
                 self.log("Calculating Initial Approach...")
                 # Use function from Initial Approach module
                 from ...modules.pbn.PBN_LNAV_Initial_Approach import run_initial_approach

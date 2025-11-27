@@ -92,17 +92,9 @@ class Qpansopy:
                                 "LNAV_APCH": {
                                     "TITLE": "LNAV",
                                     "TOOLBAR": "PBN",
-                                    "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
+                                    "TOOLTIP": "LNAV Arrival, Initial, Intermediate, Final and Missed Approach Tool",
                                     "ICON": os.path.join(self.icons_dir, 'PBN.png'),
                                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "GNSS_WAYPOINT": {
-                                    "TITLE": "GNSS Waypoint",
-                                    "TOOLBAR": "PBN",
-                                    "TOOLTIP": "GNSS Waypoint Tolerance Tool - Create fix tolerance polygons",
-                                    "ICON": os.path.join(self.icons_dir, 'gnss_waypoint.svg'),
-                                    "DOCK_WIDGET": QPANSOPYGNSSWaypointDockWidget,
                                     "GUI_INSTANCE": None
                                 },
                                 "VOR_CONV": {
