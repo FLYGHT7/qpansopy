@@ -58,8 +58,6 @@ class Qpansopy:
             'PBN': None,
             'UTILITIES': None,
             'DEPARTURES': None
-            'DEPARTURES': None,
-            'UTILITIES': None
         }
         
         # Verificar que exista la carpeta de iconos
@@ -86,85 +84,116 @@ class Qpansopy:
             if 'QPANSOPYVSSDockWidget' not in globals():
                 QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Warning", 
                                    "Some modules could not be imported. The plugin may not work correctly.")            #Configure Modules NAME:PROPERTIES (STR:DICT)
-            self.modules:dict = {"VSS": {"TITLE":"VSS Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"vss.svg","DOCK_WIDGET": QPANSOPYVSSDockWidget,"GUI_INSTANCE":None},
-                                "ILS_BASIC": {"TITLE":"ILS Tool","TOOLBAR":"ILS","TOOLTIP":"ILS Basic Surface Tool","ICON":"basic_ils.svg","DOCK_WIDGET": QPANSOPYILSDockWidget,"GUI_INSTANCE":None},
-                                "WindSpiral": {"TITLE":"Wind Spiral Tool","TOOLBAR":"UTILITIES","TOOLTIP":"Wind Spiral Tool - Calculate and visualize wind spirals for procedure design","ICON":"wind_spiral.svg","DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,"GUI_INSTANCE":None},
-                                "ILS_OAS": {"TITLE":"OAS ILS Tool","TOOLBAR":"ILS","TOOLTIP":"Visual Segment Surface Tool - Analyze obstacle clearance for visual segments","ICON":"oas_ils.svg","DOCK_WIDGET": QPANSOPYOASILSDockWidget,"GUI_INSTANCE":None},
-                                "LNAV_APCH": {
-                                    "TITLE": "LNAV",
-                                    "TOOLBAR": "PBN",
-                                    "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
-                                    "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "VOR_CONV": {
-                                    "TITLE": "VOR",
-                                    "TOOLBAR": "CONV",
-                                    "TOOLTIP": "VOR Conventional Approach Areas Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'vor.svg'),
-                                    "DOCK_WIDGET": QPANSOPYVORDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "NDB_CONV": {
-                                    "TITLE": "NDB",
-                                    "TOOLBAR": "CONV",
-                                    "TOOLTIP": "NDB Conventional Approach Areas Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'ndb.svg'),
-                                    "DOCK_WIDGET": QPANSOPYNDBDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "CONV_INITIAL": {
-                                    "TITLE": "CONV Initial",
-                                    "TOOLBAR": "CONV",
-                                    "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'conv_corridor.svg'),
-                                    "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "ObjectSelection": {
-                                    "TITLE": "Object Selection",
-                                    "TOOLBAR": "UTILITIES",
-                                    "TOOLTIP": "Extract objects intersecting with surfaces",
-                                    "ICON": "SOO.png",  # Using the SOO icon
-                                    "DOCK_WIDGET": QPANSOPYObjectSelectionDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "PointFilter": {
-                                    "TITLE": "Point Filter",
-                                    "TOOLBAR": "UTILITIES",
-                                    "TOOLTIP": "Filter points based on THR elevation threshold",
-                                    "ICON": "point_filter.svg",  # Using the F icon
-                                    "DOCK_WIDGET": QPANSOPYPointFilterDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "FeatureMerge": {
-                                    "TITLE": "Feature Merge",
-                                    "TOOLBAR": "UTILITIES",
-                                    "TOOLTIP": "Merge multiple vector layers into a single layer",
-                                    "ICON": "feature_merge.svg",  # Using the lightning bolt icon
-                                    "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
-                                    "GUI_INSTANCE": None
-                                },
-                                "SID_INITIAL": {
-                                    "TITLE": "SID Initial",
-                                    "TOOLBAR": "DEPARTURES",
-                                    "TOOLTIP": "SID Initial Climb Protection Areas Tool",
-                                    "ICON": os.path.join(self.icons_dir, 'sid_initial.svg'),
-                                    "DOCK_WIDGET": QPANSOPYSIDInitialDockWidget,
-                                "OMNIDIRECTIONAL_SID": {
-                                    "TITLE": "OMNI",
-                                    "TOOLBAR": "DEPARTURES",
-                                    "TOOLTIP": "Omnidirectional SID Departure Surface Tool",
-                                    "ICON": "omnidirectional_sid.svg",
-                                    "DOCK_WIDGET": QPANSOPYOmnidirectionalDockWidget,
-                                    "GUI_INSTANCE": None
-                                }}
+            self.modules: dict = {
+                "VSS": {
+                    "TITLE": "VSS Tool",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Visual Segment Surface Tool - Analyze obstacle clearance for visual segments",
+                    "ICON": "vss.svg",
+                    "DOCK_WIDGET": QPANSOPYVSSDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "ILS_BASIC": {
+                    "TITLE": "ILS Tool",
+                    "TOOLBAR": "ILS",
+                    "TOOLTIP": "ILS Basic Surface Tool",
+                    "ICON": "basic_ils.svg",
+                    "DOCK_WIDGET": QPANSOPYILSDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "WindSpiral": {
+                    "TITLE": "Wind Spiral Tool",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Wind Spiral Tool - Calculate and visualize wind spirals for procedure design",
+                    "ICON": "wind_spiral.svg",
+                    "DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "ILS_OAS": {
+                    "TITLE": "OAS ILS Tool",
+                    "TOOLBAR": "ILS",
+                    "TOOLTIP": "Visual Segment Surface Tool - Analyze obstacle clearance for visual segments",
+                    "ICON": "oas_ils.svg",
+                    "DOCK_WIDGET": QPANSOPYOASILSDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "LNAV_APCH": {
+                    "TITLE": "LNAV",
+                    "TOOLBAR": "PBN",
+                    "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
+                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                    "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "VOR_CONV": {
+                    "TITLE": "VOR",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "VOR Conventional Approach Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, 'vor.svg'),
+                    "DOCK_WIDGET": QPANSOPYVORDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "NDB_CONV": {
+                    "TITLE": "NDB",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "NDB Conventional Approach Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, 'ndb.svg'),
+                    "DOCK_WIDGET": QPANSOPYNDBDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "CONV_INITIAL": {
+                    "TITLE": "CONV Initial",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, 'conv_corridor.svg'),
+                    "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "ObjectSelection": {
+                    "TITLE": "Object Selection",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Extract objects intersecting with surfaces",
+                    "ICON": "SOO.png",
+                    "DOCK_WIDGET": QPANSOPYObjectSelectionDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "PointFilter": {
+                    "TITLE": "Point Filter",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Filter points based on THR elevation threshold",
+                    "ICON": "point_filter.svg",
+                    "DOCK_WIDGET": QPANSOPYPointFilterDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "FeatureMerge": {
+                    "TITLE": "Feature Merge",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Merge multiple vector layers into a single layer",
+                    "ICON": "feature_merge.svg",
+                    "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "SID_INITIAL": {
+                    "TITLE": "SID Initial",
+                    "TOOLBAR": "DEPARTURES",
+                    "TOOLTIP": "SID Initial Climb Protection Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, 'sid_initial.svg'),
+                    "DOCK_WIDGET": QPANSOPYSIDInitialDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "OMNIDIRECTIONAL_SID": {
+                    "TITLE": "OMNI",
+                    "TOOLBAR": "DEPARTURES",
+                    "TOOLTIP": "Omnidirectional SID Departure Surface Tool",
+                    "ICON": os.path.join(self.icons_dir, 'omnidirectional_sid.svg'),
+                    "DOCK_WIDGET": QPANSOPYOmnidirectionalDockWidget,
+                    "GUI_INSTANCE": None
+                }
+            }
             
             ##If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
             #self.submenus:dict = {}
-            self.submenus:dict = {"CONV":None,"ILS":None,"PBN":None,"UTILITIES":None,"DEPARTURES":None}
-            self.submenus:dict = {"CONV":None,"ILS":None,"PBN":None,"DEPARTURES":None,"UTILITIES":None}
+            self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None, "DEPARTURES": None}
             
             # Crear el menú QPANSOPY
             menuBar = self.iface.mainWindow().menuBar()
@@ -181,14 +210,8 @@ class Qpansopy:
             self.toolbars['PBN'] = self.iface.addToolBar("QPANSOPY - PBN")
             self.toolbars['PBN'].setObjectName("QPANSOPYPBNToolBar")
             
-            self.toolbars['DEPARTURES'] = self.iface.addToolBar("QPANSOPY - DEPARTURES")
-            self.toolbars['DEPARTURES'].setObjectName("QPANSOPYDEPARTURESToolBar")
-            
             self.toolbars['UTILITIES'] = self.iface.addToolBar("QPANSOPY - UTILITIES")
             self.toolbars['UTILITIES'].setObjectName("QPANSOPYUTILITIESToolBar")
-            
-            self.toolbars['DEPARTURES'] = self.iface.addToolBar("QPANSOPY - DEPARTURES")
-            self.toolbars['DEPARTURES'].setObjectName("QPANSOPYDEPARTURESToolBar")
     
             #Initilise the Submenus
             if self.submenus is not None:
@@ -210,6 +233,15 @@ class Qpansopy:
                 new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
                 new_action.setToolTip(properties['TOOLTIP'])
                 toolbar_name = properties['TOOLBAR']
+                # Ensure toolbar exists; create defensively if missing
+                if toolbar_name not in self.toolbars or self.toolbars[toolbar_name] is None:
+                    tb = self.iface.addToolBar(f"QPANSOPY - {toolbar_name}")
+                    obj_name = f"QPANSOPY{toolbar_name}ToolBar"
+                    try:
+                        tb.setObjectName(obj_name)
+                    except Exception:
+                        pass
+                    self.toolbars[toolbar_name] = tb
                 self.toolbars[toolbar_name].addAction(new_action)
                 self.actions.append(new_action)
 
