@@ -194,6 +194,14 @@ class Qpansopy:
                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
                     "GUI_INSTANCE": None
                 },
+                "GNSS_WAYPOINT": {
+                    "TITLE": "GNSS Waypoint",
+                    "TOOLBAR": "PBN",
+                    "TOOLTIP": "GNSS Waypoint Tolerance Tool - Create fix tolerance polygons",
+                    "ICON": os.path.join(self.icons_dir, 'gnss_waypoint.svg'),
+                    "DOCK_WIDGET": QPANSOPYGNSSWaypointDockWidget,
+                    "GUI_INSTANCE": None
+                },
                 "VOR_CONV": {
                     "TITLE": "VOR",
                     "TOOLBAR": "CONV",

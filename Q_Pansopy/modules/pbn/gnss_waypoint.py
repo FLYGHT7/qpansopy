@@ -140,11 +140,11 @@ def run_gnss_waypoint(iface_param, waypoint_layer, routing_layer, params=None):
         # Add layer to project
         QgsProject.instance().addMapLayers([v_layer])
         
-        # Zoom to layer
-        v_layer.selectAll()
-        canvas = iface_param.mapCanvas()
-        canvas.zoomToSelected(v_layer)
-        v_layer.removeSelection()
+        # Automatic zoom removed per client request
+        # v_layer.selectAll()
+        # canvas = iface_param.mapCanvas()
+        # canvas.zoomToSelected(v_layer)
+        # v_layer.removeSelection()
         
         iface_param.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint Tolerance created successfully", level=Qgis.Success)
         
