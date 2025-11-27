@@ -46,7 +46,7 @@
        <item>
         <widget class="QRadioButton" name="arrivalRadioButton">
          <property name="text">
-          <string>Arrival</string>
+          <string>Arrival (RNAV1/RNAV2)</string>
          </property>
         </widget>
        </item>
