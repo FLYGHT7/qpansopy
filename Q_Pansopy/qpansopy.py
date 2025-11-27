@@ -26,6 +26,7 @@ try:
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYCONVInitialDockWidget
+    from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
@@ -58,8 +59,8 @@ class Qpansopy:
             'CONV': None,
             'ILS': None,
             'PBN': None,
-            'DEPARTURES': None,
-            'UTILITIES': None
+            'UTILITIES': None,
+            'DEPARTURES': None
         }
         
         # Verificar que exista la carpeta de iconos
@@ -90,6 +91,34 @@ class Qpansopy:
                     "ICON": "ils.svg",
                     "DOCK_WIDGET": QPANSOPYILSDockWidget,
                     "GUI_INSTANCE": None,
+            # Verificar que los módulos necesarios estén disponibles
+            if 'QPANSOPYVSSDockWidget' not in globals():
+                QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Warning", 
+                                   "Some modules could not be imported. The plugin may not work correctly.")            #Configure Modules NAME:PROPERTIES (STR:DICT)
+            self.modules: dict = {
+                "VSS": {
+                    "TITLE": "VSS Tool",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Visual Segment Surface Tool - Analyze obstacle clearance for visual segments",
+                    "ICON": "vss.svg",
+                    "DOCK_WIDGET": QPANSOPYVSSDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "ILS_BASIC": {
+                    "TITLE": "ILS Tool",
+                    "TOOLBAR": "ILS",
+                    "TOOLTIP": "ILS Basic Surface Tool",
+                    "ICON": "basic_ils.svg",
+                    "DOCK_WIDGET": QPANSOPYILSDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "WindSpiral": {
+                    "TITLE": "Wind Spiral Tool",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Wind Spiral Tool - Calculate and visualize wind spirals for procedure design",
+                    "ICON": "wind_spiral.svg",
+                    "DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,
+                    "GUI_INSTANCE": None
                 },
                 "ILS_OAS": {
                     "TITLE": "OAS ILS Tool",
@@ -98,6 +127,10 @@ class Qpansopy:
                     "ICON": "oas_ils.svg",
                     "DOCK_WIDGET": QPANSOPYOASILSDockWidget,
                     "GUI_INSTANCE": None,
+                    "TOOLTIP": "Visual Segment Surface Tool - Analyze obstacle clearance for visual segments",
+                    "ICON": "oas_ils.svg",
+                    "DOCK_WIDGET": QPANSOPYOASILSDockWidget,
+                    "GUI_INSTANCE": None
                 },
                 "LNAV_APCH": {
                     "TITLE": "LNAV",
@@ -106,6 +139,9 @@ class Qpansopy:
                     "ICON": os.path.join(self.icons_dir, "PBN.png"),
                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
                     "GUI_INSTANCE": None,
+                    "ICON": os.path.join(self.icons_dir, 'PBN.png'),
+                    "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
+                    "GUI_INSTANCE": None
                 },
                 "VOR_CONV": {
                     "TITLE": "VOR",
@@ -114,6 +150,9 @@ class Qpansopy:
                     "ICON": os.path.join(self.icons_dir, "vor.svg"),
                     "DOCK_WIDGET": QPANSOPYVORDockWidget,
                     "GUI_INSTANCE": None,
+                    "ICON": os.path.join(self.icons_dir, 'vor.svg'),
+                    "DOCK_WIDGET": QPANSOPYVORDockWidget,
+                    "GUI_INSTANCE": None
                 },
                 "NDB_CONV": {
                     "TITLE": "NDB",
@@ -122,6 +161,9 @@ class Qpansopy:
                     "ICON": os.path.join(self.icons_dir, "ndb.svg"),
                     "DOCK_WIDGET": QPANSOPYNDBDockWidget,
                     "GUI_INSTANCE": None,
+                    "ICON": os.path.join(self.icons_dir, 'ndb.svg'),
+                    "DOCK_WIDGET": QPANSOPYNDBDockWidget,
+                    "GUI_INSTANCE": None
                 },
                 "CONV_INITIAL": {
                     "TITLE": "CONV Initial",
@@ -146,6 +188,9 @@ class Qpansopy:
                     "ICON": "VSS.svg",
                     "DOCK_WIDGET": QPANSOPYVSSDockWidget,
                     "GUI_INSTANCE": None,
+                    "ICON": os.path.join(self.icons_dir, 'conv_corridor.svg'),
+                    "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
+                    "GUI_INSTANCE": None
                 },
                 "ObjectSelection": {
                     "TITLE": "Object Selection",
@@ -154,6 +199,7 @@ class Qpansopy:
                     "ICON": "SOO.png",
                     "DOCK_WIDGET": QPANSOPYObjectSelectionDockWidget,
                     "GUI_INSTANCE": None,
+                    "GUI_INSTANCE": None
                 },
                 "PointFilter": {
                     "TITLE": "Point Filter",
@@ -162,6 +208,7 @@ class Qpansopy:
                     "ICON": "point_filter.svg",
                     "DOCK_WIDGET": QPANSOPYPointFilterDockWidget,
                     "GUI_INSTANCE": None,
+                    "GUI_INSTANCE": None
                 },
                 "FeatureMerge": {
                     "TITLE": "Feature Merge",
@@ -177,6 +224,32 @@ class Qpansopy:
             self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None}
 
             # Create QPANSOPY menu
+                    "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "SID_INITIAL": {
+                    "TITLE": "SID Initial",
+                    "TOOLBAR": "DEPARTURES",
+                    "TOOLTIP": "SID Initial Climb Protection Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, 'sid_initial.svg'),
+                    "DOCK_WIDGET": QPANSOPYSIDInitialDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "OMNIDIRECTIONAL_SID": {
+                    "TITLE": "OMNI",
+                    "TOOLBAR": "DEPARTURES",
+                    "TOOLTIP": "Omnidirectional SID Departure Surface Tool",
+                    "ICON": os.path.join(self.icons_dir, 'omnidirectional_sid.svg'),
+                    "DOCK_WIDGET": QPANSOPYOmnidirectionalDockWidget,
+                    "GUI_INSTANCE": None
+                }
+            }
+            
+            ##If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
+            #self.submenus:dict = {}
+            self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None, "DEPARTURES": None}
+            
+            # Crear el menú QPANSOPY
             menuBar = self.iface.mainWindow().menuBar()
             self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
             menuBar.addMenu(self.menu)
@@ -191,6 +264,7 @@ class Qpansopy:
             self.toolbars['PBN'] = self.iface.addToolBar("QPANSOPY - PBN")
             self.toolbars['PBN'].setObjectName("QPANSOPYPBNToolBar")
 
+            
             self.toolbars['UTILITIES'] = self.iface.addToolBar("QPANSOPY - UTILITIES")
             self.toolbars['UTILITIES'].setObjectName("QPANSOPYUTILITIESToolBar")
 
@@ -218,6 +292,16 @@ class Qpansopy:
                 toolbar_name = properties['TOOLBAR']
                 if self.toolbars.get(toolbar_name):
                     self.toolbars[toolbar_name].addAction(new_action)
+                # Ensure toolbar exists; create defensively if missing
+                if toolbar_name not in self.toolbars or self.toolbars[toolbar_name] is None:
+                    tb = self.iface.addToolBar(f"QPANSOPY - {toolbar_name}")
+                    obj_name = f"QPANSOPY{toolbar_name}ToolBar"
+                    try:
+                        tb.setObjectName(obj_name)
+                    except Exception:
+                        pass
+                    self.toolbars[toolbar_name] = tb
+                self.toolbars[toolbar_name].addAction(new_action)
                 self.actions.append(new_action)
 
                 # Add the tool to the menu under the correct submenu
@@ -306,6 +390,10 @@ class Qpansopy:
                         instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
                 except AttributeError:
                     QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
+            try:
+                instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+            except AttributeError:
+                pass  # Widget doesn't have KML export, silently ignore
             if hasattr(instance, "logTextEdit"):
                 instance.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
                 # Ensure the log panel is actually resizable regardless of UI max heights
