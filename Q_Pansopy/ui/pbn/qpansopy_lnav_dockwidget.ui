@@ -35,11 +35,27 @@
       </property>
       <layout class="QVBoxLayout" name="approachLayout">
        <property name="spacing">
-        <number>2</number>
+        <number>6</number>
        </property>
-       <property name="margin">
-        <number>4</number>
+       <property name="leftMargin">
+        <number>10</number>
        </property>
+       <property name="topMargin">
+        <number>10</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QRadioButton" name="arrivalRadioButton">
+         <property name="text">
+          <string>Arrival (RNAV1/RNAV2)</string>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="QRadioButton" name="initialRadioButton">
          <property name="text">
@@ -101,6 +117,12 @@
     </item>
     <item>
      <widget class="QGroupBox" name="outputGroup">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="title">
        <string>Output</string>
       </property>
@@ -202,6 +224,7 @@
        <size>
         <width>20</width>
         <height>20</height>
+        <height>40</height>
        </size>
       </property>
      </spacer>
