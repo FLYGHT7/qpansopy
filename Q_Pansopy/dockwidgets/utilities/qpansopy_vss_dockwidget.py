@@ -65,9 +65,6 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         except Exception:
             pass
-        # Prefer modest minimum height and no explicit maximum to avoid geometry jumps
-        self.setMinimumHeight(300)
-        
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
@@ -82,8 +79,11 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
         self.setup_lineedits()
         
-        # Añadir botón para copiar parámetros
-        self.setup_copy_button()
+        # Conectar botones de copia si existen en el UI
+        if hasattr(self, 'copyWordButton'):
+            self.copyWordButton.clicked.connect(self.copy_parameters_for_word)
+        if hasattr(self, 'copyJsonButton'):
+            self.copyJsonButton.clicked.connect(self.copy_parameters_as_json)
         
         # Asegura que el log se puede ocultar sin error
         if hasattr(self, "logTextEdit") and self.logTextEdit is not None:
@@ -98,7 +98,9 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
 
     def setup_copy_button(self):
-        """Configurar botones para copiar parámetros al portapapeles"""
+        """DEPRECATED: Buttons are now in the UI XML"""
+        pass
+        # Configurar botones para copiar parámetros al portapapeles
         buttons_layout = QtWidgets.QHBoxLayout()
         self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
         self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
