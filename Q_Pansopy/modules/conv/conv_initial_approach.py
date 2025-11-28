@@ -161,24 +161,50 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
             pr = v_layer.dataProvider()
             features_created = 0
 
-            def elevate_ring(ring_points, z_values):
-                # Ensure z_values length matches ring_points, fallback to uniform if single value
+            def create_polygon_with_z(ring_points, z_values):
+                """
+                Create a 3D polygon with proper Z values.
+                
+                :param ring_points: List of QgsPoint (2D or 3D)
+                :param z_values: Single value or list of Z values for each vertex
+                :return: QgsGeometry of the polygon with Z values
+                """
+                # Ensure z_values is a list matching ring_points length
                 if not isinstance(z_values, (list, tuple)):
                     z_values = [z_values] * len(ring_points)
-                return [QgsPoint(p.x(), p.y(), z) for p, z in zip(ring_points, z_values)]
+                
+                # Create 3D points with explicit Z values
+                points_3d = []
+                for i, pt in enumerate(ring_points):
+                    z = z_values[i] if i < len(z_values) else z_values[-1]
+                    points_3d.append(QgsPoint(pt.x(), pt.y(), float(z)))
+                
+                # Close the ring by adding the first point at the end if not already closed
+                if len(points_3d) > 0:
+                    first_pt = points_3d[0]
+                    last_pt = points_3d[-1]
+                    if first_pt.x() != last_pt.x() or first_pt.y() != last_pt.y():
+                        points_3d.append(QgsPoint(first_pt.x(), first_pt.y(), first_pt.z()))
+                
+                # Create the polygon geometry
+                line_string = QgsLineString(points_3d)
+                polygon = QgsPolygon()
+                polygon.setExteriorRing(line_string)
+                
+                return QgsGeometry(polygon)
 
             try:
                 # Primary area: all vertices at z_primary
-                primary_ring_z = elevate_ring(primary_area[0], z_primary)
+                geom = create_polygon_with_z(primary_area[0], z_primary)
                 f = QgsFeature()
-                f.setGeometry(QgsPolygon(QgsLineString(primary_ring_z), rings=[]))
+                f.setGeometry(geom)
                 f.setAttributes([
                     primary_area[1],
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
-                    z_primary,
-                    z_outer
+                    round(z_primary, 2),
+                    round(z_outer, 2)
                 ])
                 pr.addFeatures([f])
                 features_created += 1
@@ -187,16 +213,17 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
 
             try:
                 # Secondary left: [outer(+5), inner(+2.5), inner(+2.5), outer(+5)]
-                sec_left_ring_z = elevate_ring(secondary_area_left[0], [z_outer, z_primary, z_primary, z_outer])
+                # Points order: m3(outer), m2(inner), m6(inner), m7(outer)
+                geom = create_polygon_with_z(secondary_area_left[0], [z_outer, z_primary, z_primary, z_outer])
                 f = QgsFeature()
-                f.setGeometry(QgsPolygon(QgsLineString(sec_left_ring_z), rings=[]))
+                f.setGeometry(geom)
                 f.setAttributes([
                     secondary_area_left[1],
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
-                    z_primary,
-                    z_outer
+                    round(z_primary, 2),
+                    round(z_outer, 2)
                 ])
                 pr.addFeatures([f])
                 features_created += 1
@@ -205,16 +232,17 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
 
             try:
                 # Secondary right: [inner(-2.5), outer(-5), outer(-5), inner(-2.5)]
-                sec_right_ring_z = elevate_ring(secondary_area_right[0], [z_primary, z_outer, z_outer, z_primary])
+                # Points order: m4(inner), m5(outer), m9(outer), m8(inner)
+                geom = create_polygon_with_z(secondary_area_right[0], [z_primary, z_outer, z_outer, z_primary])
                 f = QgsFeature()
-                f.setGeometry(QgsPolygon(QgsLineString(sec_right_ring_z), rings=[]))
+                f.setGeometry(geom)
                 f.setAttributes([
                     secondary_area_right[1],
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
-                    z_primary,
-                    z_outer
+                    round(z_primary, 2),
+                    round(z_outer, 2)
                 ])
                 pr.addFeatures([f])
                 features_created += 1
