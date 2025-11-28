@@ -759,74 +759,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Connect buttons
         cancel_button.clicked.connect(dialog.reject)
-        
-        def calculate_and_close():
-            try:
-                # Get values
-                elevation_text = elev_line_edit.text().strip()
-                temperature_text = temp_line_edit.text().strip()
-                
-                if not elevation_text or not temperature_text:
-                    QtWidgets.QMessageBox.warning(dialog, "Input Error", 
-                        "Please enter both Aerodrome Elevation and Temperature Reference")
-                    return
-                
-                try:
-                    elevation = float(elevation_text)
-                    temperature = float(temperature_text)
-                except ValueError:
-                    QtWidgets.QMessageBox.warning(dialog, "Input Error", 
-                        "Please enter valid numeric values")
-                    return
-                
-                # Store values for future use
-                self.store_exact_value('adElev', elevation_text)
-                self.store_exact_value('tempRef', temperature_text)
-                
-                # Update unit
-                elevation_unit = elev_unit_combo.currentText()
-                self.units['adElev'] = elevation_unit
-                
-                # Convert elevation to feet if needed
-                if elevation_unit == 'm':
-                    elevation_ft = elevation * 3.28084
-                else:
-                    elevation_ft = elevation
-                
-                # Calculate ISA temperature at elevation
-                # ISA temperature decreases at 1.98°C per 1000 ft (or 0.00198°C per ft)
-                isa_temp = 15 - (0.00198 * elevation_ft)
-                
-                # Calculate ISA variation (actual temperature - ISA temperature)
-                isa_variation = temperature - isa_temp
-                
-                # Update the ISA Variation field in main UI
-                self.isaVarLineEdit.setText(f"{isa_variation:.5f}")
-                self.store_exact_value('isaVar', f"{isa_variation:.5f}")
-                
-                # Store calculation metadata
-                self.isa_calculation_metadata = {
-                    'method': 'calculated',
-                    'isa_temperature': isa_temp,
-                    'elevation_feet': elevation_ft,
-                    'elevation_original': elevation,
-                    'elevation_unit': elevation_unit,
-                    'temperature_reference': temperature,
-                    'isa_variation_calculated': isa_variation
-                }
-                
-                # Log the calculation
-                elev_info = f"{elevation} {elevation_unit}"
-                self.log(f"ISA Calculator: Elevation {elev_info} → ISA Temp {isa_temp:.5f}°C → ISA Variation {isa_variation:.5f}°C")
-                self.iface.messageBar().pushMessage("QPANSOPY", f"ISA Variation calculated: {isa_variation:.5f}°C", level=Qgis.Info)
-                
-                dialog.accept()
-                
-            except Exception as e:
-                self.log(f"Error calculating ISA Variation: {str(e)}")
-                QtWidgets.QMessageBox.critical(dialog, "Error", f"Error calculating ISA Variation: {str(e)}")
-        
-        calculate_button.clicked.connect(calculate_and_close)
+        calculate_button.clicked.connect(dialog.accept)
         
         # Focus on elevation field
         elev_line_edit.setFocus()
@@ -841,7 +774,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.validate_inputs():
             return
         
-        # Get parameters (no longer need aerodrome elevation and temperature reference)
+        # Get parameters
         point_layer = self.pointLayerComboBox.currentLayer()
         reference_layer = self.referenceLayerComboBox.currentLayer()
         
@@ -850,7 +783,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         try:
             isa_var = float(isa_var)
         except Exception:
-            isa_var = 0
+            isa_var = 0.0
         
         IAS = self.exact_values.get('IAS', self.IASLineEdit.text())
         altitude = self.exact_values.get('altitude', self.altitudeLineEdit.text())
@@ -861,10 +794,10 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
         
-        # Unidades
+        # Units
         altitude_unit = self.units.get('altitude', 'ft')
         
-        # Prepare parameters (simplified - no aerodrome elevation or temperature reference)
+        # Prepare parameters
         params = {
             'isaVar': isa_var,
             'IAS': IAS,
@@ -885,15 +818,14 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         else:
             self.log(f"Using manual ISA Variation: {isa_var}°C")
         
-        # Registrar las unidades utilizadas
-        self.log(f"Using units - Altitude: {self.units.get('altitude', 'ft')}")
+        # Log used units
+        self.log(f"Using units - Altitude: {altitude_unit}")
         
         try:
             # Import here to avoid circular imports
             from ...modules.wind_spiral import calculate_wind_spiral
             result = calculate_wind_spiral(self.iface, point_layer, reference_layer, params)
             
-            # Log results
             if result:
                 if export_kml:
                     self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
@@ -901,38 +833,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                 self.log("You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
             else:
                 self.log("Calculation completed but no results were returned.")
-                
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
-
-    def copy_parameters(self):
-        """Copy parameters to clipboard"""
-        try:
-            # Get parameters - use stored values for elevation and temperature from dialog
-            params = {
-                'adElev': self.exact_values.get('adElev', ''),
-                'adElev_unit': self.units.get('adElev', 'ft'),
-                'tempRef': self.exact_values.get('tempRef', ''),
-                'isa_var': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
-                'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
-                'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
-                'altitude_unit': self.altitudeUnitCombo.currentText(),
-                'bankAngle': self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()),
-                'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
-                'turn_direction': self.turnDirectionCombo.currentText()
-            }
-            
-            # Import module and format parameters
-            from ...modules.wind_spiral import copy_parameters_table
-            formatted_params = copy_parameters_table(params)
-            
-            # Copy to clipboard
-            clipboard = QtWidgets.QApplication.clipboard()
-            clipboard.setText(formatted_params)
-            
-            self.log("Parameters copied to clipboard")
-            
-        except Exception as e:
-            self.log(f"Error copying parameters: {str(e)}")

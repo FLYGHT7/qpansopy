@@ -26,7 +26,7 @@ import json
 import datetime
 import traceback
 from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
+from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.utils import iface
@@ -181,17 +181,16 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
    def copy_parameters_for_word(self):
        """Copiar los parámetros OAS ILS en formato tabla para Word"""
        import json
-       import datetime
+       from ...utils import format_parameters_table
        
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-       params_text = "QPANSOPY OAS ILS CALCULATION PARAMETERS\n"
-       params_text += "=" * 50 + "\n\n"
+       html_chunks = []
        found_params = False
        
        for layer in vector_layers:
+           has_oas_params = False
            if 'parameters' in [field.name() for field in layer.fields()]:
-               has_oas_params = False
                for feature in layer.getFeatures():
                    params_json = feature.attribute('parameters')
                    if params_json:
@@ -199,83 +198,56 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                            params_dict = json.loads(params_json)
                            if 'calculation_type' in params_dict and 'OAS ILS' in params_dict['calculation_type']:
                                has_oas_params = True
+                               # Build table data
+                               layer_params = {}
+                               layer_sections = {}
+                               thr_value = params_dict.get('THR_elev', '')
+                               thr_unit = params_dict.get('THR_elev_unit', 'm')
+                               layer_params['THR_elev'] = {'value': thr_value, 'unit': thr_unit}
+                               layer_sections['THR_elev'] = 'Runway Data'
+                               
+                               layer_params['FAP_elev'] = {'value': params_dict.get('FAP_elev', ''), 'unit': 'ft'}
+                               layer_sections['FAP_elev'] = 'Calculation Inputs'
+                               
+                               layer_params['MOC_intermediate'] = {'value': params_dict.get('MOC_intermediate', ''), 'unit': 'm'}
+                               layer_sections['MOC_intermediate'] = 'Calculation Inputs'
+                               
+                               layer_params['calculation_date'] = {'value': params_dict.get('calculation_date', ''), 'unit': ''}
+                               layer_sections['calculation_date'] = 'Calculation Info'
+                               
+                               layer_params['calculation_type'] = {'value': params_dict.get('calculation_type', ''), 'unit': ''}
+                               layer_sections['calculation_type'] = 'Calculation Info'
+                               
+                               if 'ILS_surface' in [field.name() for field in layer.fields()]:
+                                   surface_type = feature.attribute('ILS_surface') or ''
+                                   layer_params['surface_type'] = {'value': surface_type, 'unit': ''}
+                                   layer_sections['surface_type'] = 'Surface Information'
+                               
+                               table_html = format_parameters_table(
+                                   "QPANSOPY OAS ILS PARAMETERS",
+                                   layer_params,
+                                   layer_sections
+                               )
+                               html_chunks.append(f"<h3>LAYER: {layer.name()}</h3>" + table_html)
+                               found_params = True
                                break
                        except Exception:
                            pass
            
            if has_oas_params:
-               params_text += f"LAYER: {layer.name()}\n"
-               params_text += "-" * 30 + "\n\n"
-               
-               for feature in layer.getFeatures():
-                   params_json = feature.attribute('parameters')
-                   if params_json:
-                       found_params = True
-                       try:
-                           params_dict = json.loads(params_json)
-                           
-                           # Create formatted table
-                           params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
-                           params_text += "-" * 50 + "\n"
-                           
-                           # Parameter name mapping
-                           param_names = {
-                               'THR_elev': 'Threshold Elevation',
-                               'THR_elev_raw': 'Threshold Elevation (Original)',
-                               'THR_elev_unit': 'Threshold Elevation Unit',
-                               'delta': 'Delta',
-                               'FAP_elev': 'FAP Elevation',
-                               'MOC_intermediate': 'MOC Intermediate',
-                               'FAP_height': 'FAP Height',
-                               'ILS_extension_height': 'ILS Extension Height',
-                               'calculation_type': 'Calculation Type',
-                               'calculation_date': 'Calculation Date'
-                           }
-                           
-                           # Format parameters in table
-                           for key, value in params_dict.items():
-                               if key.endswith('_unit'):
-                                   continue  # Skip unit fields
-                               
-                               display_name = param_names.get(key, key.replace('_', ' ').title())
-                               unit = ""
-                               
-                               # Get unit if exists
-                               if key == 'THR_elev':
-                                   unit = params_dict.get('THR_elev_unit', 'm')
-                               elif key == 'FAP_elev':
-                                   unit = 'ft'
-                               elif key == 'MOC_intermediate':
-                                   unit = 'm'
-                               elif key == 'FAP_height':
-                                   unit = 'm'
-                               elif key == 'ILS_extension_height':
-                                   unit = 'm'
-                               
-                               params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
-                           
-                           # Add surface type if available
-                           if 'ILS_surface' in [field.name() for field in layer.fields()]:
-                               surface_type = feature.attribute('ILS_surface')
-                               if surface_type:
-                                   params_text += f"\nSurface Type: {surface_type}\n"
-                           
-                           params_text += "\n"
-                           break  # Only need parameters from one feature
-                       except json.JSONDecodeError:
-                           params_text += "Error: Could not parse parameters JSON\n\n"
-               
-               params_text += "\n"
+               continue
        
        if not found_params:
-           params_text += "No OAS ILS parameters found in any layer. Please run a calculation first.\n"
+           html_chunks.append("<p>No OAS ILS parameters found in any layer. Please run a calculation first.</p>")
        
-       # Copy to clipboard
+       html_content = "<div>" + "<br>".join(html_chunks) + "</div>"
+       mime = QMimeData()
+       mime.setHtml(html_content)
+       mime.setText("\n\n".join([chunk.replace('<', '').replace('>', '') for chunk in html_chunks]))
        clipboard = QtWidgets.QApplication.clipboard()
-       clipboard.setText(params_text)
+       clipboard.setMimeData(mime)
        
-       # Show success message
-       self.log("OAS ILS parameters copied to clipboard in Word format. You can now paste them into Word.")
+       self.log("OAS ILS parameters copied to clipboard in Word format (HTML table).")
        self.iface.messageBar().pushMessage("QPANSOPY", "OAS ILS parameters copied to clipboard in Word format", level=Qgis.Success)
 
    def copy_parameters_as_json(self):
