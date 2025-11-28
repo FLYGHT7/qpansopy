@@ -43,6 +43,8 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def __init__(self, iface):
         """Constructor."""
         super(QPANSOPYPointFilterDockWidget, self).__init__(iface.mainWindow())
+        self.setupUi(self)
+        self.iface = iface
         
         # Initialize exact_values dictionary
         self.exact_values = {}

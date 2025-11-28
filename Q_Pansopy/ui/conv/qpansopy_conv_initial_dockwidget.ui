@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
+ <class>QPANSOPYConvInitialDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYConvInitialDockWidget">
+   <property name="minimumSize">
+    <size>
+      <width>0</width>
+      <height>0</height>
  <class>QPANSOPYCONVInitialDockWidget</class>
  <widget class="QDockWidget" name="QPANSOPYCONVInitialDockWidget">
   <property name="minimumSize">
@@ -198,14 +204,14 @@
       </layout>
      </widget>
     </item>
-    <item>
-     <widget class="QGroupBox" name="logGroup">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>1</verstretch>
-       </sizepolicy>
-      </property>
+      <item>
+       <widget class="QGroupBox" name="logGroup">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
       <property name="title">
        <string>Log</string>
       </property>
@@ -216,6 +222,25 @@
        <property name="margin">
         <number>4</number>
        </property>
+      <item>
+       <widget class="QTextEdit" name="logTextEdit">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumHeight">
+         <number>60</number>
+        </property>
+        <property name="maximumHeight">
+         <number>120</number>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
        <item>
       <widget class="QTextEdit" name="logTextEdit">
        <property name="sizePolicy">
@@ -235,6 +260,19 @@
       </layout>
      </widget>
     </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+      <width>20</width>
+      <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
    </layout>
   </widget>
  </widget>
