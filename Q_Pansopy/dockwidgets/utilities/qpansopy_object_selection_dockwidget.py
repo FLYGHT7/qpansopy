@@ -73,7 +73,7 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage("QPANSOPY", "Extracting objects...", level=Qgis.Info)
             
             # Importar directamente la función de extracción y ejecutarla
-            from ...modules.selection_of_objects import extract_objects
+            from ...modules.utilities.selection_of_objects import extract_objects
             
             # IMPORTANTE: Ejecutar directamente la función sin abrir diálogos
             result = extract_objects(
