@@ -8,7 +8,7 @@ import os
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePolicy
-from qgis.PyQt import QtWidgets, QtCore, sip
+from qgis.PyQt import QtWidgets, QtCore
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
 
 
@@ -105,7 +105,7 @@ class Qpansopy:
                     "TOOLBAR": "ILS",
                     "TOOLTIP": "Obstacle Assessment Surfaces for ILS",
                     "ICON": "oas_ils.svg",
-                    "DOCK_WIDGET": QPANSOPYOASILSDockWidgetBase,
+                    "DOCK_WIDGET": QPANSOPYOASILSDockWidget,
                     "GUI_INSTANCE": None,
                 },
                 "LNAV_APCH": {
@@ -145,7 +145,7 @@ class Qpansopy:
                     "TOOLBAR": "UTILITIES",
                     "TOOLTIP": "Calculate and visualize wind spirals",
                     "ICON": "wind_spiral.svg",
-                    "DOCK_WIDGET": QPANSOPYWindSpiralDockWidgetBase,
+                    "DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,
                     "GUI_INSTANCE": None,
                 },
                 "VSS": {
@@ -513,6 +513,252 @@ class Qpansopy:
                 instance.show()
                 instance.raise_()
                 self._hide_other_docks(name)
+
+    def _ensure_resizable_log(self, dock_instance):
+        """Make only the log box resizable (Option A).
+        Adds a thin handle under the log that adjusts its height without affecting
+        the other containers. The dock may grow/shrink to accommodate the change.
+        """
+        log_widget = getattr(dock_instance, "logTextEdit", None)
+        if log_widget is None:
+            # Try to find by name in case attribute binding differs
+            log_widget = dock_instance.findChild(QtWidgets.QTextEdit, "logTextEdit") or \
+                         dock_instance.findChild(QtWidgets.QPlainTextEdit, "logTextEdit")
+        if not log_widget:
+            return
+
+        # Clear restrictive max sizes and set growth-friendly policies
+        try:
+            log_widget.setMaximumHeight(16777215)
+            # We'll control height explicitly via a handle (Fixed vertical policy)
+            log_widget.setMinimumHeight(max(60, log_widget.minimumHeight()))
+            log_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            # Ensure horizontal content never forces wider than the dock
+            try:
+                log_widget.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)
+            except Exception:
+                pass
+            try:
+                # Only import when available in QGIS' Qt shim
+                from qgis.PyQt import QtGui as _QtGui  # type: ignore
+                log_widget.setWordWrapMode(_QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere)
+            except Exception:
+                pass
+            try:
+                log_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+                log_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        # If enclosed in a group box with a capped max height, clear it too
+        try:
+            parent = log_widget.parentWidget()
+            while parent is not None and not isinstance(parent, QtWidgets.QGroupBox):
+                parent = parent.parentWidget()
+            if isinstance(parent, QtWidgets.QGroupBox):
+                parent.setMaximumHeight(16777215)
+                parent.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        except Exception:
+            pass
+
+        # Avoid forcing stretch so default stays compact; only relax form layout growth
+        try:
+            layout = log_widget.parentWidget().layout() or dock_instance.layout()
+            if isinstance(layout, QtWidgets.QFormLayout):
+                layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.AllNonFixedFieldsGrow)
+        except Exception:
+            pass
+
+        # Option A: ensure no leftover splitter from an older instance
+        try:
+            if getattr(dock_instance, "_qpansopy_hasSplitter", False):
+                splitter = getattr(dock_instance, "_qpansopy_logSplitter", None)
+                if splitter is not None:
+                    root = splitter.parentWidget()
+                    root_layout = root.layout() if root else None
+                    # Expect two widgets: top_container and log_group
+                    try:
+                        top_container = splitter.widget(0)
+                        log_group = splitter.widget(1)
+                    except Exception:
+                        top_container = None
+                        log_group = None
+                    if root_layout and top_container and log_group:
+                        # Extract children from top_container back into root_layout
+                        tl = top_container.layout()
+                        if tl is not None:
+                            while tl.count():
+                                item = tl.takeAt(0)
+                                w = item.widget()
+                                if w:
+                                    root_layout.addWidget(w)
+                        # Add log group back
+                        root_layout.addWidget(log_group)
+                        splitter.setParent(None)
+                        splitter.deleteLater()
+                        try:
+                            top_container.setParent(None)
+                            top_container.deleteLater()
+                        except Exception:
+                            pass
+                dock_instance._qpansopy_hasSplitter = False
+                dock_instance._qpansopy_logSplitter = None
+        except Exception:
+            pass
+
+        # Build an internal resize handle that only changes the log height
+        try:
+            # Find the log group box
+            log_group = None
+            parent = log_widget.parentWidget()
+            while parent is not None and not isinstance(parent, QtWidgets.QGroupBox):
+                parent = parent.parentWidget()
+            if isinstance(parent, QtWidgets.QGroupBox):
+                log_group = parent
+            else:
+                log_group = log_widget.parentWidget()
+
+            if not log_group or not log_group.layout():
+                return
+            lg_layout = log_group.layout()
+
+            # Remove expanding spacers and reset stretches so the group hugs content
+            try:
+                for i in reversed(range(lg_layout.count())):
+                    it = lg_layout.itemAt(i)
+                    if it is not None and it.spacerItem() is not None:
+                        lg_layout.takeAt(i)
+                for i in range(lg_layout.count()):
+                    try:
+                        lg_layout.setStretch(i, 0)
+                    except Exception:
+                        pass
+                # Prefer top alignment for contained widgets
+                try:
+                    lg_layout.setAlignment(Qt.AlignTop)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+            # Ensure default compact size via fixed height (user can adjust with handle)
+            min_h = 60
+            default_h = 80
+            max_h = 260
+            log_widget.setMinimumHeight(min_h)
+            log_widget.setMaximumHeight(max_h)
+            log_widget.setFixedHeight(default_h)
+            # Prevent the log group from expanding vertically; keep it tight to content
+            try:
+                log_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            except Exception:
+                pass
+
+            # Add a thin handle below the log editor if not already
+            handle = getattr(log_group, "_qpansopy_logHandle", None)
+            if handle is None:
+                handle = QtWidgets.QFrame(log_group)
+                handle.setObjectName("qpansopyLogResizeHandle")
+                handle.setFrameShape(QtWidgets.QFrame.NoFrame)
+                handle.setFixedHeight(6)
+                handle.setCursor(Qt.SizeVerCursor)
+                handle.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                # subtle visual cue
+                handle.setStyleSheet("QFrame#qpansopyLogResizeHandle { background: rgba(0,0,0,0.08); border-radius: 2px; }")
+                lg_layout.addWidget(handle)
+
+                class _HandleFilter(QtCore.QObject):
+                    def __init__(self, target, min_h, max_h):
+                        super().__init__()
+                        self._target = target
+                        self._press_pos = None
+                        self._start_h = None
+                        self._min = min_h
+                        self._max = max_h
+                    def eventFilter(self, obj, event):
+                        et = event.type()
+                        if et == QtCore.QEvent.MouseButtonPress and (event.button() == Qt.LeftButton):
+                            self._press_pos = event.globalPos()
+                            self._start_h = self._target.height()
+                            return True
+                        if et == QtCore.QEvent.MouseMove and self._press_pos is not None:
+                            dy = event.globalPos().y() - self._press_pos.y()
+                            nh = max(self._min, min(self._max, self._start_h + dy))
+                            self._target.setFixedHeight(nh)
+                            try:
+                                # Ask layouts to recompute sizes so group doesn't leave gray gaps
+                                log_group.adjustSize()
+                                log_group.updateGeometry()
+                            except Exception:
+                                pass
+                            return True
+                        if et == QtCore.QEvent.MouseButtonRelease:
+                            self._press_pos = None
+                            self._start_h = None
+                            return True
+                        return False
+
+                hf = _HandleFilter(log_widget, min_h, max_h)
+                handle.installEventFilter(hf)
+                # keep references to avoid GC
+                log_group._qpansopy_logHandle = handle
+                log_group._qpansopy_logHandleFilter = hf
+            
+            # Additionally compact the entire dock layout to remove big gray gaps
+            try:
+                root_widget = None
+                try:
+                    root_widget = dock_instance.widget()
+                except Exception:
+                    root_widget = dock_instance
+                root_layout = root_widget.layout() if root_widget else None
+
+                def _strip_spacers(layout):
+                    if not isinstance(layout, QtWidgets.QLayout):
+                        return
+                    for i in reversed(range(layout.count())):
+                        it = layout.itemAt(i)
+                        if it is None:
+                            continue
+                        if it.spacerItem() is not None:
+                            layout.takeAt(i)
+                            continue
+                        cl = it.layout()
+                        if cl is not None:
+                            _strip_spacers(cl)
+                    # reset stretch and align top
+                    try:
+                        for j in range(layout.count()):
+                            layout.setStretch(j, 0)
+                        layout.setAlignment(Qt.AlignTop)
+                    except Exception:
+                        pass
+
+                if root_layout:
+                    _strip_spacers(root_layout)
+                    try:
+                        root_layout.setSizeConstraint(QtWidgets.QLayout.SetMinAndMaxSize)
+                    except Exception:
+                        pass
+
+                # Ensure every group box hugs its content (no vertical expansion)
+                for gb in root_widget.findChildren(QtWidgets.QGroupBox):
+                    try:
+                        gb.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+                    except Exception:
+                        pass
+
+                try:
+                    root_widget.adjustSize()
+                    root_widget.updateGeometry()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def _ensure_resizable_log(self, dock_instance):
         """Make only the log box resizable (Option A).
