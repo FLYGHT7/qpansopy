@@ -26,7 +26,7 @@ import json
 import datetime
 from collections import OrderedDict
 from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
+from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.utils import iface
@@ -171,9 +171,12 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        if not found_params:
            params_text += "No parameters found in any layer. Please run a calculation first.\n"
        
-       # Copiar al portapapeles
+       # Copiar al portapapeles con HTML + texto para mejor pegado en Word
+       mime = QMimeData()
+       mime.setHtml(params_text.replace("\n", "<br>"))
+       mime.setText(params_text)
        clipboard = QtWidgets.QApplication.clipboard()
-       clipboard.setText(params_text)
+       clipboard.setMimeData(mime)
        
        # Mostrar mensaje de éxito
        self.log("Parameters copied to clipboard. You can now paste them into Word or another application.")

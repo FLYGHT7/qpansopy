@@ -405,65 +405,6 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             print(f"Wind Spiral: {message}")
 
     def copy_parameters_for_word(self):
-<<<<<<< HEAD
-        """Copiar los parámetros en formato tabla para Word"""
-        layers = QgsProject.instance().mapLayers().values()
-        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-        params_text = ""
-        found_params = False
-
-        for layer in vector_layers:
-            if 'parameters' not in [field.name() for field in layer.fields()]:
-                continue
-
-            for feature in layer.getFeatures():
-                params_json = feature.attribute('parameters')
-                if not params_json:
-                    continue
-
-                try:
-                    params_dict = json.loads(params_json)
-                except json.JSONDecodeError:
-                    continue
-
-                calculation_type = params_dict.get('calculation_type', '')
-                if 'Wind Spiral' not in calculation_type:
-                    continue
-
-                found_params = True
-
-                sanitized_params = params_dict.copy()
-                for key in ['adElev', 'tempRef', 'IAS', 'altitude', 'bankAngle', 'w']:
-                    value = sanitized_params.get(key)
-                    try:
-                        sanitized_params[key] = float(value)
-                    except (TypeError, ValueError):
-                        sanitized_params[key] = 0
-
-                try:
-                    from ...modules.wind_spiral import copy_parameters_table
-                    formatted_table = copy_parameters_table(sanitized_params)
-                except Exception as e:
-                    self.log(f"Error formatting parameters for layer {layer.name()}: {str(e)}")
-                    formatted_table = None
-
-                params_text += f"LAYER: {layer.name()}\n{'-' * 30}\n"
-                if formatted_table:
-                    params_text += formatted_table + "\n"
-                else:
-                    params_text += "Unable to format parameters for this layer.\n\n"
-
-                break  # Process only the first matching feature per layer
-
-            if found_params:
-                params_text += "\n"
-
-        if not found_params:
-            params_text += "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n"
-            params_text += "=" * 50 + "\n\n"
-            params_text += "No Wind Spiral parameters found in any layer. Please run a calculation first.\n"
-
-=======
         """Copy parameters in a Word-friendly table format.
         Prefers reading from output layer 'parameters' JSON; falls back to current UI values.
         """
@@ -538,7 +479,6 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             ]
             for name, value, unit in rows:
                 formatted += f"{name:<25}\t{value}\t\t{unit}\n"
->>>>>>> origin/fix/issue-10
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(formatted)
         self.log("Wind Spiral parameters (from UI) copied to clipboard in Word format.")
@@ -819,123 +759,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Connect buttons
         cancel_button.clicked.connect(dialog.reject)
-        
-        def copy_parameters_for_word(self):
-            """Copiar los parámetros en formato tabla para Word"""
-            layers = QgsProject.instance().mapLayers().values()
-            vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-            layer_tables = []
-            found_params = False
-
-            for layer in vector_layers:
-                if 'parameters' not in [field.name() for field in layer.fields()]:
-                    continue
-
-                for feature in layer.getFeatures():
-                    params_json = feature.attribute('parameters')
-                    if not params_json:
-                        continue
-
-                    try:
-                        params_dict = json.loads(params_json)
-                    except json.JSONDecodeError:
-                        continue
-
-                    calculation_type = str(params_dict.get('calculation_type', '')).lower()
-                    if 'wind spiral' not in calculation_type:
-                        continue
-
-                    found_params = True
-
-                    sanitized_params = params_dict.copy()
-                    for key in ['adElev', 'tempRef', 'IAS', 'altitude', 'bankAngle', 'w']:
-                        value = sanitized_params.get(key)
-                        try:
-                            sanitized_params[key] = float(value)
-                        except (TypeError, ValueError):
-                            sanitized_params[key] = 0.0
-                    sanitized_params.setdefault('adElev_unit', params_dict.get('adElev_unit', 'ft'))
-                    sanitized_params.setdefault('altitude_unit', params_dict.get('altitude_unit', 'ft'))
-                    sanitized_params.setdefault('turn_direction', params_dict.get('turn_direction', 'R'))
-
-                    formatted_table = None
-                    try:
-                        from ...modules.wind_spiral import copy_parameters_table
-                        formatted_table = copy_parameters_table(sanitized_params)
-                    except Exception as e:
-                        self.log(f"Error formatting parameters for layer {layer.name()}: {str(e)}")
-
-                    layer_block = f"LAYER: {layer.name()}\n{'-' * 30}\n"
-                    if formatted_table:
-                        layer_block += formatted_table + "\n"
-                    else:
-                        layer_block += "Unable to format parameters for this layer.\n\n"
-
-                    layer_tables.append(layer_block)
-                    break  # Process only the first matching feature per layer
-
-            clipboard = QtWidgets.QApplication.clipboard()
-
-            if found_params:
-                params_text = "\n".join(layer_tables).strip() + "\n"
-                clipboard.setText(params_text)
-                self.log("Wind Spiral parameters copied from stored layer parameters.")
-                self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied from layers", level=Qgis.Success)
-                return
-
-            self.log("No stored Wind Spiral parameters found; using current dialog values.")
-
-            def to_float(value, default):
-                try:
-                    if value in ('', None):
-                        raise ValueError
-                    return float(value)
-                except (TypeError, ValueError):
-                    return default
-
-            params = {
-                'adElev': to_float(self.exact_values.get('adElev'), 0.0),
-                'adElev_unit': self.units.get('adElev', 'ft'),
-                'tempRef': to_float(self.exact_values.get('tempRef'), 15.0),
-                'IAS': to_float(self.exact_values.get('IAS', self.IASLineEdit.text()), 205.0),
-                'altitude': to_float(self.exact_values.get('altitude', self.altitudeLineEdit.text()), 800.0),
-                'altitude_unit': self.units.get('altitude', 'ft'),
-                'bankAngle': to_float(self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()), 15.0),
-                'w': to_float(self.exact_values.get('w', self.windSpeedLineEdit.text()), 30.0),
-                'turn_direction': self.turnDirectionCombo.currentText()
-            }
-
-            formatted = None
-            try:
-                from ...modules.wind_spiral import copy_parameters_table
-                formatted = copy_parameters_table(params)
-            except Exception:
-                formatted = (
-                    "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n"
-                    + "=" * 50 + "\n\n"
-                    + "PARAMETER                    VALUE           UNIT\n"
-                    + "-" * 50 + "\n"
-                )
-                rows = [
-                    ("Aerodrome Elevation", params['adElev'], params['adElev_unit']),
-                    ("Temperature Reference", params['tempRef'], "degC"),
-                    ("IAS", params['IAS'], "kt"),
-                    ("Altitude", params['altitude'], params['altitude_unit']),
-                    ("Bank Angle", params['bankAngle'], "deg"),
-                    ("Wind Speed", params['w'], "kt"),
-                    ("Turn Direction", params['turn_direction'], ""),
-                ]
-                for name, value, unit in rows:
-                    formatted += f"{name:<25} {value:<15} {unit}\n"
-
-            clipboard.setText(formatted)
-            self.log("Wind Spiral parameters (from UI) copied to clipboard in Word format.")
-            self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied from dialog values", level=Qgis.Success)
-            except Exception as e:
-                self.log(f"Error calculating ISA Variation: {str(e)}")
-                QtWidgets.QMessageBox.critical(dialog, "Error", f"Error calculating ISA Variation: {str(e)}")
-        
-        calculate_button.clicked.connect(calculate_and_close)
+        calculate_button.clicked.connect(dialog.accept)
         
         # Focus on elevation field
         elev_line_edit.setFocus()
@@ -950,7 +774,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.validate_inputs():
             return
         
-        # Get parameters (no longer need aerodrome elevation and temperature reference)
+        # Get parameters
         point_layer = self.pointLayerComboBox.currentLayer()
         reference_layer = self.referenceLayerComboBox.currentLayer()
         
@@ -959,7 +783,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         try:
             isa_var = float(isa_var)
         except Exception:
-            isa_var = 0
+            isa_var = 0.0
         
         IAS = self.exact_values.get('IAS', self.IASLineEdit.text())
         altitude = self.exact_values.get('altitude', self.altitudeLineEdit.text())
@@ -970,10 +794,10 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
         
-        # Unidades
+        # Units
         altitude_unit = self.units.get('altitude', 'ft')
         
-        # Prepare parameters (simplified - no aerodrome elevation or temperature reference)
+        # Prepare parameters
         params = {
             'isaVar': isa_var,
             'IAS': IAS,
@@ -994,15 +818,14 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         else:
             self.log(f"Using manual ISA Variation: {isa_var}°C")
         
-        # Registrar las unidades utilizadas
-        self.log(f"Using units - Altitude: {self.units.get('altitude', 'ft')}")
+        # Log used units
+        self.log(f"Using units - Altitude: {altitude_unit}")
         
         try:
             # Import here to avoid circular imports
             from ...modules.wind_spiral import calculate_wind_spiral
             result = calculate_wind_spiral(self.iface, point_layer, reference_layer, params)
             
-            # Log results
             if result:
                 if export_kml:
                     self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
@@ -1010,38 +833,7 @@ class QPANSOPYWindSpiralDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.log("You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
             else:
                 self.log("Calculation completed but no results were returned.")
-                
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
-
-    def copy_parameters(self):
-        """Copy parameters to clipboard"""
-        try:
-            # Get parameters - use stored values for elevation and temperature from dialog
-            params = {
-                'adElev': self.exact_values.get('adElev', ''),
-                'adElev_unit': self.units.get('adElev', 'ft'),
-                'tempRef': self.exact_values.get('tempRef', ''),
-                'isa_var': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
-                'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
-                'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
-                'altitude_unit': self.altitudeUnitCombo.currentText(),
-                'bankAngle': self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()),
-                'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
-                'turn_direction': self.turnDirectionCombo.currentText()
-            }
-            
-            # Import module and format parameters
-            from ...modules.wind_spiral import copy_parameters_table
-            formatted_params = copy_parameters_table(params)
-            
-            # Copy to clipboard
-            clipboard = QtWidgets.QApplication.clipboard()
-            clipboard.setText(formatted_params)
-            
-            self.log("Parameters copied to clipboard")
-            
-        except Exception as e:
-            self.log(f"Error copying parameters: {str(e)}")
