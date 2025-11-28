@@ -50,6 +50,8 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
         
+        # Make the dock widget floating by default
+        
         # Set default output folder
         if hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit.setText(self.get_desktop_path())
