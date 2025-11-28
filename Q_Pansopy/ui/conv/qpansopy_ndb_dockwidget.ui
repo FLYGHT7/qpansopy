@@ -2,15 +2,11 @@
 <ui version="4.0">
  <class>QPANSOPYNDBDockWidget</class>
  <widget class="QDockWidget" name="QPANSOPYNDBDockWidget">
-    <property name="minimumSize">
-     <size>
-        <width>0</width>
-        <height>0</height>
   <property name="minimumSize">
-   <size>
-    <width>250</width>
-    <height>200</height>
-   </size>
+  <size>
+   <width>250</width>
+   <height>200</height>
+  </size>
   </property>
     <property name="maximumSize">
      <size>
@@ -140,19 +136,11 @@
       <item>
        <widget class="QGroupBox" name="logGroup">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-    <item>
-    <widget class="QGroupBox" name="logGroup">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
       <property name="title">
        <string>Log</string>
       </property>
@@ -165,39 +153,20 @@
        </property>
       <item>
        <widget class="QTextEdit" name="logTextEdit">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumHeight">
-         <number>60</number>
-        </property>
-        <property name="maximumHeight">
-         <number>120</number>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-    <item>
-     <widget class="QTextEdit" name="logTextEdit">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
         <verstretch>1</verstretch>
        </sizepolicy>
       </property>
       <property name="minimumHeight">
-       <number>100</number>
+         <number>100</number>
       </property>
       <property name="readOnly">
        <bool>true</bool>
       </property>
-     </widget>
-    </item>
+       </widget>
+      </item>
       </layout>
      </widget>
     </item>
