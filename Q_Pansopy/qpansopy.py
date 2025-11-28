@@ -9,7 +9,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePolicy
 from qgis.PyQt import QtWidgets, QtCore
-from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication, Qgis
+from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
 
 
 # Importar los dock widgets con manejo de errores
@@ -170,8 +170,8 @@ class Qpansopy:
                     "TOOLBAR": "UTILITIES",
                     "TOOLTIP": "Merge multiple vector layers into a single layer",
                     "ICON": "feature_merge.svg",
-                    "MODE": "action",
-                    "HANDLER": "run_feature_merge_action",
+                    "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
+                    "GUI_INSTANCE": None,
                 },
             }
 
@@ -392,15 +392,7 @@ class Qpansopy:
                 if not os.path.exists(icon_path):
                     icon_path = QgsApplication.iconPath(":missing_image.svg")
                 new_action = QAction(QIcon(icon_path), properties["TITLE"], self.iface.mainWindow())
-                if "DOCK_WIDGET" in properties:
-                    new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
-                elif properties.get("MODE") == "action":
-                    handler_name = properties.get("HANDLER")
-                    if handler_name and hasattr(self, handler_name):
-                        new_action.triggered.connect(getattr(self, handler_name))
-                    else:
-                        # Fallback to no-op if handler missing
-                        new_action.triggered.connect(lambda checked=False: None)
+                new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
                 new_action.setToolTip(properties['TOOLTIP'])
                 toolbar_name = properties['TOOLBAR']
                 if self.toolbars.get(toolbar_name):
