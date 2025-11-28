@@ -6,6 +6,16 @@
      <size>
         <width>0</width>
         <height>0</height>
+  <property name="minimumSize">
+   <size>
+    <width>250</width>
+    <height>200</height>
+   </size>
+  </property>
+    <property name="maximumSize">
+     <size>
+        <width>16777215</width>
+        <height>16777215</height>
      </size>
     </property>
   <widget class="QWidget" name="dockWidgetContents">
@@ -135,6 +145,14 @@
             <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+    <item>
+    <widget class="QGroupBox" name="logGroup">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
       <property name="title">
        <string>Log</string>
       </property>
@@ -164,6 +182,22 @@
         </property>
        </widget>
       </item>
+    <item>
+     <widget class="QTextEdit" name="logTextEdit">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>1</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumHeight">
+       <number>100</number>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
       </layout>
      </widget>
     </item>

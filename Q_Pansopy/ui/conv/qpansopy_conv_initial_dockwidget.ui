@@ -6,6 +6,18 @@
     <size>
       <width>0</width>
       <height>0</height>
+ <class>QPANSOPYCONVInitialDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYCONVInitialDockWidget">
+  <property name="minimumSize">
+   <size>
+    <width>250</width>
+    <height>200</height>
+   </size>
+  </property>
+   <property name="maximumSize">
+    <size>
+      <width>16777215</width>
+      <height>16777215</height>
     </size>
    </property>
   <widget class="QWidget" name="dockWidgetContents">
@@ -229,6 +241,22 @@
         </property>
        </widget>
       </item>
+       <item>
+      <widget class="QTextEdit" name="logTextEdit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumHeight">
+        <number>100</number>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+       </item>
       </layout>
      </widget>
     </item>

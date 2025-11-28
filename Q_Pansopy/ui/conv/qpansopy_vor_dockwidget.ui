@@ -2,10 +2,16 @@
 <ui version="4.0">
  <class>QPANSOPYVORDockWidget</class>
  <widget class="QDockWidget" name="QPANSOPYVORDockWidget">
-    <property name="minimumSize">
+  <property name="minimumSize">
+   <size>
+    <width>250</width>
+    <height>200</height>
+   </size>
+  </property>
+    <property name="maximumSize">
      <size>
-        <width>0</width>
-        <height>0</height>
+        <width>16777215</width>
+        <height>16777215</height>
      </size>
     </property>
   <widget class="QWidget" name="dockWidgetContents">
@@ -127,14 +133,14 @@
       </layout>
      </widget>
     </item>
-      <item>
-       <widget class="QGroupBox" name="logGroup">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
+    <item>
+    <widget class="QGroupBox" name="logGroup">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
       <property name="title">
        <string>Log</string>
       </property>
@@ -145,25 +151,22 @@
        <property name="margin">
         <number>4</number>
        </property>
-      <item>
-       <widget class="QTextEdit" name="logTextEdit">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumHeight">
-         <number>60</number>
-        </property>
-        <property name="maximumHeight">
-         <number>120</number>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
+    <item>
+     <widget class="QTextEdit" name="logTextEdit">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>1</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumHeight">
+       <number>100</number>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
       </layout>
      </widget>
     </item>
