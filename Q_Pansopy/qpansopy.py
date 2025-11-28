@@ -82,8 +82,103 @@ class Qpansopy:
 
 
     def initGui(self):
-        """Create the menu entries and toolbar icons inside the QGIS GUI."""
         try:
+            # Declare available modules and their UI metadata
+            self.modules = {
+                "ILS": {
+                    "TITLE": "ILS",
+                    "TOOLBAR": "ILS",
+                    "TOOLTIP": "Instrument Landing System surfaces",
+                    "ICON": "ils.svg",
+                    "DOCK_WIDGET": QPANSOPYILSDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "ILS_OAS": {
+                    "TITLE": "OAS ILS Tool",
+                    "TOOLBAR": "ILS",
+                    "TOOLTIP": "Obstacle Assessment Surfaces for ILS",
+                    "ICON": "oas_ils.svg",
+                    "DOCK_WIDGET": QPANSOPYOASILSDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "LNAV_APCH": {
+                    "TITLE": "LNAV",
+                    "TOOLBAR": "PBN",
+                    "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
+                    "ICON": os.path.join(self.icons_dir, "PBN.png"),
+                    "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "VOR_CONV": {
+                    "TITLE": "VOR",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "VOR Conventional Approach Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, "vor.svg"),
+                    "DOCK_WIDGET": QPANSOPYVORDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "NDB_CONV": {
+                    "TITLE": "NDB",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "NDB Conventional Approach Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, "ndb.svg"),
+                    "DOCK_WIDGET": QPANSOPYNDBDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "CONV_INITIAL": {
+                    "TITLE": "CONV Initial",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
+                    "ICON": os.path.join(self.icons_dir, "conv_corridor.svg"),
+                    "DOCK_WIDGET": QPANSOPYCONVInitialDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "WindSpiral": {
+                    "TITLE": "Wind Spiral Tool",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Calculate and visualize wind spirals",
+                    "ICON": "wind_spiral.svg",
+                    "DOCK_WIDGET": QPANSOPYWindSpiralDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "VSS": {
+                    "TITLE": "VSS",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Visual Segment Surface Tool",
+                    "ICON": "VSS.svg",
+                    "DOCK_WIDGET": QPANSOPYVSSDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "ObjectSelection": {
+                    "TITLE": "Object Selection",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Extract objects intersecting with surfaces",
+                    "ICON": "SOO.png",
+                    "DOCK_WIDGET": QPANSOPYObjectSelectionDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "PointFilter": {
+                    "TITLE": "Point Filter",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Filter points based on THR elevation threshold",
+                    "ICON": "point_filter.svg",
+                    "DOCK_WIDGET": QPANSOPYPointFilterDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+                "FeatureMerge": {
+                    "TITLE": "Feature Merge",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Merge multiple vector layers into a single layer",
+                    "ICON": "feature_merge.svg",
+                    "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
+                    "GUI_INSTANCE": None,
+                },
+            }
+
+            # If you do not want empty submenus, you can leave this empty
+            self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None}
+
+            # Create QPANSOPY menu
             # Verificar que los módulos necesarios estén disponibles
             if 'QPANSOPYVSSDockWidget' not in globals():
                 QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Warning", 
@@ -212,42 +307,40 @@ class Qpansopy:
             menuBar = self.iface.mainWindow().menuBar()
             self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
             menuBar.addMenu(self.menu)
-            
-            # Crear las barras de herramientas temáticas
+
+            # Create themed toolbars
             self.toolbars['CONV'] = self.iface.addToolBar("QPANSOPY - CONV")
             self.toolbars['CONV'].setObjectName("QPANSOPYCONVToolBar")
-            
+
             self.toolbars['ILS'] = self.iface.addToolBar("QPANSOPY - ILS")
             self.toolbars['ILS'].setObjectName("QPANSOPYILSToolBar")
-            
+
             self.toolbars['PBN'] = self.iface.addToolBar("QPANSOPY - PBN")
             self.toolbars['PBN'].setObjectName("QPANSOPYPBNToolBar")
+
             
             self.toolbars['DEPARTURES'] = self.iface.addToolBar("QPANSOPY - DEPARTURES")
             self.toolbars['DEPARTURES'].setObjectName("QPANSOPYDEPARTURESToolBar")
             
             self.toolbars['UTILITIES'] = self.iface.addToolBar("QPANSOPY - UTILITIES")
             self.toolbars['UTILITIES'].setObjectName("QPANSOPYUTILITIESToolBar")
-    
-            # Initilise the Submenus
-            if self.submenus is not None:
-                for category in self.submenus.keys():
-                    self.submenus[category] = QMenu(category, self.menu)
-                    self.menu.addMenu(self.submenus[category])
 
-            # Create Actions
+            # Initialize submenus
+            for category in self.submenus.keys():
+                self.submenus[category] = QMenu(category, self.menu)
+                self.menu.addMenu(self.submenus[category])
+
+            # Create actions for each module
             for name, properties in self.modules.items():
                 icon_path = os.path.join(self.plugin_dir, 'icons', properties["ICON"])
                 if not os.path.exists(icon_path):
                     icon_path = QgsApplication.iconPath(":missing_image.svg")
-                new_action = QAction(
-                    QIcon(icon_path),
-                    properties["TITLE"], 
-                    self.iface.mainWindow())
-                # Conectar asegurando compatibilidad con triggered(bool)
+                new_action = QAction(QIcon(icon_path), properties["TITLE"], self.iface.mainWindow())
                 new_action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
                 new_action.setToolTip(properties['TOOLTIP'])
                 toolbar_name = properties['TOOLBAR']
+                if self.toolbars.get(toolbar_name):
+                    self.toolbars[toolbar_name].addAction(new_action)
                 # Ensure toolbar exists; create defensively if missing
                 if toolbar_name not in self.toolbars or self.toolbars[toolbar_name] is None:
                     tb = self.iface.addToolBar(f"QPANSOPY - {toolbar_name}")
@@ -261,29 +354,16 @@ class Qpansopy:
                 self.actions.append(new_action)
 
                 # Add the tool to the menu under the correct submenu
-                try:
-                    # If the submenu already exists we can add the tool/action directly to it
-                    menu_category = self.submenus[toolbar_name]
-                except KeyError:
-                    # If it does not exist we need to first create the submenu then add that the QPANSOPY Menu
+                if self.submenus.get(toolbar_name) is None:
                     self.submenus[toolbar_name] = QMenu(toolbar_name, self.menu)
-                    menu_category = self.submenus[toolbar_name]
-                    self.menu.addMenu(menu_category)
-                else:
-                    # In the event submenus is prepopulated with values, this will initilise the submenu
-                    if self.submenus[toolbar_name] is None:
-                        menu_category = self.submenus[toolbar_name]
-                finally:
-                    menu_category = self.submenus[toolbar_name]
-                    # Finally we can add the action to the submenu
-                    menu_category.addAction(new_action)
-                
+                    self.menu.addMenu(self.submenus[toolbar_name])
+                self.submenus[toolbar_name].addAction(new_action)
 
-            # Añadir separadores en las barras de herramientas
+            # Add separators in toolbars
             self.toolbars['ILS'].addSeparator()
             self.toolbars['UTILITIES'].addSeparator()
 
-            # Añadir menú contextual "About" y "Settings"
+            # Add About and Settings entries
             self.menu.setTearOffEnabled(True)
             self.menu.addSeparator()
             about_action = QAction("About", self.iface.mainWindow())
