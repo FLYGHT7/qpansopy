@@ -280,7 +280,7 @@ class Qpansopy:
                 "ILS_OAS": {
                     "TITLE": "OAS ILS Tool",
                     "TOOLBAR": "ILS",
-                    "TOOLTIP": "Visual Segment Surface Tool - Analyze obstacle clearance for visual segments",
+                    "TOOLTIP": "Obstacle Assessment Surfaces for ILS",
                     "ICON": "oas_ils.svg",
                     "DOCK_WIDGET": QPANSOPYOASILSDockWidget,
                     "GUI_INSTANCE": None
@@ -288,7 +288,7 @@ class Qpansopy:
                 "LNAV_APCH": {
                     "TITLE": "LNAV",
                     "TOOLBAR": "PBN",
-                    "TOOLTIP": "LNAV Initial, Intermediate, Final and Missed Approach Tool",
+                    "TOOLTIP": "LNAV Arrival, Initial, Intermediate, Final and Missed Approach Tool",
                     "ICON": os.path.join(self.icons_dir, 'PBN.png'),
                     "DOCK_WIDGET": QPANSOPYLNAVDockWidget,
                     "GUI_INSTANCE": None
@@ -367,8 +367,7 @@ class Qpansopy:
                 }
             }
             
-            ##If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
-            #self.submenus:dict = {}
+            # If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
             self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None, "DEPARTURES": None}
             
             # Crear el menú QPANSOPY
@@ -386,6 +385,9 @@ class Qpansopy:
             self.toolbars['PBN'] = self.iface.addToolBar("QPANSOPY - PBN")
             self.toolbars['PBN'].setObjectName("QPANSOPYPBNToolBar")
 
+            
+            self.toolbars['DEPARTURES'] = self.iface.addToolBar("QPANSOPY - DEPARTURES")
+            self.toolbars['DEPARTURES'].setObjectName("QPANSOPYDEPARTURESToolBar")
             
             self.toolbars['UTILITIES'] = self.iface.addToolBar("QPANSOPY - UTILITIES")
             self.toolbars['UTILITIES'].setObjectName("QPANSOPYUTILITIESToolBar")
@@ -489,6 +491,13 @@ class Qpansopy:
             except Exception:
                 pass
             # Initial configuration
+            # PointFilter is an exception - it doesn't have a KML export button by design
+            if name != "PointFilter":
+                try:
+                    if hasattr(instance, "exportKmlCheckBox"):
+                        instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                except AttributeError:
+                    QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
             try:
                 instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
             except AttributeError:
@@ -857,3 +866,54 @@ class Qpansopy:
         def callback():
             self.toggle_dock(name)
         return callback
+
+    def run_feature_merge_action(self, checked=False):
+        """Run Feature Merge directly without opening a dock.
+        Select 2+ vector layers with same geometry and CRS, merge into memory layer.
+        """
+        try:
+            layers = [lyr for lyr in QgsProject.instance().mapLayers().values() if isinstance(lyr, QgsVectorLayer)]
+        except Exception:
+            layers = []
+        try:
+            selected_layers = self.iface.layerTreeView().selectedLayers()
+        except Exception:
+            selected_layers = []
+        # Keep only vector layers
+        selected_layers = [lyr for lyr in selected_layers if isinstance(lyr, QgsVectorLayer)]
+        if len(selected_layers) < 2:
+            QMessageBox.information(self.iface.mainWindow(), "Feature Merge", "Select at least two vector layers in the Layers panel.")
+            return
+        # Validate geometry type and CRS
+        geom_type = selected_layers[0].wkbType()
+        crs = selected_layers[0].crs()
+        for lyr in selected_layers[1:]:
+            if lyr.wkbType() != geom_type:
+                QMessageBox.warning(self.iface.mainWindow(), "Feature Merge", "Selected layers must have the same geometry type.")
+                return
+            if lyr.crs() != crs:
+                QMessageBox.warning(self.iface.mainWindow(), "Feature Merge", "Selected layers must share the same CRS.")
+                return
+        # Default merged layer name; user can rename in layer tree later
+        base_name = "Merged_Layer"
+        name = base_name
+        used_names = {lyr.name() for lyr in QgsProject.instance().mapLayers().values()}
+        idx = 1
+        while name in used_names:
+            idx += 1
+            name = f"{base_name}_{idx}"
+        try:
+            from .modules.utilities.feature_merge import merge_selected_layers
+            result = merge_selected_layers(self.iface, selected_layers, name, None)
+            if result and result.get('merged_layer'):
+                count = result.get('total_features', 0)
+                self.iface.messageBar().pushMessage("QPANSOPY", f"Feature Merge completed: {count} features", level=Qgis.Success)
+            else:
+                self.iface.messageBar().pushMessage("QPANSOPY", "Feature Merge finished with no result", level=Qgis.Warning)
+        except Exception as e:
+            QMessageBox.critical(self.iface.mainWindow(), "Feature Merge", f"Merge failed: {e}")
+            try:
+                from qgis.core import Qgis as _Q
+                self.iface.messageBar().pushMessage("QPANSOPY", f"Merge failed: {e}", level=_Q.Critical)
+            except Exception:
+                pass
