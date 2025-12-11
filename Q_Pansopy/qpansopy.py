@@ -337,12 +337,33 @@ class Qpansopy:
             except AttributeError:
                 pass  # Widget doesn't have KML export, silently ignore
             if hasattr(instance, "logTextEdit"):
-                instance.logTextEdit.setVisible(self.settings.value("qpansopy/show_log", True, type=bool))
-                # Ensure the log panel is actually resizable regardless of UI max heights
+                show_log = self.settings.value("qpansopy/show_log", True, type=bool)
                 try:
-                    self._ensure_resizable_log(instance)
+                    # Hide or show the entire Log group box if present
+                    log_widget = getattr(instance, "logTextEdit", None)
+                    log_group = None
+                    parent = log_widget.parentWidget() if log_widget else None
+                    while parent is not None and not isinstance(parent, QtWidgets.QGroupBox):
+                        parent = parent.parentWidget()
+                    if isinstance(parent, QtWidgets.QGroupBox):
+                        log_group = parent
+                    # Apply visibility
+                    if log_group:
+                        log_group.setVisible(show_log)
+                    if log_widget:
+                        log_widget.setVisible(show_log)
                 except Exception:
-                    pass
+                    # Fallback to just the editor visibility
+                    try:
+                        instance.logTextEdit.setVisible(show_log)
+                    except Exception:
+                        pass
+                # Ensure the log panel is actually resizable regardless of UI max heights (only when visible)
+                if show_log:
+                    try:
+                        self._ensure_resizable_log(instance)
+                    except Exception:
+                        pass
             instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
             self.iface.addDockWidget(Qt.RightDockWidgetArea, instance)
             self._ensure_dock_anchor(name, instance)
