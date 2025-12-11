@@ -247,7 +247,8 @@ class Qpansopy:
                 # If module provides a direct-run action, hook that instead of toggling a dock
                 run_cb = properties.get("RUN_ACTION")
                 if callable(run_cb) and properties.get("DOCK_WIDGET") is None:
-                    action.triggered.connect(run_cb)
+                    # Ensure we accept the QAction's checked(bool) parameter
+                    action.triggered.connect(lambda checked=False, cb=run_cb: cb(checked))
                 else:
                     action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
                 action.setToolTip(properties['TOOLTIP'])
