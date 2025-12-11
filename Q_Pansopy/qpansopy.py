@@ -184,9 +184,10 @@ class Qpansopy:
                 "FeatureMerge": {
                     "TITLE": "Feature Merge",
                     "TOOLBAR": "UTILITIES",
-                    "TOOLTIP": "Merge multiple vector layers into a single layer",
+                    "TOOLTIP": "Merge multiple vector layers into a single memory layer",
                     "ICON": "feature_merge.svg",
-                    "DOCK_WIDGET": QPANSOPYFeatureMergeDockWidget,
+                    "DOCK_WIDGET": None,
+                    "RUN_ACTION": self.run_feature_merge_action,
                     "GUI_INSTANCE": None
                 },
                 "SID_INITIAL": {
@@ -243,7 +244,12 @@ class Qpansopy:
                 if not os.path.exists(icon_path):
                     icon_path = QgsApplication.iconPath(":missing_image.svg")
                 action = QAction(QIcon(icon_path), properties["TITLE"], self.iface.mainWindow())
-                action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
+                # If module provides a direct-run action, hook that instead of toggling a dock
+                run_cb = properties.get("RUN_ACTION")
+                if callable(run_cb) and properties.get("DOCK_WIDGET") is None:
+                    action.triggered.connect(run_cb)
+                else:
+                    action.triggered.connect(lambda checked, n=name: self.toggle_dock(n, checked))
                 action.setToolTip(properties['TOOLTIP'])
                 toolbar_name = properties['TOOLBAR']
                 if toolbar_name not in self.toolbars or self.toolbars[toolbar_name] is None:
@@ -309,6 +315,15 @@ class Qpansopy:
         if instance is None:
             # Create and register the dock widget once; later toggles just show/hide
             dock_widget_cls = self.modules[name]["DOCK_WIDGET"]
+            # If this module is designed as a direct action, run it and return
+            if dock_widget_cls is None:
+                run_cb = self.modules[name].get("RUN_ACTION")
+                if callable(run_cb):
+                    try:
+                        run_cb()
+                    finally:
+                        return
+                return
             instance = self.modules[name]["GUI_INSTANCE"] = dock_widget_cls(self.iface)
             title = self.modules[name].get("TITLE", name)
             # Basic metadata (ignore failures silently)
