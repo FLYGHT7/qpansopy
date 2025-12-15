@@ -39,9 +39,11 @@ def run_holding_pattern(iface, routing_layer, params: dict):
             iface.messageBar().pushMessage("QPANSOPY", "Routing segment must be a polyline with 2+ vertices", level=Qgis.Warning)
             return False
 
-        start_pt = QgsPoint(pts[-1])  # Use end of selection as holding fix
+        # Follow original script semantics
+        start_pt = QgsPoint(pts[-1])  # fix at end of selected polyline
         end_pt = QgsPoint(pts[0])
-        inbound_az = start_pt.azimuth(end_pt) + 180  # true course inbound to fix
+        angle0 = start_pt.azimuth(end_pt) + 180
+        azimuth = angle0  # original uses 'azimuth' variable
 
         # Inputs
         IAS = float(params.get('IAS', 195))
@@ -50,48 +52,52 @@ def run_holding_pattern(iface, routing_layer, params: dict):
         bank_angle = float(params.get('bank_angle', 25))
         leg_time_min = float(params.get('leg_time_min', 1.0))
         turn = params.get('turn', 'R').upper()
-
-        # Turn direction sign
+        # side = 90 LEFT, -90 RIGHT
         side = 90 if turn == 'L' else -90
 
         # Compute TAS, rate and radius via shared helper
         k, tas, rate_of_turn, radius_of_turn, wind = tas_calculation(IAS, altitude, isa_var, bank_angle)
 
-        # Leg ground distance (very simplified, time*speed)
-        v_nmps = tas / 3600.0  # kt -> NM per second
-        L_nm = v_nmps * (leg_time_min * 60.0)
+        # Leg ground distance like original: v = tas/3600, t = time*60, L = v*t
+        v_nmps = tas / 3600.0
+        t_sec = leg_time_min * 60.0
+        L_nm = v_nmps * t_sec
 
-        # Build memory line layer
+        # Build memory line layer (lines only, like original)
         crs = iface.mapCanvas().mapSettings().destinationCrs()
         v_layer = QgsVectorLayer(f"Linestring?crs={crs.authid()}", f"Holding {int(IAS)}kt/{int(altitude)}ft", "memory")
         pr = v_layer.dataProvider()
 
-        # Outbound line from fix
-        angle = math.radians(90 - inbound_az - 180)  # nominal outbound direction
-        dx = L_nm * 1852 * math.cos(angle)
-        dy = L_nm * 1852 * math.sin(angle)
-        outbound_pt = QgsPoint(start_pt.x() + dx, start_pt.y() + dy)
+        # Outbound point from fix (original: angle = 90 - azimuth - 180)
+        outbound_pt = _offset_point(start_pt, azimuth + 180, L_nm)  # helper uses course_deg; convert below
+        # Our helper expects course_deg (bearing). To mimic angle=90-azimuth-180 we pass (azimuth+180)
+        # because _offset_point internally does 90 - course.
 
-        # First outbound segment
+        # Segment: outbound -> start
         f1 = QgsFeature()
         f1.setGeometry(QgsGeometry.fromPolyline([outbound_pt, start_pt]))
         pr.addFeatures([f1])
 
-        # First 180° turn (top arc)
+        # Build nominal points exactly as in original
+        # From 'start': nominal0 then nominal1
+        nominal0 = _offset_point(start_pt, azimuth + side, L_nm)  # angle: 90-azimuth-side
+        nominal1 = _offset_point(nominal0, azimuth, L_nm/2)       # angle: 90-azimuth
+
+        # From 'outbound': nominal2 then nominal3
+        nominal2 = _offset_point(outbound_pt, azimuth + side, L_nm)      # angle: 90-azimuth-side
+        nominal3 = _offset_point(nominal2, azimuth + 180, L_nm/2)        # angle: 90-azimuth+180
+
+        # Arc 1: start -> nominal0 via nominal1
         c1 = QgsCircularString()
-        # Create intermediate points roughly using side direction and half-leg offset
-        turn1_mid = _offset_point(start_pt, inbound_az + side, L_nm/2)
-        c1.setPoints([start_pt, turn1_mid, outbound_pt])
+        c1.setPoints([start_pt, nominal1, nominal0])
         f2 = QgsFeature(); f2.setGeometry(QgsGeometry(c1)); pr.addFeatures([f2])
 
-        # Outbound to opposite point
-        outbound2_pt = _offset_point(outbound_pt, inbound_az + side, L_nm)
-        f3 = QgsFeature(); f3.setGeometry(QgsGeometry.fromPolyline([outbound_pt, outbound2_pt])); pr.addFeatures([f3])
+        # Straight: nominal0 -> nominal2
+        f3 = QgsFeature(); f3.setGeometry(QgsGeometry.fromPolyline([nominal0, nominal2])); pr.addFeatures([f3])
 
-        # Second 180° turn (bottom arc) back to initial outbound point
+        # Arc 2: nominal2 -> outbound via nominal3
         c2 = QgsCircularString()
-        turn2_mid = _offset_point(outbound2_pt, inbound_az, L_nm/2)
-        c2.setPoints([outbound2_pt, turn2_mid, outbound_pt])
+        c2.setPoints([nominal2, nominal3, outbound_pt])
         f4 = QgsFeature(); f4.setGeometry(QgsGeometry(c2)); pr.addFeatures([f4])
 
         v_layer.updateExtents()
@@ -111,6 +117,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
 
 
 def _offset_point(origin: QgsPoint, course_deg: float, dist_nm: float) -> QgsPoint:
+    # Convert a course/bearing in degrees to screen X/Y offsets
     angle = math.radians(90 - course_deg)
     dx = dist_nm * 1852 * math.cos(angle)
     dy = dist_nm * 1852 * math.sin(angle)
