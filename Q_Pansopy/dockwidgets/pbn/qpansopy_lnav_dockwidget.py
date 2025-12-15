@@ -26,6 +26,13 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
 
+        # RNAV mode visibility should only show for SID/Missed
+        for rb in [self.arrivalRadioButton, self.initialRadioButton, self.intermediateRadioButton, getattr(self, 'finalRadioButton', None), self.missedRadioButton, getattr(self, 'sidRadioButton', None)]:
+            if rb:
+                rb.toggled.connect(self._update_rnav_mode_visibility)
+        # Initialize visibility on load
+        self._update_rnav_mode_visibility()
+
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
@@ -43,6 +50,19 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         )
         if folder:
             self.outputFolderLineEdit.setText(folder)
+
+    def _update_rnav_mode_visibility(self):
+        # Show RNAV mode only when Missed or SID is selected
+        show = False
+        try:
+            if self.missedRadioButton.isChecked():
+                show = True
+            if getattr(self, 'sidRadioButton', None) and self.sidRadioButton.isChecked():
+                show = True
+        except Exception:
+            show = False
+        if hasattr(self, 'rnavModeGroup') and self.rnavModeGroup:
+            self.rnavModeGroup.setVisible(show)
 
     def log(self, message):
         self.logTextEdit.append(message)
