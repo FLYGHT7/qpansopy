@@ -23,6 +23,7 @@ try:
     from .dockwidgets.utilities.qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
     from .dockwidgets.utilities.qpansopy_feature_merge_dockwidget import QPANSOPYFeatureMergeDockWidget
+    from .dockwidgets.utilities.qpansopy_holding_dockwidget import QPANSOPYHoldingDockWidget
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.pbn.qpansopy_gnss_waypoint_dockwidget import QPANSOPYGNSSWaypointDockWidget
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
@@ -189,6 +190,14 @@ class Qpansopy:
                     "ICON": "feature_merge.svg",
                     "DOCK_WIDGET": None,
                     "RUN_ACTION": self.run_feature_merge_action,
+                    "GUI_INSTANCE": None
+                },
+                "Holding": {
+                    "TITLE": "Holding",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Conventional holding (racetrack) generator",
+                    "ICON": "holding.svg",
+                    "DOCK_WIDGET": QPANSOPYHoldingDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "SID_INITIAL": {
