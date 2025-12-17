@@ -141,6 +141,7 @@ class Qpansopy:
                     "DOCK_WIDGET": QPANSOPYGNSSWaypointDockWidget,
                     "GUI_INSTANCE": None
                 },
+                
                 "VOR_CONV": {
                     "TITLE": "VOR",
                     "TOOLBAR": "CONV",
