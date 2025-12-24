@@ -145,7 +145,7 @@ def get_selected_feature(layer, show_error):
             show_error("Multiple features found but none selected. Please select one feature.")
             return None
 
-def format_parameters_table(title, params_dict, sections=None):
+def format_parameters_table(title, params_dict, sections=None, as_html=False):
     """
     Format parameters as a standardized table for Word/text output.
     Supports both flat dictionaries and nested dictionaries grouped by sections.
@@ -156,9 +156,10 @@ def format_parameters_table(title, params_dict, sections=None):
             - flat: {"param": value, "param_unit": "m"}
             - nested: {"group": {"param": {"value": v, "unit": u}, ...}, ...}
         sections: Optional dict mapping param names to section names.
+        as_html: When True, returns an HTML table suitable for pasting in Word.
 
     Returns:
-        Formatted table as string.
+        Formatted table as string (plain text by default, HTML when as_html=True).
     """
     # Collect normalized entries as tuples: (section, param_key, value, unit)
     entries = []
@@ -206,11 +207,10 @@ def format_parameters_table(title, params_dict, sections=None):
     traverse(params_dict)
 
     # Build output grouped by section preserving insertion order
-    table = f"{title}\n{'='*50}\n\n"
-
-
     if not entries:
-        # Fallback: print raw dict if nothing was recognized
+        if as_html:
+            return f"<p>{title}</p><p>{params_dict}</p>"
+        table = f"{title}\n{'='*50}\n\n"
         table += "PARAMETER                    VALUE           UNIT\n"
         table += "-"*50 + "\n"
         table += str(params_dict)
@@ -222,6 +222,23 @@ def format_parameters_table(title, params_dict, sections=None):
         if sec not in section_order:
             section_order.append(sec)
 
+    if as_html:
+        # Build simple HTML table with alternating row colors for Word
+        html = []
+        html.append('<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt;">')
+        html.append(f'<tr style="background-color:#4472C4;color:white;font-weight:bold;text-align:center;"><th colspan="3">{title}</th></tr>')
+        for sec in section_order:
+            section_rows = [(p, v, u) for s, p, v, u in entries if s == sec]
+            html.append(f'<tr style="background-color:#D9E1F2;font-weight:bold;"><td colspan="3">{sec}</td></tr>')
+            html.append('<tr style="background-color:#F2F2F2;font-weight:bold;"><td>Parameter</td><td>Value</td><td>Unit</td></tr>')
+            for idx, (param_key, value, unit) in enumerate(section_rows):
+                bg = '#FFFFFF' if idx % 2 == 0 else '#F9F9F9'
+                param_name = str(param_key).replace('_', ' ').title()
+                html.append(f'<tr style="background-color:{bg};"><td>{param_name}</td><td style="text-align:right;">{value}</td><td>{unit}</td></tr>')
+        html.append('</table>')
+        return ''.join(html)
+
+    table = f"{title}\n{'='*50}\n\n"
     for sec in section_order:
         section_rows = [(p, v, u) for s, p, v, u in entries if s == sec]
         table += f"\n{sec}\n{'-'*len(sec)}\n"
