@@ -127,16 +127,11 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                    with open(csv_path, 'r', encoding='utf-8-sig') as f:
                        # Try to read first few lines to validate format
                        lines = f.readlines()[:10]
-                       if any('OAS constants' in line for line in lines):
-                           self.csv_path = csv_path
-                           self.log(f"CSV file selected: {os.path.basename(csv_path)}")
-                           self.iface.messageBar().pushMessage("QPANSOPY", f"OAS Constants file loaded: {os.path.basename(csv_path)}", level=Qgis.Success)
-                           return True
-                       else:
-                           self.log("Warning: Selected CSV file may not contain OAS constants")
-                           self.iface.messageBar().pushMessage("QPANSOPY", "Warning: Selected CSV file may not contain expected OAS constants format", level=Qgis.Warning)
-                           self.csv_path = csv_path  # Still allow it, might be a different format
-                           return True
+                       # Accept any CSV; skip format warning
+                       self.csv_path = csv_path
+                       self.log(f"CSV file selected: {os.path.basename(csv_path)}")
+                       self.iface.messageBar().pushMessage("QPANSOPY", f"OAS Constants file loaded: {os.path.basename(csv_path)}", level=Qgis.Success)
+                       return True
                except Exception as e:
                    error_msg = f"Error reading CSV file: {str(e)}"
                    self.log(error_msg)
