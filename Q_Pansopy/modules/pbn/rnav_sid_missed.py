@@ -1,58 +1,121 @@
-from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsWkbTypes, QgsCoordinateReferenceSystem
-from qgis.core import QgsCoordinateTransform, QgsPointXY
-from qgis.PyQt.QtGui import QColor
+from qgis.core import (
+    QgsProject, QgsVectorLayer, QgsFeature, QgsPoint, QgsLineString, QgsPolygon,
+    QgsField
+)
 from qgis.core import Qgis
-from math import radians
-
-
-def _nm_to_m(nm: float) -> float:
-    return nm * 1852.0
+from qgis.PyQt.QtCore import QVariant
+import math
+import os
 
 
 def run_rnav_sid_missed(iface, routing_layer, rnav_mode: str, op_mode: str,
                         export_kml: bool = False, output_dir: str | None = None):
-    """
-    Minimal RNAV1/2 SID or Missed template generator.
-    Creates a simple buffered corridor around the selected segment as a placeholder
-    for the full spec implementation.
-    """
+    """Generate RNAV1/2 SID (o Missed) usando la geometría legacy <15NM."""
     try:
-        sel = routing_layer.selectedFeatures()
-        if not sel:
+        selection = routing_layer.selectedFeatures()
+        if not selection:
             iface.messageBar().pushMessage("QPANSOPY", "No features selected", level=Qgis.Critical)
             return False
 
-        geom = sel[0].geometry()
-        if geom.isEmpty() or geom.type() != QgsWkbTypes.LineGeometry:
-            iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: expected line", level=Qgis.Warning)
+        geom = selection[0].geometry()
+        if geom.isEmpty():
+            iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: empty feature", level=Qgis.Warning)
             return False
 
-        # Very rough placeholder widths (half-widths)
-        half_width_nm = 1.0 if rnav_mode.upper() == 'RNAV1' else 2.0
-        half_width_m = _nm_to_m(half_width_nm)
+        line = geom.asPolyline()
+        if not line or len(line) < 2:
+            iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: expected a line with 2+ vertices", level=Qgis.Warning)
+            return False
 
-        # Buffer corridor around the selected segment
-        corridor = geom.buffer(half_width_m, 24)
+        # Orientación legacy: start = último vértice, end = primero
+        start_point = QgsPoint(line[-1])
+        end_point = QgsPoint(line[0])
+        azimuth = start_point.azimuth(end_point) + 180
+        length0 = geom.length()
 
-        # Memory layer for output (same CRS as project)
-        crs = iface.mapCanvas().mapSettings().destinationCrs()
-        vlyr = QgsVectorLayer(f"Polygon?crs={crs.authid()}", f"{rnav_mode}_{op_mode}_corridor", "memory")
-        pr = vlyr.dataProvider()
-        feat = QgsFeature()
-        feat.setGeometry(corridor)
-        pr.addFeatures([feat])
-        vlyr.updateExtents()
-        QgsProject.instance().addMapLayer(vlyr)
+        map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
-        # Styling
-        try:
-            vlyr.renderer().symbol().setColor(QColor("#66c2a5"))
-            vlyr.renderer().symbol().setOpacity(0.35)
-            vlyr.triggerRepaint()
-        except Exception:
-            pass
+        pts = {}
+        a = 0
 
-        return {"layer": vlyr}
+        # Proyección FAF
+        bearing = azimuth
+        angle = 90 - bearing
+        bearing = math.radians(bearing)
+        angle = math.radians(angle)
+        dist_x = length0 * math.cos(angle)
+        dist_y = length0 * math.sin(angle)
+        pts[f"m{a}"] = QgsPoint(end_point.x() + dist_x, end_point.y() + dist_y)
+        a += 1
+        pts[f"m{a}"] = QgsPoint(end_point.x(), end_point.y())
+        a += 1
+
+        # Puntos inferiores desde start (±1, ±2 NM)
+        for i in (1.0, 2.0, -1.0, -2.0):
+            TNA_dist = i * 1852
+            bearing = azimuth + 90
+            angle = 90 - bearing
+            bearing = math.radians(bearing)
+            angle = math.radians(angle)
+            dist_x = TNA_dist * math.cos(angle)
+            dist_y = TNA_dist * math.sin(angle)
+            pts[f"m{a}"] = QgsPoint(start_point.x() + dist_x, start_point.y() + dist_y)
+            a += 1
+
+        # Puntos superiores desde end (±1, ±2 NM)
+        for i in (1.0, 2.0, -1.0, -2.0):
+            TNA_dist = i * 1852
+            bearing = azimuth + 90
+            angle = 90 - bearing
+            bearing = math.radians(bearing)
+            angle = math.radians(angle)
+            dist_x = TNA_dist * math.cos(angle)
+            dist_y = TNA_dist * math.sin(angle)
+            pts[f"m{a}"] = QgsPoint(end_point.x() + dist_x, end_point.y() + dist_y)
+            a += 1
+
+        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "PBN RNAV 1/2", "memory")
+        myField = QgsField('Symbol', QVariant.String)
+        v_layer.dataProvider().addAttributes([myField])
+        v_layer.updateFields()
+
+        # Área primaria
+        primary = [pts["m2"], pts["m0"], pts["m4"], pts["m8"], pts["m1"], pts["m6"]]
+        seg = QgsFeature()
+        seg.setGeometry(QgsPolygon(QgsLineString(primary), rings=[]))
+        seg.setAttributes(['Primary Area'])
+        v_layer.dataProvider().addFeatures([seg])
+
+        # Secundaria izquierda
+        secondary_left = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
+        seg = QgsFeature()
+        seg.setGeometry(QgsPolygon(QgsLineString(secondary_left), rings=[]))
+        seg.setAttributes(['Secondary Area'])
+        v_layer.dataProvider().addFeatures([seg])
+
+        # Secundaria derecha
+        secondary_right = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+        seg = QgsFeature()
+        seg.setGeometry(QgsPolygon(QgsLineString(secondary_right), rings=[]))
+        seg.setAttributes(['Secondary Area'])
+        v_layer.dataProvider().addFeatures([seg])
+
+        v_layer.updateExtents()
+        QgsProject.instance().addMapLayers([v_layer])
+
+        # Estilo legacy
+        style_path = os.path.join(os.path.dirname(__file__), '..', '..', 'styles', 'primary_secondary_areas.qml')
+        if os.path.exists(style_path):
+            v_layer.loadNamedStyle(style_path)
+
+        # Zoom legacy
+        v_layer.selectAll()
+        canvas = iface.mapCanvas()
+        canvas.zoomToSelected(v_layer)
+        v_layer.removeSelection()
+
+        iface.messageBar().pushMessage("QPANSOPY:", f"Finished {rnav_mode} {op_mode} (<30NM)", level=Qgis.Success)
+        return {'layer': v_layer}
     except Exception as e:
         iface.messageBar().pushMessage("QPANSOPY", f"RNAV {op_mode} failed: {e}", level=Qgis.Critical)
         return False

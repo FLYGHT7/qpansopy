@@ -90,33 +90,13 @@
          <item>
           <widget class="QRadioButton" name="sidRadioButton">
           <property name="text">
-           <string>SID (Departures)</string>
+           <string>SID (RNAV1/RNAV2)</string>
           </property>
           </widget>
          </item>
       </layout>
      </widget>
     </item>
-       <item>
-        <widget class="QGroupBox" name="rnavModeGroup">
-        <property name="title">
-         <string>RNAV Mode</string>
-        </property>
-        <layout class="QHBoxLayout" name="rnavModeLayout">
-         <item>
-          <widget class="QRadioButton" name="rnav1RadioButton">
-          <property name="text"><string>RNAV1</string></property>
-          <property name="checked"><bool>true</bool></property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="rnav2RadioButton">
-          <property name="text"><string>RNAV2</string></property>
-          </widget>
-         </item>
-        </layout>
-        </widget>
-       </item>
     <item>
      <widget class="QGroupBox" name="inputGroup">
       <property name="sizePolicy">
