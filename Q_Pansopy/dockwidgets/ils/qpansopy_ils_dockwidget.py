@@ -184,28 +184,29 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
        params_text = ""
+       html_blocks = []
        found_params = False
 
-       for layer in vector_layers:
-           has_ils_params = False
-           if 'parameters' not in [field.name() for field in layer.fields()]:
-               continue
+        for layer in vector_layers:
+            has_ils_params = False
+            if 'parameters' not in [field.name() for field in layer.fields()]:
+                continue
 
-           for feature in layer.getFeatures():
-               params_json = feature.attribute('parameters')
-               if not params_json:
-                   continue
+            for feature in layer.getFeatures():
+                params_json = feature.attribute('parameters')
+                if not params_json:
+                    continue
 
-               try:
-                   params_dict = json.loads(params_json)
-               except json.JSONDecodeError:
-                   continue
+                try:
+                    params_dict = json.loads(params_json)
+                except json.JSONDecodeError:
+                    continue
 
-               calculation_type = params_dict.get('calculation_type', '')
-               if calculation_type and 'Basic ILS' in calculation_type:
-                   has_ils_params = True
-                   layer_params = OrderedDict()
-                   layer_sections = {}
+                calculation_type = params_dict.get('calculation_type', '')
+                if calculation_type and 'Basic ILS' in calculation_type:
+                    has_ils_params = True
+                    layer_params = OrderedDict()
+                    layer_sections = {}
 
                    thr_value = params_dict.get('thr_elev', '')
                    thr_unit = params_dict.get('thr_elev_unit', 'm')
@@ -223,14 +224,22 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                        layer_params['surface_type'] = {'value': surface_type, 'unit': ''}
                        layer_sections['surface_type'] = 'Surface Information'
 
-                   formatted_table = format_parameters_table(
+                   formatted_table_html = format_parameters_table(
                        "QPANSOPY BASIC ILS PARAMETERS",
                        layer_params,
-                       layer_sections
+                       layer_sections,
+                       as_html=True
+                   )
+                   formatted_table_text = format_parameters_table(
+                       "QPANSOPY BASIC ILS PARAMETERS",
+                       layer_params,
+                       layer_sections,
+                       as_html=False
                    )
 
                    params_text += f"LAYER: {layer.name()}\n{'-'*30}\n"
-                   params_text += formatted_table + "\n"
+                   params_text += formatted_table_text + "\n"
+                   html_blocks.append(f"<h3>LAYER: {layer.name()}</h3>{formatted_table_html}")
                    found_params = True
                    break
 
@@ -241,10 +250,14 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            params_text += "QPANSOPY BASIC ILS CALCULATION PARAMETERS\n"
            params_text += "=" * 50 + "\n\n"
            params_text += "No Basic ILS parameters found in any layer. Please run a calculation first.\n"
+           html_blocks.append("<p>No Basic ILS parameters found in any layer. Please run a calculation first.</p>")
 
+       mime = QMimeData()
+       mime.setHtml("<div>" + "<br>".join(html_blocks) + "</div>")
+       mime.setText(params_text)
        clipboard = QtWidgets.QApplication.clipboard()
-       clipboard.setText(params_text)
-       self.log("Parameters copied to clipboard in Word format. You can now paste them into Word.")
+       clipboard.setMimeData(mime)
+       self.log("Parameters copied to clipboard as a table for Word.")
        self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard in Word format", level=Qgis.Success)
 
    def copy_parameters_as_json(self):

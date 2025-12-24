@@ -186,6 +186,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
        html_chunks = []
+        text_chunks = []
        found_params = False
        
        for layer in vector_layers:
@@ -226,9 +227,17 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                                table_html = format_parameters_table(
                                    "QPANSOPY OAS ILS PARAMETERS",
                                    layer_params,
-                                   layer_sections
+                                   layer_sections,
+                                   as_html=True
+                               )
+                               text_table = format_parameters_table(
+                                   "QPANSOPY OAS ILS PARAMETERS",
+                                   layer_params,
+                                   layer_sections,
+                                   as_html=False
                                )
                                html_chunks.append(f"<h3>LAYER: {layer.name()}</h3>" + table_html)
+                               text_chunks.append(f"LAYER: {layer.name()}\n{text_table}")
                                found_params = True
                                break
                        except Exception:
@@ -239,11 +248,13 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        
        if not found_params:
            html_chunks.append("<p>No OAS ILS parameters found in any layer. Please run a calculation first.</p>")
+           text_chunks.append("No OAS ILS parameters found in any layer. Please run a calculation first.")
        
        html_content = "<div>" + "<br>".join(html_chunks) + "</div>"
+       plain_content = "\n\n".join(text_chunks)
        mime = QMimeData()
        mime.setHtml(html_content)
-       mime.setText("\n\n".join([chunk.replace('<', '').replace('>', '') for chunk in html_chunks]))
+       mime.setText(plain_content)
        clipboard = QtWidgets.QApplication.clipboard()
        clipboard.setMimeData(mime)
        

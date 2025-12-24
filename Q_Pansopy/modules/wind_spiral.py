@@ -297,7 +297,7 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     
     return result
 
-def copy_parameters_table(params):
+def copy_parameters_table(params, as_html=False):
     """Generate formatted table for Wind Spiral parameters"""
     from ..utils import format_parameters_table
     
@@ -339,5 +339,6 @@ def copy_parameters_table(params):
     return format_parameters_table(
         "QPANSOPY WIND SPIRAL PARAMETERS",
         params_dict,
-        sections
+        sections,
+        as_html=as_html
     )
