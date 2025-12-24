@@ -39,14 +39,10 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
         # Get Projected Coordinate System for the QGIS Project 
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
         
-        # Verify routing layer is provided and has correct name
+        # Verify routing layer is provided
         if not routing_layer:
             iface.messageBar().pushMessage("No routing layer provided", level=Qgis.Critical)
             return False
-            
-        # Check if the layer name contains "routing" (like original script)
-        if "routing" not in routing_layer.name().lower():
-            iface.messageBar().pushMessage(f"Selected layer '{routing_layer.name()}' does not appear to be a routing layer", level=Qgis.Warning)
         
         # Check if there are selected features
         selection = routing_layer.selectedFeatures()
