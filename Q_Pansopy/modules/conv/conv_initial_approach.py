@@ -133,6 +133,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
             v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "CONV Initial Approach Areas", "memory")
             fields = [
                 QgsField('Symbol', QVariant.String),
+                QgsField('area_side', QVariant.String),
                 QgsField('proc_alt_ft', QVariant.Double),
                 QgsField('moc', QVariant.Double),
                 QgsField('moc_unit', QVariant.String),
@@ -145,15 +146,15 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
             # Define areas as polygons exactly as in the original code
             # Primary Area
             primary_ring = [pts["m2"], pts["m0"], pts["m4"], pts["m8"], pts["m1"], pts["m6"]]
-            primary_area = (primary_ring, 'Primary Area')
+            primary_area = (primary_ring, 'Primary Area', '-')
             
             # Secondary Area Left
             sec_left_ring = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
-            secondary_area_left = (sec_left_ring, 'Secondary Area (Left)')
+            secondary_area_left = (sec_left_ring, 'Secondary Area', 'Left')
             
             # Secondary Area Right
             sec_right_ring = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
-            secondary_area_right = (sec_right_ring, 'Secondary Area (Right)')
+            secondary_area_right = (sec_right_ring, 'Secondary Area', 'Right')
             
             areas = (primary_area, secondary_area_left, secondary_area_right)
 
@@ -200,6 +201,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                 f.setGeometry(geom)
                 f.setAttributes([
                     primary_area[1],
+                    primary_area[2],
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
@@ -219,6 +221,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                 f.setGeometry(geom)
                 f.setAttributes([
                     secondary_area_left[1],
+                    secondary_area_left[2],
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
@@ -238,6 +241,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                 f.setGeometry(geom)
                 f.setAttributes([
                     secondary_area_right[1],
+                    secondary_area_right[2],
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
