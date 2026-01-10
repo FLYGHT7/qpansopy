@@ -2,23 +2,15 @@
 <ui version="4.0">
  <class>QPANSOPYSIDInitialDockWidget</class>
  <widget class="QDockWidget" name="QPANSOPYSIDInitialDockWidget">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>260</width>
-    <height>420</height>
-   </rect>
-  </property>
   <property name="minimumSize">
    <size>
-    <width>240</width>
-    <height>350</height>
+    <width>250</width>
+    <height>200</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>320</width>
+    <width>16777215</width>
     <height>16777215</height>
    </size>
   </property>
@@ -388,41 +380,22 @@
      </layout>
     </item>
     <item>
-     <widget class="QLabel" name="logLabel">
-      <property name="text">
-       <string>Log:</string>
+     <widget class="QGroupBox" name="logGroup">
+      <property name="title">
+       <string>Log</string>
       </property>
-      <property name="font">
-       <font>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QTextEdit" name="logTextEdit">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>50</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>55</height>
-       </size>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
+      <layout class="QVBoxLayout" name="logLayout">
+       <item>
+        <widget class="QTextEdit" name="logTextEdit">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="minimumHeight">
+          <number>100</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
     <item>

@@ -4,14 +4,14 @@
  <widget class="QDockWidget" name="QPANSOPYOmnidirectionalDockWidget">
   <property name="minimumSize">
    <size>
-    <width>280</width>
-    <height>400</height>
+    <width>250</width>
+    <height>200</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>16777215</width>
-    <height>550</height>
+    <height>16777215</height>
    </size>
   </property>
   <widget class="QWidget" name="dockWidgetContents">
