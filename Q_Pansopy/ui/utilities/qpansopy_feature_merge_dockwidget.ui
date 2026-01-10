@@ -4,8 +4,8 @@
  <widget class="QDockWidget" name="QPANSOPYFeatureMergeDockWidget">
   <property name="minimumSize">
    <size>
-    <width>300</width>
-    <height>450</height>
+    <width>250</width>
+    <height>200</height>
    </size>
   </property>
     <property name="maximumSize">
