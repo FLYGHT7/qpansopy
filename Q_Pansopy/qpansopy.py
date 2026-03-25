@@ -332,8 +332,8 @@ class Qpansopy:
                 if callable(run_cb):
                     try:
                         run_cb()
-                    finally:
-                        return
+                    except Exception:
+                        pass
                 return
             instance = self.modules[name]["GUI_INSTANCE"] = dock_widget_cls(self.iface)
             title = self.modules[name].get("TITLE", name)
