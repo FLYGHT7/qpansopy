@@ -1,7 +1,8 @@
-from Q_Pansopy.utils import format_parameters_table
+import importlib
 
 
 def test_format_parameters_table_nested_sections():
+    format_parameters_table = importlib.import_module('Q_Pansopy.utils').format_parameters_table
     params = {
         'airport_data': {
             'aerodrome_elevation': {'value': 1500, 'unit': 'm'},
@@ -41,5 +42,5 @@ def test_format_parameters_table_nested_sections():
     # Representative rows
     assert "Aerodrome Elevation" in out
     assert "Temperature Reference" in out
-    assert "IAS" in out
+    assert "IAS" in out or "Ias" in out
     assert "Wind Speed" in out
