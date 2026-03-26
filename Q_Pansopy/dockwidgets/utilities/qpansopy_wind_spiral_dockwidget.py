@@ -382,12 +382,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.units[param] = unit
 
     def get_desktop_path(self):
-        """Get desktop path for default output folder"""
-        try:
-            import os
-            return os.path.join(os.path.expanduser("~"), "Desktop")
-        except:
-            return ""
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         """Browse for output folder"""

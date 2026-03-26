@@ -46,6 +46,7 @@ from qgis.utils import iface
 import math
 import os
 import datetime
+from ._lnav_common import _resolve_routing_layer, _create_area_layer
 
 def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
@@ -113,19 +114,10 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
         
         iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Missed Approach (RNP APCH)", level=Qgis.Info)
 
-        # Get Projected Coordinate System for the QGIS Project 
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
-        # Use the provided routing layer instead of searching
+        routing_layer = _resolve_routing_layer(iface, routing_layer)
         if routing_layer is None:
-            # Fallback: search for routing layer (original behavior)
-            for layer in QgsProject.instance().mapLayers().values():
-                if "routing" in layer.name():
-                    routing_layer = layer
-                    break
-
-        if routing_layer is None:
-            iface.messageBar().pushMessage("No Routing Selected", level=Qgis.Critical)
             return None
 
         # Original behavior: select all missed segments automatically
@@ -250,12 +242,6 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
             pts[f"mm{a}"] = QgsPoint(bx1, by2)
             a += 1
         
-        # Create memory layer (original name)
-        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "LNAV Missed", "memory")
-        myField = QgsField('Symbol', QVariant.String)
-        v_layer.dataProvider().addAttributes([myField])
-        v_layer.updateFields()
-
         # Area Definition 
         primary_area = ([pts["m2"], pts["mm6"], pts["mm10"], pf, pts["mm12"], pts["mm8"], pts["m4"], pts["m1"]], 'Primary Area')
         secondary_area_left = ([pts["m2"], pts["m3"], pts["mm7"], pts["mm11"], pts["mm10"], pts["mm6"]], 'Secondary Area')
@@ -263,25 +249,8 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
 
         areas = (primary_area, secondary_area_left, secondary_area_right)
 
-        # Creating areas
-        pr = v_layer.dataProvider()
-        features = []
-        
-        for area in areas:
-            seg = QgsFeature()
-            seg.setGeometry(QgsPolygon(QgsLineString(area[0]), rings=[]))
-            seg.setAttributes([area[1]])
-            features.append(seg)
+        v_layer = _create_area_layer(map_srid, "LNAV Missed", areas, __file__)
 
-        pr.addFeatures(features)
-        v_layer.updateExtents()
-        QgsProject.instance().addMapLayers([v_layer])
-
-        # Apply style (no zoom to respect user's current view)
-        style_path = os.path.join(os.path.dirname(__file__), '..', '..', 'styles', 'primary_secondary_areas.qml')
-        if os.path.exists(style_path):
-            v_layer.loadNamedStyle(style_path)
-        
         # Export to KML if requested
         result = {'missed_layer': v_layer}
         

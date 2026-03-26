@@ -138,12 +138,8 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 del self.exact_values[key]
 
     def get_desktop_path(self):
-        """Get desktop path for default output folder"""
-        try:
-            import os
-            return os.path.join(os.path.expanduser("~"), "Desktop")
-        except:
-            return ""
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     # Output folder selection removed per #67
 

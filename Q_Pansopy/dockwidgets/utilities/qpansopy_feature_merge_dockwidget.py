@@ -79,12 +79,8 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Note: exportKmlCheckBox doesn't need connection - it's checked during merge execution
 
     def get_desktop_path(self):
-        """Get desktop path for default output folder"""
-        import pathlib
-        try:
-            return str(pathlib.Path.home() / "Desktop")
-        except Exception:
-            return str(pathlib.Path.home())
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         """Browse for output folder"""

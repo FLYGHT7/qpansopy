@@ -30,9 +30,8 @@ class QPANSOPYNDBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def get_desktop_path(self):
-        if os.name == 'nt':
-            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-        return os.path.expanduser('~/Desktop')
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(

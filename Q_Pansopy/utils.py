@@ -232,3 +232,16 @@ def format_parameters_table(title, params_dict, sections=None):
             table += f"{param_name:<25} {str(value):<15} {unit}\n"
 
     return table
+
+
+import pathlib
+
+
+def get_desktop_path() -> str:
+    """Return the current user's Desktop path as a string.
+
+    Uses :func:`pathlib.Path.home` for cross-platform compatibility
+    and returns a plain ``str`` so existing dockwidget code that treats
+    the result as a file-system path continues to work unchanged.
+    """
+    return str(pathlib.Path.home() / "Desktop")

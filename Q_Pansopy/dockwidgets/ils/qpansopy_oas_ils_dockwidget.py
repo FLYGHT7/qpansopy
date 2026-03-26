@@ -431,14 +431,9 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        event.accept()
    
    def get_desktop_path(self):
-       """Get the path to the desktop"""
-       if os.name == 'nt':  # Windows
-           return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-       elif os.name == 'posix':  # macOS or Linux
-           return os.path.join(os.path.expanduser('~'), 'Desktop')
-       else:
-           return os.path.expanduser('~')
-   
+       from ...utils import get_desktop_path as _gdp
+       return _gdp()
+
    def browse_output_folder(self):
        """Open a folder browser dialog"""
        folder = QtWidgets.QFileDialog.getExistingDirectory(

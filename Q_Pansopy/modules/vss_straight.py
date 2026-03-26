@@ -17,6 +17,7 @@ import os
 import datetime
 import json
 from ..utils import get_selected_feature
+from .constants import FT_TO_M
 
 def calculate_vss_straight(iface, point_layer, runway_layer, params):
     """
@@ -44,9 +45,9 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     RDH_unit = params.get('RDH_unit', 'm')
     
     # Convert units to meters if needed
-    thr_elev = thr_elev_raw if thr_elev_unit == 'm' else thr_elev_raw * 0.3048
-    OCH = OCH_raw if OCH_unit == 'm' else OCH_raw * 0.3048
-    RDH = RDH_raw if RDH_unit == 'm' else RDH_raw * 0.3048
+    thr_elev = thr_elev_raw if thr_elev_unit == 'm' else thr_elev_raw * FT_TO_M
+    OCH = OCH_raw if OCH_unit == 'm' else OCH_raw * FT_TO_M
+    RDH = RDH_raw if RDH_unit == 'm' else RDH_raw * FT_TO_M
     
     # Create a parameters dictionary for JSON storage - store original values
     parameters_dict = {
