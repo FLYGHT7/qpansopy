@@ -160,8 +160,8 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                                params_text += f"  - {formatted_key}: {value}\n"
                            
                            params_text += "\n"
-                       except json.JSONDecodeError:
-                           params_text += f"  Error: Could not parse parameters JSON\n\n"
+                       except json.JSONDecodeError as e:
+                           params_text += f"  Error: Could not parse parameters JSON: {e}\n\n"
                
                params_text += "\n"
        

@@ -13,6 +13,9 @@ from qgis.PyQt import QtWidgets, QtCore
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
 
 
+# Collect import errors to surface them in initGui()
+_IMPORT_ERRORS: list = []
+
 # Importar los dock widgets con manejo de errores
 try:
     # Import dock widgets from new organized structure
@@ -33,8 +36,7 @@ try:
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Importar el diálogo de configuración
 except ImportError as e:
-    # No lanzamos el error aquí, lo manejaremos en initGui
-    pass
+    _IMPORT_ERRORS.append(str(e))
 
 class Qpansopy:
     """QPANSOPY Plugin Implementation"""
@@ -91,6 +93,13 @@ class Qpansopy:
 
 
     def initGui(self):
+        if _IMPORT_ERRORS:
+            from qgis.PyQt.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                None, "QPANSOPY — Import Error",
+                "One or more plugin modules failed to load:\n\n" + "\n".join(_IMPORT_ERRORS)
+            )
+            return
         try:
             # Unified modules dictionary (single authoritative mapping)
             self.modules: dict = {

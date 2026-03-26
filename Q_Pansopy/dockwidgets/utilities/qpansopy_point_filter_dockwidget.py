@@ -56,10 +56,6 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.higher_color = QColor("red")
         self.lower_color = QColor("green")
         
-        # Set up the user interface from Designer.
-        self.setupUi(self)
-        self.iface = iface
-        
         # Hide output/KML/JSON controls not needed for this tool (per #67)
         if hasattr(self, 'outputGroup'):
             self.outputGroup.setVisible(False)

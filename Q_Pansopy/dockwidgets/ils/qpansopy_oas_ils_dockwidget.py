@@ -456,7 +456,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        self.logTextEdit.ensureCursorVisible()
    
    def validate_inputs(self):
-       """Validate user inputs"""
+       """Validate user inputs"""        self.csv_path = None
        # Check if layers are selected
        if not self.pointLayerComboBox.currentLayer():
            self.log("Error: Please select a point layer")

@@ -24,20 +24,21 @@ def ISA_temperature(adElev, tempRef):
     deltaISA = tempRef - tempISA
     return (adElev, tempRef, tempISA, deltaISA)
 
-def tas_calculation(ias, altitude, var, bank_angle):
+def tas_calculation(ias, altitude, var, bank_angle, wind_speed=30):
     """Aviation Calculations for Wind Spiral - Original Formula
     
     :param ias: Indicated Air Speed in knots
     :param altitude: Altitude in feet
     :param var: Temperature variation from ISA
     :param bank_angle: Bank angle in degrees
+    :param wind_speed: Wind speed in knots (default 30)
     :return: Tuple of (k, tas, rate_of_turn, radius_of_turn, w)
     """
     k = 171233*(((288+var)-0.00198*altitude)**0.5)/(288-0.00198*altitude)**2.628
     tas = k*ias
     rate_of_turn = (3431*math.tan(math.radians(bank_angle)))/(math.pi*tas)
     radius_of_turn = tas/(20*math.pi*rate_of_turn)
-    w = 30  # Wind speed
+    w = wind_speed
     return k, tas, rate_of_turn, radius_of_turn, w
 
 def calculate_wind_spiral(iface, point_layer, reference_layer, params):
@@ -108,7 +109,7 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
         d = (-30, -60, -90, -120, -150, -180, -210, -240, -270, -300, -330)  # NM
 
     # Calculate TAS and turn parameters using original formula
-    values = tas_calculation(IAS, altitude, isa_var, bankAngle)
+    values = tas_calculation(IAS, altitude, isa_var, bankAngle, wind_speed=w)
     r_turn = values[3]
     
     # Calculate drift angle - Original Formula

@@ -6,7 +6,12 @@ from qgis.PyQt.QtGui import QColor
 import math
 
 # Reuse existing TAS/turn helpers from wind_spiral
-from ..wind_spiral import tas_calculation
+try:
+    from ..wind_spiral import tas_calculation
+except ImportError as e:
+    raise ImportError(
+        f"holding.py requires wind_spiral module in parent package: {e}"
+    ) from e
 
 
 def _feet(value, unit):

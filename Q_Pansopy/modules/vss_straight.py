@@ -95,6 +95,9 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     
     # Get the runway line (in same projected CRS as point)
     runway_geom = runway_feature.geometry().asPolyline()
+    if len(runway_geom) < 2:
+        iface.messageBar().pushMessage("QPANSOPY", "Runway layer must have at least 2 vertices", level=Qgis.Critical)
+        return None
     
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -245,7 +248,7 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
         
         # Correct KML structure for better visualization
         def correct_kml_structure(kml_file_path):
-            with open(kml_file_path, 'r') as file:
+            with open(kml_file_path, 'r', encoding='utf-8') as file:
                 kml_content = file.read()
             
             # Add altitude mode
@@ -268,7 +271,7 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
             kml_content = kml_content.replace('<Document>', f'<Document>{style_kml}')
             kml_content = kml_content.replace('<styleUrl>#</styleUrl>', '<styleUrl>#style1</styleUrl>')
             
-            with open(kml_file_path, 'w') as file:
+            with open(kml_file_path, 'w', encoding='utf-8') as file:
                 file.write(kml_content)
         
         # Apply corrections to KML files

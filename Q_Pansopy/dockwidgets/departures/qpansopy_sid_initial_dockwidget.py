@@ -242,8 +242,9 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         Args:
             message (str): Message to log.
         """
-        self.logTextEdit.append(message)
-        self.logTextEdit.ensureCursorVisible()
+        if hasattr(self, 'logTextEdit'):
+            self.logTextEdit.append(message)
+            self.logTextEdit.ensureCursorVisible()
 
     def validate_inputs(self):
         """

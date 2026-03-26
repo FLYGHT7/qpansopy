@@ -80,11 +80,11 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def get_desktop_path(self):
         """Get desktop path for default output folder"""
+        import pathlib
         try:
-            import os
-            return os.path.join(os.path.expanduser("~"), "Desktop")
-        except:
-            return ""
+            return str(pathlib.Path.home() / "Desktop")
+        except Exception:
+            return str(pathlib.Path.home())
 
     def browse_output_folder(self):
         """Browse for output folder"""
@@ -175,7 +175,11 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Log results
             if result:
                 self.log(f"Layer merging completed successfully!")
-                self.log(f"Merged layer: {result.get('merged_layer').name()}")
+                merged_layer = result.get('merged_layer')
+                if merged_layer is not None:
+                    self.log(f"Merged layer: {merged_layer.name()}")
+                else:
+                    self.log("Warning: merged_layer is None — layer may not have been created")
                 self.log(f"Total features: {result.get('total_features', 0)}")
                 self.log(f"Geometry type: {result.get('geometry_type', 'Unknown')}")
                 self.log(f"CRS: {result.get('crs', 'Unknown')}")
