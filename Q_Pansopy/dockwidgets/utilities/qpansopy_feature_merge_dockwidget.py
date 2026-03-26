@@ -28,7 +28,6 @@ from PyQt5.QtGui import QRegExpValidator, QColor
 from PyQt5.QtWidgets import QColorDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel, QgsVectorFileWriter
 from qgis.gui import QgsMapLayerComboBox
-from qgis.utils import iface
 from qgis.core import Qgis
 import json
 import datetime

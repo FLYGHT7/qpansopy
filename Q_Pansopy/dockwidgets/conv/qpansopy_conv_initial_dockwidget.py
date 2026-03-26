@@ -2,7 +2,6 @@ from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, Qt
 from qgis.core import QgsMapLayerProxyModel
 import os
-import datetime
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'conv', 'qpansopy_conv_initial_dockwidget.ui'))

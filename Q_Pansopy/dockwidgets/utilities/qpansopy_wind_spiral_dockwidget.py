@@ -28,7 +28,6 @@ from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtWidgets import QMessageBox
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
-from qgis.utils import iface
 from qgis.core import Qgis
 import json
 import datetime
@@ -108,9 +107,12 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.formLayout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.formLayout.setFormAlignment(Qt.AlignLeft)
         
-        # Create validator for numeric inputs
+        # Create validator for strictly positive numeric inputs (IAS, altitude, bank angle, wind speed)
         regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegExpValidator(regex)
+        # ISA variation allows negatives: use a broader validator (sign, digits, decimal)
+        isa_regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]*")
+        isa_validator = QRegExpValidator(isa_regex)
         
         # Common styles for consistent UI
         line_edit_style = """
@@ -188,7 +190,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         
         # ISA Variation LineEdit - same size as other fields
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
-        self.isaVarLineEdit.setValidator(validator)
+        self.isaVarLineEdit.setValidator(isa_validator)
         self.isaVarLineEdit.setText("0.00000")
         self.isaVarLineEdit.textChanged.connect(
             lambda text: self.handle_isa_manual_change(text))

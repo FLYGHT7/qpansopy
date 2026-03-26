@@ -27,7 +27,6 @@ from PyQt5.QtCore import pyqtSignal, QRegExp
 from PyQt5.QtGui import QRegExpValidator, QColor
 from PyQt5.QtWidgets import QColorDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem
-from qgis.utils import iface
 from qgis.core import Qgis
 import datetime
 

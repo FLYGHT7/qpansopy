@@ -27,8 +27,7 @@ import json
 import datetime
 
 from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt, QRegExp, QMimeData
-from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtCore import pyqtSignal, Qt, QMimeData
 from qgis.core import QgsMapLayerProxyModel, Qgis
 
 
@@ -103,11 +102,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def setup_validators(self):
         """Configure validators for numeric input fields."""
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
-        
-        # Apply validators to all numeric spin boxes
-        # (Qt SpinBoxes have built-in validation, but LineEdits need this)
+        pass  # SpinBoxes have built-in validation; add setValidator() here if LineEdits are added
 
     def setup_copy_buttons(self):
         """Configure buttons to copy parameters to clipboard."""

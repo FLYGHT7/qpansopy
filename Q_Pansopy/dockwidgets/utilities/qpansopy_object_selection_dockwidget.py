@@ -97,6 +97,3 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)
             import traceback
             self.log(traceback.format_exc())
-            self.log(f"Error during extraction: {str(e)}")
-            self.iface.messageBar().pushMessage(
-                "Error", str(e), level=Qgis.Critical)

@@ -287,8 +287,10 @@ class Qpansopy:
                 self.submenus[toolbar_name].addAction(action)
 
             # Add separators in toolbars
-            self.toolbars['ILS'].addSeparator()
-            self.toolbars['UTILITIES'].addSeparator()
+            if self.toolbars.get('ILS'):
+                self.toolbars['ILS'].addSeparator()
+            if self.toolbars.get('UTILITIES'):
+                self.toolbars['UTILITIES'].addSeparator()
 
             # Add About and Settings entries
             self.menu.setTearOffEnabled(True)
@@ -367,10 +369,6 @@ class Qpansopy:
                         instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
                 except AttributeError:
                     QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
-            try:
-                instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
-            except AttributeError:
-                pass  # Widget doesn't have KML export, silently ignore
             if hasattr(instance, "logTextEdit"):
                 show_log = self.settings.value("qpansopy/show_log", True, type=bool)
                 try:

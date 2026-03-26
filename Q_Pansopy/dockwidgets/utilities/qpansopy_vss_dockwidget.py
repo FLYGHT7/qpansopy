@@ -26,7 +26,6 @@ from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
 import json
 import datetime
@@ -98,21 +97,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
 
     def setup_copy_button(self):
-        """DEPRECATED: Buttons are now in the UI XML"""
+        """DEPRECATED: Buttons are now defined in the UI XML."""
         pass
-        # Configurar botones para copiar parámetros al portapapeles
-        buttons_layout = QtWidgets.QHBoxLayout()
-        self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
-        self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
-        self.copyParamsWordButton.setMinimumHeight(30)
-        self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
-        self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
-        self.copyParamsJsonButton.setMinimumHeight(30)
-        buttons_layout.addWidget(self.copyParamsWordButton)
-        buttons_layout.addWidget(self.copyParamsJsonButton)
-        buttons_widget = QtWidgets.QWidget(self)
-        buttons_widget.setLayout(buttons_layout)
-        self.verticalLayout.addWidget(buttons_widget)
 
     def copy_parameters_for_word(self):
         """Copiar los parámetros VSS en formato tabla para Word"""

@@ -29,7 +29,6 @@ from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
 
 # Use __file__ to get the current script path
@@ -180,7 +179,6 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
    def copy_parameters_for_word(self):
        """Copiar los parámetros OAS ILS en formato tabla para Word"""
-       import json
        from ...utils import format_parameters_table
        
        layers = QgsProject.instance().mapLayers().values()
@@ -252,8 +250,6 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
    def copy_parameters_as_json(self):
        """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""
-       import json
-       import datetime
        
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]

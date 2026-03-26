@@ -29,7 +29,6 @@ from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
 from ...utils import format_parameters_table
 
@@ -365,23 +364,19 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.units[param_name] = unit
    
    def replace_widget_in_form(self, old_widget, new_widget):
-       """Reemplazar un widget en un QFormLayout"""
+       """Reemplazar un widget en un QFormLayout."""
        parent = old_widget.parent()
        form_layout = parent.layout()
-       
-       # Encontrar la fila donde está el widget
+       if not isinstance(form_layout, QtWidgets.QFormLayout):
+           return
+
        for i in range(form_layout.rowCount()):
-           if form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole) and form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole).widget() == old_widget:
-               # Obtener la etiqueta
-               label_item = form_layout.itemAt(i, QtWidgets.QFormLayout.LabelRole)
-               
-               # Eliminar el widget antiguo
+           field_item = form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole)
+           if field_item is not None and field_item.widget() == old_widget:
                form_layout.removeWidget(old_widget)
                old_widget.hide()
-               
-               # Añadir el nuevo widget
                form_layout.setWidget(i, QtWidgets.QFormLayout.FieldRole, new_widget)
-               break
+               return
    
    def store_exact_value(self, param_name, text):
        """Almacenar el valor exacto ingresado por el usuario"""

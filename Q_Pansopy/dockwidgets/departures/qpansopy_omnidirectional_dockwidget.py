@@ -23,7 +23,6 @@ import os
 from PyQt5 import QtGui, QtWidgets, uic
 from PyQt5.QtCore import pyqtSignal, Qt
 from qgis.core import QgsProject, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
 
 
@@ -74,6 +73,9 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
             self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
             self.exportKmlCheckBox.setChecked(False)
+            # Add the fallback checkbox to the layout so it is visible
+            if hasattr(self, "verticalLayout") and self.verticalLayout is not None:
+                self.verticalLayout.addWidget(self.exportKmlCheckBox)
         
         # Log message
         self.log("QPANSOPY Omnidirectional SID plugin loaded.")
