@@ -78,7 +78,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         except Exception:
             pass
         
-        self.setMinimumHeight(300)
+        # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize
         
         # Setup layer combobox
         self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)

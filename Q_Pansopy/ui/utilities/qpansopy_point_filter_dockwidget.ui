@@ -4,8 +4,8 @@
  <widget class="QDockWidget" name="QPANSOPYPointFilterDockWidget">
   <property name="minimumSize">
    <size>
-    <width>300</width>
-    <height>500</height>
+    <width>250</width>
+    <height>200</height>
    </size>
   </property>
    <property name="maximumSize">

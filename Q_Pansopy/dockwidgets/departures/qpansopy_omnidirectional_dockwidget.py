@@ -51,7 +51,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         except Exception:
             pass
-        self.setMinimumHeight(300)
+        # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize
         
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)

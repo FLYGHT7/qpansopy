@@ -2,18 +2,10 @@
 <ui version="4.0">
  <class>QPANSOPYILSDockWidget</class>
  <widget class="QDockWidget" name="QPANSOPYILSDockWidget">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>400</width>
-    <height>500</height>
-   </rect>
-  </property>
   <property name="minimumSize">
    <size>
-    <width>300</width>
-    <height>300</height>
+    <width>250</width>
+    <height>200</height>
    </size>
   </property>
     <property name="maximumSize">
@@ -154,7 +146,7 @@
         <item>
          <widget class="QGroupBox" name="groupBox_5">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
