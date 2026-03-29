@@ -23,13 +23,14 @@ Procedure Analysis and Obstacle Protection Surfaces - VSS Module
 
 import os
 from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
+from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
 from PyQt5.QtGui import QRegExpValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.utils import iface
 from qgis.core import Qgis
 import json
 import datetime
+from ...utils import format_parameters_table
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -115,48 +116,48 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.verticalLayout.addWidget(buttons_widget)
 
     def copy_parameters_for_word(self):
-        """Copiar los parámetros VSS en formato tabla para Word"""
-        params_text = "QPANSOPY VSS CALCULATION PARAMETERS\n"
-        params_text += "=" * 50 + "\n\n"
-        params_text += "PARAMETER\t\t\tVALUE\t\tUNIT\n"
-        params_text += "-" * 50 + "\n"
-        param_names = {
-            'rwy_width': 'Runway Width',
-            'thr_elev': 'Threshold Elevation',
-            'strip_width': 'Strip Width',
-            'OCH': 'OCH',
-            'RDH': 'RDH',
-            'VPA': 'VPA'
-        }
+        """Copiar los parámetros VSS como tabla para Word"""
         params = {
-            'rwy_width': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()),
-            'thr_elev': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()),
-            'thr_elev_unit': self.units.get('thr_elev', 'm'),
-            'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
-            'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
-            'OCH_unit': self.units.get('OCH', 'm'),
-            'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
-            'RDH_unit': self.units.get('RDH', 'm'),
-            'VPA': self.exact_values.get('VPA', self.VPALineEdit.text())
+            'runway_details': {
+                'rwy_width': {'value': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()), 'unit': 'm'},
+                'thr_elev': {'value': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()), 'unit': self.units.get('thr_elev', 'm')},
+                'strip_width': {'value': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()), 'unit': 'm'}
+            },
+            'approach_params': {
+                'OCH': {'value': self.exact_values.get('OCH', self.OCHLineEdit.text()), 'unit': self.units.get('OCH', 'm')},
+                'RDH': {'value': self.exact_values.get('RDH', self.RDHLineEdit.text()), 'unit': self.units.get('RDH', 'm')},
+                'VPA': {'value': self.exact_values.get('VPA', self.VPALineEdit.text()), 'unit': '°'}
+            }
         }
-        for key in ['rwy_width', 'thr_elev', 'strip_width', 'OCH', 'RDH', 'VPA']:
-            display_name = param_names.get(key, key.replace('_', ' ').title())
-            value = params[key]
-            unit = ""
-            if key == 'thr_elev':
-                unit = params['thr_elev_unit']
-            elif key == 'OCH':
-                unit = params['OCH_unit']
-            elif key == 'RDH':
-                unit = params['RDH_unit']
-            elif key == 'rwy_width' or key == 'strip_width':
-                unit = "m"
-            elif key == 'VPA':
-                unit = "°"
-            params_text += f"{display_name:<25}\t{value}\t\t{unit}\n"
+
+        sections = {
+            'rwy_width': 'Runway Data',
+            'thr_elev': 'Runway Data',
+            'strip_width': 'Runway Data',
+            'OCH': 'Approach Parameters',
+            'RDH': 'Approach Parameters',
+            'VPA': 'Approach Parameters'
+        }
+
+        html_table = format_parameters_table(
+            "QPANSOPY VSS PARAMETERS",
+            params,
+            sections,
+            as_html=True
+        )
+        text_table = format_parameters_table(
+            "QPANSOPY VSS PARAMETERS",
+            params,
+            sections,
+            as_html=False
+        )
+
+        mime = QMimeData()
+        mime.setHtml(html_table)
+        mime.setText(text_table)
         clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(params_text)
-        self.log("VSS parameters copied to clipboard in Word format. You can now paste them into Word.")
+        clipboard.setMimeData(mime)
+        self.log("VSS parameters copied to clipboard as a Word table.")
         self.iface.messageBar().pushMessage("QPANSOPY", "VSS parameters copied to clipboard in Word format", level=Qgis.Success)
 
     def copy_parameters_as_json(self):
