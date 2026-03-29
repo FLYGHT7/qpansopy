@@ -24,7 +24,7 @@ Procedure Analysis and Obstacle Protection Surfaces - Feature Merge Module
 import os
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsWkbTypes, QgsFeature,
-    QgsFields, QgsField, QgsFeatureRequest
+    QgsFields, QgsField, QgsFeatureRequest, Qgis
 )
 from PyQt5.QtCore import QVariant
 
