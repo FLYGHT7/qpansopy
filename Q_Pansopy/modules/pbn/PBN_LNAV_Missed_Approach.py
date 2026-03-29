@@ -1,5 +1,3 @@
-
-# -*- coding: utf-8 -*-
 """
 PBN LNAV Missed Approach (RNP APCH) Generator
 

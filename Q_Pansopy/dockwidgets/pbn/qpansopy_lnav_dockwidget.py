@@ -26,12 +26,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
 
-        # RNAV mode visibility should only show for SID/Missed
-        for rb in [self.arrivalRadioButton, self.initialRadioButton, self.intermediateRadioButton, getattr(self, 'finalRadioButton', None), self.missedRadioButton, getattr(self, 'sidRadioButton', None)]:
-            if rb:
-                rb.toggled.connect(self._update_rnav_mode_visibility)
-        # Initialize visibility on load
-        self._update_rnav_mode_visibility()
+        # No RNAV mode selector needed (RNAV1/2 same output)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
@@ -50,19 +45,6 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         )
         if folder:
             self.outputFolderLineEdit.setText(folder)
-
-    def _update_rnav_mode_visibility(self):
-        # Show RNAV mode only when Missed or SID is selected
-        show = False
-        try:
-            if self.missedRadioButton.isChecked():
-                show = True
-            if getattr(self, 'sidRadioButton', None) and self.sidRadioButton.isChecked():
-                show = True
-        except Exception:
-            show = False
-        if hasattr(self, 'rnavModeGroup') and self.rnavModeGroup:
-            self.rnavModeGroup.setVisible(show)
 
     def log(self, message):
         self.logTextEdit.append(message)
@@ -106,14 +88,18 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 from ...modules.pbn.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
                 result = run_intermediate_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Intermediate"
-            elif self.missedRadioButton.isChecked() or getattr(self, 'sidRadioButton', None) and self.sidRadioButton.isChecked():
-                # RNAV1/2 for Missed or SID integrated here
-                rnav_mode = 'RNAV1' if (getattr(self, 'rnav1RadioButton', None) and self.rnav1RadioButton.isChecked()) else 'RNAV2'
-                op_mode = 'SID' if getattr(self, 'sidRadioButton', None) and self.sidRadioButton.isChecked() else 'MISSED'
-                self.log(f"Calculating {rnav_mode} {op_mode}...")
+            elif self.missedRadioButton.isChecked():
+                self.log("Calculating Missed Approach...")
+                from ...modules.pbn.PBN_LNAV_Missed_Approach import run_missed_approach
+                result = run_missed_approach(self.iface, routing_layer, export_kml, output_dir)
+                approach_type = "Missed Approach"
+            elif getattr(self, 'sidRadioButton', None) and self.sidRadioButton.isChecked():
+                # RNAV1/2 same output; label accordingly
+                rnav_mode = 'RNAV1/2'
+                self.log(f"Calculating {rnav_mode} SID...")
                 from ...modules.pbn.rnav_sid_missed import run_rnav_sid_missed
-                result = run_rnav_sid_missed(self.iface, routing_layer, rnav_mode, op_mode, export_kml, output_dir)
-                approach_type = f"{op_mode} ({rnav_mode})"
+                result = run_rnav_sid_missed(self.iface, routing_layer, 'RNAV1', 'SID', export_kml, output_dir)
+                approach_type = f"SID ({rnav_mode})"
             else:  # Final approach
                 self.log("Calculating Final Approach...")
                 # Use function from Final Approach module
