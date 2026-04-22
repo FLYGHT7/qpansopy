@@ -93,8 +93,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
             self.exportKmlCheckBox.setChecked(True)
             self.verticalLayout.addWidget(self.exportKmlCheckBox)
-        
-    # Log message
+
+        # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
 
     def _setup_tooltips(self) -> None:
@@ -340,9 +340,10 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def log(self, message):
         """Add a message to the log"""
-        self.logTextEdit.append(message)
-        # Ensure the latest message is visible
-        self.logTextEdit.ensureCursorVisible()
+        if hasattr(self, 'logTextEdit') and self.logTextEdit is not None:
+            self.logTextEdit.append(message)
+            # Ensure the latest message is visible
+            self.logTextEdit.ensureCursorVisible()
 
     def validate_inputs(self):
         """Validate user inputs"""

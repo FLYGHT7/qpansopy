@@ -29,7 +29,6 @@ Version: 2.0
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 from qgis.core import Qgis
-from qgis.utils import iface
 from math import *
 import os
 from ._lnav_common import (

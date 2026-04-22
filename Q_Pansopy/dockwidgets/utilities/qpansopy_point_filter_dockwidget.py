@@ -112,7 +112,12 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Replace the original field in the form layout (row 0, column 1)
         try:
             self.parametersLayout.removeWidget(self.thrElevLineEdit)
-            self.parametersLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, container)
+            _field_role = getattr(
+                QtWidgets.QFormLayout,
+                'FieldRole',
+                getattr(QtWidgets.QFormLayout, 'ItemRole', QtWidgets.QFormLayout).FieldRole
+            )
+            self.parametersLayout.setWidget(0, _field_role, container)
         except Exception:
             pass
 

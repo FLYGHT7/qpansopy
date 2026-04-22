@@ -91,12 +91,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        
        # Limitar el tamaño del área de log
        if hasattr(self, 'logTextEdit') and self.logTextEdit is not None:
-           # Use a preferred height but don't enforce a hard maximum
-           try:
-               self.logTextEdit.setMaximumHeight(0)  # 0 means no max; layout manages size
-           except Exception:
-               pass
-           self.logTextEdit.setVisible(True)  # El valor real lo pone qpansopy.py
+           self.logTextEdit.setVisible(True)
        
        # Asegura que el checkbox de KML existe
        if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
@@ -447,7 +442,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        self.logTextEdit.ensureCursorVisible()
    
    def validate_inputs(self):
-       """Validate user inputs"""        self.csv_path = None
+       """Validate user inputs"""
        # Check if layers are selected
        if not self.pointLayerComboBox.currentLayer():
            self.log("Error: Please select a point layer")
@@ -484,6 +479,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
    
    def calculate(self):
        """Run the calculation"""
+       self.csv_path = None
        self.log("Starting calculation...")
        
        # First, request CSV file - this is mandatory

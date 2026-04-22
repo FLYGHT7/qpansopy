@@ -88,7 +88,7 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
                 feat for feat in selected_features 
                 if feat.attribute('segment') == 'arrival'
             ]
-        except:
+        except Exception:
             pass  # Attribute doesn't exist, use all selected
         
         if not arrival_features:

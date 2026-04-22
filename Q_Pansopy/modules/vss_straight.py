@@ -11,7 +11,6 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 from qgis.core import Qgis
-from qgis.utils import iface
 import math
 import os
 import datetime

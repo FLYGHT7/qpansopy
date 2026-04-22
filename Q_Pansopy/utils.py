@@ -112,7 +112,7 @@ def fix_kml_altitude_mode(kml_path):
                 f.write(content)
             
             return True
-        except:
+        except Exception:
             return False
 
 

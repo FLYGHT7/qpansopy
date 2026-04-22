@@ -12,7 +12,6 @@ from qgis.PyQt.QtCore import QVariant, Qt
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import QFileDialog, QDialog, QFormLayout, QLineEdit, QComboBox, QDialogButtonBox, QMessageBox
 from qgis.core import Qgis
-from qgis.utils import iface
 import math
 import os
 import datetime
@@ -67,6 +66,7 @@ def csv_to_structured_json(THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS
     :return: Dictionary with structured data or None if file not selected
     """
     global OAS_template, OAS_extended_to_FAP, OAS_W, OAS_X, OAS_Y, OAS_Z
+    from qgis.utils import iface  # noqa: PLC0415 — local import intentional
     
     csv_path, _ = QFileDialog.getOpenFileName(None, "Select CSV File", "", "CSV Files (*.csv);;All Files (*)")
     if not csv_path:
@@ -201,6 +201,7 @@ def compute_geom(intersections, new_geom, angle0, THR_elev):
     :param THR_elev: Threshold elevation
     :return: Dictionary with computed geometry points
     """
+    from qgis.utils import iface  # noqa: PLC0415 — local import intentional
     geom_dict = {}
     for m, v in intersections.items():
         try:

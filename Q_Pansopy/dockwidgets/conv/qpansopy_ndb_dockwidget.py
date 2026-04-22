@@ -70,8 +70,8 @@ class QPANSOPYNDBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if result:
                 self.log("NDB Approach Areas calculation completed successfully")
                 if export_kml:
-                    # Add KML export code here if available
-                    self.log(f"KML export would go to: {output_dir}")
+                    self.log("Note: KML export for NDB approach is not yet implemented.")
+                    self.log(f"Output folder selected: {output_dir}")
                 
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")

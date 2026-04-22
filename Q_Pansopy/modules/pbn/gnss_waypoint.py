@@ -12,7 +12,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
-from qgis.utils import iface
 from math import radians, cos, sin
 import os
 

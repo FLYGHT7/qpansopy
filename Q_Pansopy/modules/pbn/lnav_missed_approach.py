@@ -42,7 +42,6 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.core import Qgis
-from qgis.utils import iface
 import math
 import os
 import datetime
@@ -140,7 +139,7 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
                     back_azimuth = azimuth + 180
                     length = feat.geometry().length()
                     break
-            except:
+            except Exception:
                 iface.messageBar().pushMessage("Invalid geometry in selected feature", level=Qgis.Warning)
                 continue
         else:
