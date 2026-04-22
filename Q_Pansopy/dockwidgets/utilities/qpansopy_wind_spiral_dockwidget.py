@@ -23,7 +23,7 @@ Procedure Analysis and Obstacle Protection Surfaces - Wind Spiral Module
 
 import os
 from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
-from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMimeData
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.PyQt.QtWidgets import QMessageBox
 from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer
@@ -322,10 +322,14 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                         'turn_direction': data.get('turn_direction', 'R')
                     }
                     from ...modules.wind_spiral import copy_parameters_table
-                    formatted = copy_parameters_table(mapped)
+                    html_table = copy_parameters_table(mapped, as_html=True)
+                    text_table = copy_parameters_table(mapped, as_html=False)
+                    mime = QMimeData()
+                    mime.setHtml(html_table)
+                    mime.setText(text_table)
                     clipboard = QtWidgets.QApplication.clipboard()
-                    clipboard.setText(formatted)
-                    self.log("Wind Spiral parameters (from layer) copied to clipboard in Word format.")
+                    clipboard.setMimeData(mime)
+                    self.log("Wind Spiral parameters (from layer) copied to clipboard as a Word table.")
                     self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied (from layer)", level=Qgis.Success)
                     return
         except Exception as e:
@@ -346,11 +350,12 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         }
         try:
             from ...modules.wind_spiral import copy_parameters_table
-            formatted = copy_parameters_table(params)
+            html_table = copy_parameters_table(params, as_html=True)
+            text_table = copy_parameters_table(params, as_html=False)
         except Exception:
             # Minimal fallback formatting if utils-based table fails
-            formatted = "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n" + "=" * 50 + "\n\n"
-            formatted += "PARAMETER\t\t\tVALUE\t\tUNIT\n" + "-" * 50 + "\n"
+            text_table = "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n" + "=" * 50 + "\n\n"
+            text_table += "PARAMETER\t\t\tVALUE\t\tUNIT\n" + "-" * 50 + "\n"
             rows = [
                 ("Aerodrome Elevation", params['adElev'], params['adElev_unit']),
                 ("Temperature Reference", params['tempRef'], "°C"),
@@ -361,10 +366,15 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                 ("Turn Direction", params['turn_direction'], ""),
             ]
             for name, value, unit in rows:
-                formatted += f"{name:<25}\t{value}\t\t{unit}\n"
+                text_table += f"{name:<25}\t{value}\t\t{unit}\n"
+            html_table = text_table.replace("\n", "<br>")
+
+        mime = QMimeData()
+        mime.setHtml(html_table)
+        mime.setText(text_table)
         clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setText(formatted)
-        self.log("Wind Spiral parameters (from UI) copied to clipboard in Word format.")
+        clipboard.setMimeData(mime)
+        self.log("Wind Spiral parameters (from UI) copied to clipboard as a Word table.")
         self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied (from UI)", level=Qgis.Success)
 
     def copy_parameters_as_json(self):
