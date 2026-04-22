@@ -173,7 +173,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
        html_chunks = []
-        text_chunks = []
+       text_chunks = []
        found_params = False
        
        for layer in vector_layers:

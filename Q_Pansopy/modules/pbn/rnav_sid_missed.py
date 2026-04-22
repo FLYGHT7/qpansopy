@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsPoint, QgsLineString, QgsPolygon,
     QgsField, QgsWkbTypes

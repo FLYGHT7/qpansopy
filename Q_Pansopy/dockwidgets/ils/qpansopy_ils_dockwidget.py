@@ -204,26 +204,26 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        html_blocks = []
        found_params = False
 
-        for layer in vector_layers:
-            has_ils_params = False
-            if 'parameters' not in [field.name() for field in layer.fields()]:
-                continue
+       for layer in vector_layers:
+           has_ils_params = False
+           if 'parameters' not in [field.name() for field in layer.fields()]:
+               continue
 
-            for feature in layer.getFeatures():
-                params_json = feature.attribute('parameters')
-                if not params_json:
-                    continue
+           for feature in layer.getFeatures():
+               params_json = feature.attribute('parameters')
+               if not params_json:
+                   continue
 
-                try:
-                    params_dict = json.loads(params_json)
-                except json.JSONDecodeError:
-                    continue
+               try:
+                   params_dict = json.loads(params_json)
+               except json.JSONDecodeError:
+                   continue
 
-                calculation_type = params_dict.get('calculation_type', '')
-                if calculation_type and 'Basic ILS' in calculation_type:
-                    has_ils_params = True
-                    layer_params = OrderedDict()
-                    layer_sections = {}
+               calculation_type = params_dict.get('calculation_type', '')
+               if calculation_type and 'Basic ILS' in calculation_type:
+                   has_ils_params = True
+                   layer_params = OrderedDict()
+                   layer_sections = {}
 
                    thr_value = params_dict.get('thr_elev', '')
                    thr_unit = params_dict.get('thr_elev_unit', 'm')
