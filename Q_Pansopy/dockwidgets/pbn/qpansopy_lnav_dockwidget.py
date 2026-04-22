@@ -94,13 +94,13 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             elif self.initialRadioButton.isChecked():
                 self.log("Calculating Initial Approach...")
                 # Use function from Initial Approach module
-                from ...modules.pbn.PBN_LNAV_Initial_Approach import run_initial_approach
+                from ...modules.pbn.lnav_initial_approach import run_initial_approach
                 result = run_initial_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Initial"
             elif self.intermediateRadioButton.isChecked():
                 self.log("Calculating Intermediate Approach...")
                 # Use function from Intermediate Approach module
-                from ...modules.pbn.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
+                from ...modules.pbn.lnav_intermediate_approach import run_intermediate_approach
                 result = run_intermediate_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Intermediate"
             elif self.missedRadioButton.isChecked() or getattr(self, 'sidRadioButton', None) and self.sidRadioButton.isChecked():
@@ -114,7 +114,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             else:  # Final approach
                 self.log("Calculating Final Approach...")
                 # Use function from Final Approach module
-                from ...modules.pbn.PBN_LNAV_Final_Approach import run_final_approach
+                from ...modules.pbn.lnav_final_approach import run_final_approach
                 result = run_final_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Final"
 
