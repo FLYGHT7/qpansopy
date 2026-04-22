@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Straight In NPA Surface Generator
 """
@@ -8,8 +8,8 @@ from qgis.core import (
     QgsPointXY, QgsWkbTypes, QgsField, QgsFields, QgsPoint,
     QgsLineString, QgsPolygon, QgsVectorFileWriter
 )
-from PyQt5.QtCore import QVariant
-from PyQt5.QtGui import QColor
+from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtGui import QColor
 from qgis.core import Qgis
 from qgis.utils import iface
 import math

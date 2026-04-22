@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYOmnidirectionalDockWidget
@@ -20,8 +20,8 @@ Procedure Analysis - Omnidirectional SID Departure Surface Tool
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsProject, QgsMapLayerProxyModel
 from qgis.core import Qgis
 

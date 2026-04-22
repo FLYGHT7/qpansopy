@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYVSSDockWidget
@@ -22,9 +22,9 @@ Procedure Analysis and Obstacle Protection Surfaces - VSS Module
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
+from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
 import json
@@ -77,6 +77,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
         self.setup_lineedits()
+        self._setup_tooltips()
         
         # Conectar botones de copia si existen en el UI
         if hasattr(self, 'copyWordButton'):
@@ -95,6 +96,33 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
     # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
+
+    def _setup_tooltips(self) -> None:
+        """Set helpful tooltips on critical VSS input fields."""
+        if hasattr(self, 'rwyWidthLineEdit'):
+            self.rwyWidthLineEdit.setToolTip(
+                "Runway Width\nUnit: m\nTypical values: 30, 45, 60 m (ICAO Annex 14)")
+        if hasattr(self, 'thrElevLineEdit'):
+            self.thrElevLineEdit.setToolTip(
+                "Threshold Elevation\nUnit: m or ft (select with dropdown)\nRange: -1000 to 15000 ft")
+        if hasattr(self, 'stripWidthLineEdit'):
+            self.stripWidthLineEdit.setToolTip(
+                "Strip Width (half-width from centreline)\nUnit: m\nICAO PANS-OPS Doc 8168")
+        if hasattr(self, 'OCHLineEdit'):
+            self.OCHLineEdit.setToolTip(
+                "Obstacle Clearance Height (OCH)\nUnit: m or ft\nMinimum height above threshold elevation")
+        if hasattr(self, 'RDHLineEdit'):
+            self.RDHLineEdit.setToolTip(
+                "Reference Datum Height (RDH)\nUnit: m or ft\nDefault: 15 m for ILS / RNAV approach")
+        if hasattr(self, 'VPALineEdit'):
+            self.VPALineEdit.setToolTip(
+                "Visual Path Angle (VPA)\nUnit: degrees\nTypical: 3.00° | Range: 2.50° to 3.50°")
+        if hasattr(self, 'runwayLayerComboBox'):
+            self.runwayLayerComboBox.setToolTip(
+                "Runway centreline layer (line geometry)")
+        if hasattr(self, 'pointLayerComboBox'):
+            self.pointLayerComboBox.setToolTip(
+                "Threshold point layer (point geometry)")
 
     def setup_copy_button(self):
         """DEPRECATED: Buttons are now defined in the UI XML."""
@@ -174,8 +202,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def setup_lineedits(self):
         """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
         # Crear un validador para números decimales
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
+        regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegularExpressionValidator(regex)
         
         # Threshold Elevation con selector de unidades
         self.thrElevLineEdit = QtWidgets.QLineEdit(self)

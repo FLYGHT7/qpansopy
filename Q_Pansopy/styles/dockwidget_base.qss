@@ -1,0 +1,179 @@
+/* QPANSOPY dockwidget base stylesheet
+   Applied automatically by BasePansopyDockWidget on construction.
+   Targets: QGIS 3.34 LTR+ and QGIS 4.x (Qt6).
+*/
+
+/* ── Container ─────────────────────────────────────────────────────── */
+QDockWidget > QWidget {
+    background-color: #2b2b2b;
+    color: #e0e0e0;
+}
+
+/* ── Groups ─────────────────────────────────────────────────────────── */
+QGroupBox {
+    font-weight: bold;
+    color: #4dabf7;
+    border: 1px solid #404040;
+    border-radius: 4px;
+    margin-top: 10px;
+    padding-top: 4px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 4px;
+    left: 8px;
+}
+
+/* ── Text inputs ─────────────────────────────────────────────────────── */
+QLineEdit {
+    background-color: #1e1e1e;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #e0e0e0;
+    padding: 2px 4px;
+    selection-background-color: #1971c2;
+}
+QLineEdit:focus {
+    border-color: #4dabf7;
+}
+QLineEdit:hover {
+    border-color: #888;
+}
+QLineEdit[invalid="true"] {
+    border-color: #ff6b6b;
+    background-color: #3a1a1a;
+}
+QLineEdit:disabled {
+    color: #777;
+    background-color: #252525;
+}
+
+/* ── ComboBoxes ──────────────────────────────────────────────────────── */
+QComboBox {
+    background-color: #1e1e1e;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #e0e0e0;
+    padding: 2px 4px;
+}
+QComboBox:focus {
+    border-color: #4dabf7;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 18px;
+}
+QComboBox QAbstractItemView {
+    background-color: #2b2b2b;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    selection-background-color: #1971c2;
+    selection-color: white;
+    outline: none;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+QPushButton {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #e0e0e0;
+    padding: 3px 10px;
+}
+QPushButton:hover {
+    background-color: #484848;
+    border-color: #4dabf7;
+}
+QPushButton:pressed {
+    background-color: #222;
+}
+QPushButton#calculateButton {
+    background-color: #1971c2;
+    border-color: #1864ab;
+    color: white;
+    font-weight: bold;
+    padding: 4px 12px;
+}
+QPushButton#calculateButton:hover {
+    background-color: #1864ab;
+}
+QPushButton#calculateButton:disabled {
+    background-color: #3a4a5a;
+    color: #999;
+}
+
+/* ── SpinBoxes ───────────────────────────────────────────────────────── */
+QSpinBox, QDoubleSpinBox {
+    background-color: #1e1e1e;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #e0e0e0;
+    padding: 2px 4px;
+}
+QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: #4dabf7;
+}
+
+/* ── Labels ──────────────────────────────────────────────────────────── */
+QLabel {
+    color: #c8c8c8;
+}
+
+/* ── Log / text output ───────────────────────────────────────────────── */
+QTextEdit {
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+    color: #b0b0b0;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 11px;
+}
+
+/* ── Checkboxes ──────────────────────────────────────────────────────── */
+QCheckBox {
+    color: #c8c8c8;
+    spacing: 6px;
+}
+QCheckBox::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #666;
+    border-radius: 2px;
+    background-color: #1e1e1e;
+}
+QCheckBox::indicator:checked {
+    background-color: #1971c2;
+    border-color: #1864ab;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────── */
+QProgressBar {
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 3px;
+    text-align: center;
+    color: #e0e0e0;
+    height: 8px;
+}
+QProgressBar::chunk {
+    background-color: #1971c2;
+    border-radius: 2px;
+}
+
+/* ── Scroll bars ─────────────────────────────────────────────────────── */
+QScrollBar:vertical {
+    background-color: #2b2b2b;
+    width: 10px;
+    border: none;
+}
+QScrollBar::handle:vertical {
+    background-color: #555;
+    border-radius: 4px;
+    min-height: 20px;
+}
+QScrollBar::handle:vertical:hover {
+    background-color: #777;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}

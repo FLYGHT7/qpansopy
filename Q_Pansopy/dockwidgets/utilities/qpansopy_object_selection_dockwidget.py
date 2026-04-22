@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal
+﻿from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal
 from qgis.core import QgsMapLayerProxyModel, Qgis
 from qgis.gui import QgsMapLayerComboBox
 import os

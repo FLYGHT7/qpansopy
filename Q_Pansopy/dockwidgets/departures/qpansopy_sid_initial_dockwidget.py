@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYSIDInitialDockWidget
@@ -26,8 +26,8 @@ import os
 import json
 import datetime
 
-from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt, QMimeData
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt, QMimeData
 from qgis.core import QgsMapLayerProxyModel, Qgis
 
 

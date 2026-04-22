@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYILSDockWidget
@@ -25,9 +25,9 @@ import os
 import json
 import datetime
 from collections import OrderedDict
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMimeData
+from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
 from ...utils import format_parameters_table
@@ -76,6 +76,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        
        # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
        self.setup_lineedits()
+       self._setup_tooltips()
        
        # Añadir botón para copiar parámetros
        self.setup_copy_button()
@@ -92,6 +93,24 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Log message
        self.log("QPANSOPY ILS plugin loaded. Select layers and parameters, then click Calculate.")
    
+   def _setup_tooltips(self) -> None:
+       """Set helpful tooltips on critical input fields."""
+       if hasattr(self, 'thrElevLineEdit'):
+           self.thrElevLineEdit.setToolTip(
+               "Threshold Elevation\nUnit: m or ft (select with dropdown)\nRange: -1000 to 15000 ft")
+       if hasattr(self, 'runwayLayerComboBox'):
+           self.runwayLayerComboBox.setToolTip(
+               "Runway centreline layer (line geometry)")
+       if hasattr(self, 'pointLayerComboBox'):
+           self.pointLayerComboBox.setToolTip(
+               "Threshold point layer (point geometry)\nMust contain the runway threshold point")
+       if hasattr(self, 'outputFolderLineEdit'):
+           self.outputFolderLineEdit.setToolTip(
+               "Output folder for KML and result files")
+       if hasattr(self, 'exportKmlCheckBox'):
+           self.exportKmlCheckBox.setToolTip(
+               "Export calculated surfaces to KML file in the output folder")
+
    def setup_copy_button(self):
        """Configurar botones para copiar parámetros al portapapeles"""
        # Crear un layout horizontal para los botones
@@ -334,8 +353,8 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
    def setup_lineedits(self):
        """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
        # Crear un validador para números decimales
-       regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-       validator = QRegExpValidator(regex)
+       regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+       validator = QRegularExpressionValidator(regex)
        
        # Threshold Elevation con selector de unidades
        self.thrElevLineEdit = QtWidgets.QLineEdit(self)

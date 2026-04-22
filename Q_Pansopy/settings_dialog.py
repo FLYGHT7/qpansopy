@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt
+﻿from qgis.PyQt import QtWidgets, QtGui
+from qgis.PyQt.QtCore import Qt
 import os
 
 class SettingsDialog(QtWidgets.QDialog):

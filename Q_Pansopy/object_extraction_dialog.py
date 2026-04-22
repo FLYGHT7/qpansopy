@@ -1,7 +1,7 @@
-# Este archivo es un reemplazo para el diálogo de extracción que ya no es necesario
+﻿# Este archivo es un reemplazo para el diálogo de extracción que ya no es necesario
 # Ya que la funcionalidad ahora se ejecuta directamente desde el dockwidget
 
-from PyQt5.QtWidgets import QDialog
+from qgis.PyQt.QtWidgets import QDialog
 
 class ObjectExtractionDialog(QDialog):
     """

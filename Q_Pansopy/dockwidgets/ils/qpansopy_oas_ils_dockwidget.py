@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYOASILSDockWidget
@@ -25,9 +25,9 @@ import os
 import json
 import datetime
 import traceback
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMimeData
+from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
 
@@ -110,7 +110,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
    
    def request_csv_file(self):
        """Request CSV file from user - mandatory for calculation"""
-       from PyQt5.QtWidgets import QFileDialog
+       from qgis.PyQt.QtWidgets import QFileDialog
        
        csv_path, _ = QFileDialog.getOpenFileName(
            self,
@@ -332,8 +332,8 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
    def setup_lineedits(self):
        """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
        # Crear un validador para números decimales
-       regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-       validator = QRegExpValidator(regex)
+       regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+       validator = QRegularExpressionValidator(regex)
        
        # Configurar el espaciado y márgenes del formulario
        self.formLayout.setSpacing(8)

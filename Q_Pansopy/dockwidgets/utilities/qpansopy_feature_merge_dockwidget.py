@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYFeatureMergeDockWidget
@@ -22,10 +22,10 @@ Procedure Analysis and Obstacle Protection Surfaces - Feature Merge Module
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic, QtCore
-from PyQt5.QtCore import pyqtSignal, QRegExp
-from PyQt5.QtGui import QRegExpValidator, QColor
-from PyQt5.QtWidgets import QColorDialog
+from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
+from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
+from qgis.PyQt.QtWidgets import QColorDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel, QgsVectorFileWriter
 from qgis.gui import QgsMapLayerComboBox
 from qgis.core import Qgis

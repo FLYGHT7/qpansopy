@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYWindSpiralDockWidget
@@ -22,10 +22,10 @@ Procedure Analysis and Obstacle Protection Surfaces - Wind Spiral Module
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic, QtCore
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtWidgets import QMessageBox
+from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
+from qgis.PyQt.QtGui import QRegularExpressionValidator
+from qgis.PyQt.QtWidgets import QMessageBox
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
 from qgis.core import Qgis
@@ -108,11 +108,11 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.formLayout.setFormAlignment(Qt.AlignLeft)
         
         # Create validator for strictly positive numeric inputs (IAS, altitude, bank angle, wind speed)
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
+        regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegularExpressionValidator(regex)
         # ISA variation allows negatives: use a broader validator (sign, digits, decimal)
-        isa_regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]*")
-        isa_validator = QRegExpValidator(isa_regex)
+        isa_regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]*")
+        isa_validator = QRegularExpressionValidator(isa_regex)
         
         # Common styles for consistent UI
         line_edit_style = """

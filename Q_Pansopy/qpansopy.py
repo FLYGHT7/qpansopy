@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 QPANSOPY Plugin for QGIS
 Aviation surfaces plugin for QGIS developed by FLYGHT7
@@ -718,8 +718,8 @@ class Qpansopy:
 
     def show_about_dialog(self):
         """Show the About dialog"""
-        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QHBoxLayout
-        from PyQt5.QtGui import QPixmap
+        from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QLabel, QHBoxLayout
+        from qgis.PyQt.QtGui import QPixmap
         dlg = QDialog()
         dlg.setWindowTitle("About QPANSOPY")
         layout = QVBoxLayout(dlg)

@@ -1,4 +1,4 @@
-from qgis.core import (
+﻿from qgis.core import (
     QgsProject,
     QgsFeatureRequest,
     QgsSpatialIndex,
@@ -11,8 +11,8 @@ from qgis.core import (
     Qgis
 )
 from qgis.utils import iface
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QComboBox, QLabel, QPushButton
-from PyQt5.QtGui import QColor
+from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QComboBox, QLabel, QPushButton
+from qgis.PyQt.QtGui import QColor
 
 # ----- Custom UI Dialog -----
 class LayerSelectionDialog(QDialog):

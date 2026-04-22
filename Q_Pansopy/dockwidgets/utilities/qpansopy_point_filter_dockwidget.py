@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYPointFilterDockWidget
@@ -22,10 +22,10 @@ Procedure Analysis and Obstacle Protection Surfaces - Point Filter Module
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic, QtCore
-from PyQt5.QtCore import pyqtSignal, QRegExp
-from PyQt5.QtGui import QRegExpValidator, QColor
-from PyQt5.QtWidgets import QColorDialog
+from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
+from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
+from qgis.PyQt.QtWidgets import QColorDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem
 from qgis.core import Qgis
 import datetime
@@ -83,8 +83,8 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def setup_validators(self):
         """Setup validators for numeric inputs"""
         # Create validator for decimal numbers (including negative)
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
+        regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegularExpressionValidator(regex)
         
         if hasattr(self, 'thrElevLineEdit'):
             self.thrElevLineEdit.setValidator(validator)
