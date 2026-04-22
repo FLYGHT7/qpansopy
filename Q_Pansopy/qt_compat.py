@@ -119,3 +119,63 @@ except AttributeError:
         | QDockWidget.DockWidgetFloatable   # type: ignore[attr-defined]
         | QDockWidget.DockWidgetClosable    # type: ignore[attr-defined]
     )
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible Qt.DockWidgetArea enum values
+#
+# Qt5: Qt.RightDockWidgetArea
+# Qt6: Qt.DockWidgetArea.RightDockWidgetArea
+# ---------------------------------------------------------------------------
+try:
+    _dwa = Qt.DockWidgetArea
+    Qt_RightDockWidgetArea = _dwa.RightDockWidgetArea
+    Qt_LeftDockWidgetArea = _dwa.LeftDockWidgetArea
+    Qt_TopDockWidgetArea = _dwa.TopDockWidgetArea
+    Qt_BottomDockWidgetArea = _dwa.BottomDockWidgetArea
+except AttributeError:
+    Qt_RightDockWidgetArea = Qt.RightDockWidgetArea   # type: ignore[attr-defined]
+    Qt_LeftDockWidgetArea = Qt.LeftDockWidgetArea     # type: ignore[attr-defined]
+    Qt_TopDockWidgetArea = Qt.TopDockWidgetArea       # type: ignore[attr-defined]
+    Qt_BottomDockWidgetArea = Qt.BottomDockWidgetArea # type: ignore[attr-defined]
+
+Qt_ALLOWED_DOCK_AREAS = Qt_LeftDockWidgetArea | Qt_RightDockWidgetArea
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible Qt.AlignmentFlag enum values
+#
+# Qt5: Qt.AlignTop
+# Qt6: Qt.AlignmentFlag.AlignTop
+# ---------------------------------------------------------------------------
+try:
+    _af = Qt.AlignmentFlag
+    Qt_AlignTop = _af.AlignTop
+    Qt_AlignBottom = _af.AlignBottom
+    Qt_AlignLeft = _af.AlignLeft
+    Qt_AlignRight = _af.AlignRight
+    Qt_AlignHCenter = _af.AlignHCenter
+    Qt_AlignVCenter = _af.AlignVCenter
+    Qt_AlignCenter = _af.AlignCenter
+except AttributeError:
+    Qt_AlignTop = Qt.AlignTop           # type: ignore[attr-defined]
+    Qt_AlignBottom = Qt.AlignBottom     # type: ignore[attr-defined]
+    Qt_AlignLeft = Qt.AlignLeft         # type: ignore[attr-defined]
+    Qt_AlignRight = Qt.AlignRight       # type: ignore[attr-defined]
+    Qt_AlignHCenter = Qt.AlignHCenter   # type: ignore[attr-defined]
+    Qt_AlignVCenter = Qt.AlignVCenter   # type: ignore[attr-defined]
+    Qt_AlignCenter = Qt.AlignCenter     # type: ignore[attr-defined]
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible QFormLayout ItemRole enum values
+#
+# Qt5: QFormLayout.FieldRole
+# Qt6: QFormLayout.ItemRole.FieldRole
+# ---------------------------------------------------------------------------
+try:
+    _ir = QFormLayout.ItemRole
+    FORM_LABEL_ROLE = _ir.LabelRole
+    FORM_FIELD_ROLE = _ir.FieldRole
+    FORM_SPANNING_ROLE = _ir.SpanningRole
+except AttributeError:
+    FORM_LABEL_ROLE = QFormLayout.LabelRole     # type: ignore[attr-defined]
+    FORM_FIELD_ROLE = QFormLayout.FieldRole     # type: ignore[attr-defined]
+    FORM_SPANNING_ROLE = QFormLayout.SpanningRole  # type: ignore[attr-defined]

@@ -11,6 +11,7 @@ from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePoli
 from qgis.PyQt import sip
 from qgis.PyQt import QtWidgets, QtCore
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
+from .qt_compat import (Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop)
 
 
 # Collect import errors to surface them in initGui()
@@ -358,7 +359,7 @@ class Qpansopy:
             except Exception:
                 pass
             try:
-                instance.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+                instance.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
             except Exception:
                 pass
             # Initial configuration
@@ -398,7 +399,7 @@ class Qpansopy:
                     except Exception:
                         pass
             instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, instance)
+            self.iface.addDockWidget(Qt_RightDockWidgetArea, instance)
             self._ensure_dock_anchor(name, instance)
             instance.show()
             instance.raise_()
@@ -536,7 +537,7 @@ class Qpansopy:
                         pass
                 # Prefer top alignment for contained widgets
                 try:
-                    lg_layout.setAlignment(Qt.AlignTop)
+                    lg_layout.setAlignment(Qt_AlignTop)
                 except Exception:
                     pass
             except Exception:
@@ -631,7 +632,7 @@ class Qpansopy:
                     try:
                         for j in range(layout.count()):
                             layout.setStretch(j, 0)
-                        layout.setAlignment(Qt.AlignTop)
+                        layout.setAlignment(Qt_AlignTop)
                     except Exception:
                         pass
 

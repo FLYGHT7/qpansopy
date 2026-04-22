@@ -24,7 +24,7 @@ from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsProject, QgsMapLayerProxyModel
 from qgis.core import Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS
 
 
 # Use __file__ to get the current script path
@@ -46,7 +46,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Configure the dock widget to be resizable
         self.setFeatures(DOCK_FEATURES_DEFAULT)
         try:
-            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
         except Exception:
             pass
         self.setMinimumHeight(300)

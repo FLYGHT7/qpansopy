@@ -29,7 +29,7 @@ import datetime
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, Qt, QMimeData
 from qgis.core import QgsMapLayerProxyModel, Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS
 
 
 # Load UI file
@@ -70,7 +70,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setFeatures(DOCK_FEATURES_DEFAULT)
         
         try:
-            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
         except Exception:
             pass
         

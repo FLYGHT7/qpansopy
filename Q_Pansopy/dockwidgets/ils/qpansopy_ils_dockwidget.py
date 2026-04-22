@@ -31,7 +31,7 @@ from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
 from ...utils import format_parameters_table
-from ...qt_compat import DOCK_FEATURES_DEFAULT
+from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -59,7 +59,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Configure the dock widget to be resizable without forcing main window geometry
        self.setFeatures(DOCK_FEATURES_DEFAULT)
        try:
-           self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+           self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
        except Exception:
            pass
        # Connect signals
@@ -389,11 +389,11 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            return
 
        for i in range(form_layout.rowCount()):
-           field_item = form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole)
+           field_item = form_layout.itemAt(i, FORM_FIELD_ROLE)
            if field_item is not None and field_item.widget() == old_widget:
                form_layout.removeWidget(old_widget)
                old_widget.hide()
-               form_layout.setWidget(i, QtWidgets.QFormLayout.FieldRole, new_widget)
+               form_layout.setWidget(i, FORM_FIELD_ROLE, new_widget)
                return
    
    def store_exact_value(self, param_name, text):

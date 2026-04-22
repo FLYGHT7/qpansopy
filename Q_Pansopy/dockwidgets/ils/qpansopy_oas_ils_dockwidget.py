@@ -30,7 +30,7 @@ from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMim
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -61,7 +61,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        # Configure the dock widget to be resizable without forcing main window geometry
        self.setFeatures(DOCK_FEATURES_DEFAULT)
        try:
-           self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+           self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
        except Exception:
            pass
        # Aumentar el espaciado en los layouts

@@ -26,6 +26,7 @@ from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
 from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.PyQt.QtWidgets import QMessageBox
+from ....qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
 from qgis.core import Qgis
@@ -104,8 +105,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         # Improve form layout spacing and alignment
         self.formLayout.setVerticalSpacing(12)
         self.formLayout.setHorizontalSpacing(10)
-        self.formLayout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.formLayout.setFormAlignment(Qt.AlignLeft)
+        self.formLayout.setLabelAlignment(Qt_AlignRight | Qt_AlignVCenter)
+        self.formLayout.setFormAlignment(Qt_AlignLeft)
         
         # Create validator for strictly positive numeric inputs (IAS, altitude, bank angle, wind speed)
         regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")

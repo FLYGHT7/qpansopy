@@ -27,7 +27,7 @@ from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT
+from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS
 import json
 import datetime
 
@@ -60,7 +60,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setFeatures(DOCK_FEATURES_DEFAULT)
         # Allow docking left/right and avoid aggressive size constraints
         try:
-            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
         except Exception:
             pass
         # Connect signals
@@ -306,7 +306,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         old_widget.hide()
         
         # Añadir el nuevo widget
-        layout.setWidget(row, QtWidgets.QFormLayout.FieldRole, new_widget)
+        layout.setWidget(row, FORM_FIELD_ROLE, new_widget)
 
     def store_exact_value(self, param_name, text):
         """Almacenar el valor exacto ingresado por el usuario"""
