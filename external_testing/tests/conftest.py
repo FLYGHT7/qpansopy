@@ -17,7 +17,8 @@ def _install_qgis_stubs():
         'QgsProject', 'QgsVectorLayer', 'QgsFeature', 'QgsGeometry',
         'QgsCoordinateReferenceSystem', 'QgsCoordinateTransform', 'QgsPointXY',
         'QgsWkbTypes', 'QgsField', 'QgsFields', 'QgsPoint', 'QgsLineString',
-        'QgsPolygon', 'QgsVectorFileWriter', 'QgsCircularString'
+        'QgsPolygon', 'QgsVectorFileWriter', 'QgsCircularString',
+        'QgsRuleBasedRenderer', 'QgsFillSymbol',
     ]:
         setattr(core, name, _Dummy)
 

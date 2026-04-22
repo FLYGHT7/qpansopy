@@ -6,7 +6,8 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, 
     QgsCoordinateReferenceSystem,
     QgsPointXY, QgsWkbTypes, QgsField, QgsFields, QgsPoint,
-    QgsLineString, QgsPolygon, QgsVectorFileWriter
+    QgsLineString, QgsPolygon, QgsVectorFileWriter,
+    QgsRuleBasedRenderer, QgsFillSymbol
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
@@ -291,10 +292,34 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # Update layer extents
     v_layer.updateExtents()
     
-    # Style the layer - green with 50% opacity as requested by client
-    v_layer.renderer().symbol().setColor(QColor(0, 255, 0, 127))  # Green with 50% opacity
-    v_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor(0, 255, 0))
-    v_layer.renderer().symbol().symbolLayer(0).setStrokeWidth(0.7)
+    # Style the layer - rule-based renderer so surface boundaries are visible.
+    # Primary surfaces (approach, missed, ground): semi-transparent solid green fill.
+    # Transition surfaces (secondary areas): diagonal-hatch fill.
+    # Both use the same dark green outline colour used in primary_secondary_areas.qml
+    # so individual polygon boundaries are clearly distinguishable.
+    _OUTLINE = '35,139,69,255'  # dark green, matches primary_secondary_areas.qml
+    primary_sym = QgsFillSymbol.createSimple({
+        'color': '0,200,0,120',
+        'outline_color': _OUTLINE,
+        'outline_width': '0.75',
+        'style': 'solid',
+    })
+    transition_sym = QgsFillSymbol.createSimple({
+        'color': '0,200,0,200',
+        'outline_color': _OUTLINE,
+        'outline_width': '0.75',
+        'style': 'b_diagonal',
+    })
+    root_rule = QgsRuleBasedRenderer.Rule(None)
+    primary_rule = QgsRuleBasedRenderer.Rule(primary_sym)
+    primary_rule.setLabel('Primary Surfaces')
+    primary_rule.setFilterExpression("\"ILS_surface\" NOT LIKE 'transition surface%'")
+    root_rule.appendChild(primary_rule)
+    transition_rule = QgsRuleBasedRenderer.Rule(transition_sym)
+    transition_rule.setLabel('Transition Surfaces')
+    transition_rule.setFilterExpression("\"ILS_surface\" LIKE 'transition surface%'")
+    root_rule.appendChild(transition_rule)
+    v_layer.setRenderer(QgsRuleBasedRenderer(root_rule))
     
     # Add layer to the project
     QgsProject.instance().addMapLayer(v_layer)

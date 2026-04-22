@@ -334,14 +334,15 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
         # Add all features
         pr.addFeatures(features)
         
-        # Set layer style
+        # Set layer style - use dark stroke colours so surface boundaries are visible
+        # (a stroke the same hue as the fill makes internal lines invisible).
         symbol = v_layer.renderer().symbol()
         if key == "Extended":
-            symbol.setColor(QColor(0, 255, 0, 127))
-            symbol.symbolLayer(0).setStrokeColor(QColor(0, 255, 0))
+            symbol.setColor(QColor(0, 200, 0, 127))
+            symbol.symbolLayer(0).setStrokeColor(QColor(35, 139, 69))   # dark green
         else:
             symbol.setColor(QColor(255, 0, 0, 127))
-            symbol.symbolLayer(0).setStrokeColor(QColor(255, 0, 0))
+            symbol.symbolLayer(0).setStrokeColor(QColor(180, 0, 0))     # dark red
         symbol.symbolLayer(0).setStrokeWidth(0.5)
         
         # Update layer extents
