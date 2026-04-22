@@ -115,73 +115,10 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         isa_regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]*")
         isa_validator = QRegularExpressionValidator(isa_regex)
         
-        # Common styles for consistent UI
-        line_edit_style = """
-            QLineEdit {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                padding: 4px 8px;
-                font-size: 11px;
-                background-color: white;
-            }
-            QLineEdit:focus {
-                border-color: #0078d4;
-            }
-            QLineEdit:hover {
-                border-color: #999;
-            }
-        """
-        
-        combo_box_style = """
-            QComboBox {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                padding: 4px 8px;
-                font-size: 11px;
-                background-color: white;
-                color: black;
-                selection-background-color: #0078d4;
-                selection-color: white;
-            }
-            QComboBox:focus {
-                border-color: #0078d4;
-            }
-            QComboBox:hover {
-                border-color: #999;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-                background-color: transparent;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 6px solid #666;
-                margin-right: 6px;
-            }
-            QComboBox QAbstractItemView {
-                border: 1px solid #ccc;
-                background-color: white;
-                selection-background-color: #0078d4;
-                selection-color: white;
-                outline: none;
-            }
-            QComboBox QAbstractItemView::item {
-                padding: 4px 8px;
-                border: none;
-                color: black;
-            }
-            QComboBox QAbstractItemView::item:selected {
-                background-color: #0078d4;
-                color: white;
-            }
-            QComboBox QAbstractItemView::item:hover {
-                background-color: #e3f2fd;
-                color: black;
-            }
-        """
+        # Common styles defined in dockwidget_base.qss — do not set inline here.
+        # Setting background-color without color causes white-on-white in dark themes.
+        line_edit_style = ""
+        combo_box_style = ""
         
         # ISA Variation with Calculator button - aligned with other fields
         isa_container = QtWidgets.QWidget(self)
@@ -207,22 +144,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.isaCalculatorButton.setMinimumHeight(28)
         self.isaCalculatorButton.setMaximumHeight(28)
         self.isaCalculatorButton.clicked.connect(self.show_isa_calculator_dialog)
-        self.isaCalculatorButton.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                font-size: 14px;
-                padding: 2px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-                border-color: #0078d4;
-            }
-            QPushButton:pressed {
-                background-color: #dee2e6;
-            }
-        """)
+        self.isaCalculatorButton.setStyleSheet("")
         
         # Add widgets to layout - LineEdit takes most space, button is fixed
         isa_layout.addWidget(self.isaVarLineEdit)
@@ -306,50 +228,12 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Show Points checkbox
         self.showPointsCheckBox = QtWidgets.QCheckBox("Show intermediate points", self)
-        self.showPointsCheckBox.setStyleSheet("""
-            QCheckBox {
-                font-size: 11px;
-                spacing: 8px;
-            }
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: white;
-            }
-            QCheckBox::indicator:hover {
-                border-color: #0078d4;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #0078d4;
-                border-color: #0078d4;
-            }
-        """)
+        self.showPointsCheckBox.setStyleSheet("")
         self.formLayout.addRow("", self.showPointsCheckBox)
         
         # Export KML checkbox
         self.exportKmlCheckBox = QtWidgets.QCheckBox("Export KML", self)
-        self.exportKmlCheckBox.setStyleSheet("""
-            QCheckBox {
-                font-size: 11px;
-                spacing: 8px;
-            }
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: white;
-            }
-            QCheckBox::indicator:hover {
-                border-color: #0078d4;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #0078d4;
-                border-color: #0078d4;
-            }
-        """)
+        self.exportKmlCheckBox.setStyleSheet("")
         self.formLayout.addRow("", self.exportKmlCheckBox)
         
         # Output folder
