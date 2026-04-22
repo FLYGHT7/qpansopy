@@ -24,7 +24,7 @@ from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsProject, QgsMapLayerProxyModel
 from qgis.core import Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer
 
 
 # Use __file__ to get the current script path
@@ -56,7 +56,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.directionButton.clicked.connect(self.toggle_direction)
         
         # Filter layers in comboboxes - Runway layer should be a line
-        self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Direction state: False = Start to End, True = End to Start
         self.is_reversed = False

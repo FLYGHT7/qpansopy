@@ -5,6 +5,15 @@ from qgis.core import (
 from qgis.PyQt.QtGui import QColor
 import math
 
+# Compat for QGIS 3/4: QgsWkbTypes.LineGeometry → Qgis.GeometryType.Line
+try:
+    _LINE_GEOMETRY = Qgis.GeometryType.Line  # QGIS 4+
+except AttributeError:
+    try:
+        _LINE_GEOMETRY = QgsWkbTypes.LineGeometry  # QGIS 3  # type: ignore[attr-defined]
+    except AttributeError:
+        _LINE_GEOMETRY = 1  # type: ignore[assignment]  # test-stub sentinel
+
 # Reuse existing TAS/turn helpers from wind_spiral
 try:
     from ..wind_spiral import tas_calculation
@@ -34,7 +43,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
 
         feat = sel[0]
         geom = feat.geometry()
-        if geom.isEmpty() or geom.type() != QgsWkbTypes.LineGeometry:
+        if geom.isEmpty() or geom.type() != _LINE_GEOMETRY:
             iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: expected a line", level=Qgis.Warning)
             return False
 

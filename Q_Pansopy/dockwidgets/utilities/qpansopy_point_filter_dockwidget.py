@@ -28,6 +28,7 @@ from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
 from qgis.PyQt.QtWidgets import QColorDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem
 from qgis.core import Qgis
+from ...qt_compat import Qgis_GeomType_Point, Qgis_LayerType_Vector
 import datetime
 
 # Use __file__ to get the current script path
@@ -196,7 +197,7 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return False
         
         # Check if active layer is a point layer
-        if active_layer.type() != QgsVectorLayer.VectorLayer or active_layer.geometryType() != QgsWkbTypes.PointGeometry:
+        if active_layer.type() != Qgis_LayerType_Vector or active_layer.geometryType() != Qgis_GeomType_Point:
             self.log("Error: Active layer must be a point layer")
             self.iface.messageBar().pushMessage("Error", "Active layer must be a point layer", level=Qgis.Warning)
             return False

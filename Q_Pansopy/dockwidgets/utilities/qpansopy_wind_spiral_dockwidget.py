@@ -26,7 +26,7 @@ from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
 from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.PyQt.QtWidgets import QMessageBox
-from ....qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop
+from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
 from qgis.core import Qgis
@@ -72,9 +72,9 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Setup layer combos (these should already exist from UI file)
         if hasattr(self, 'pointLayerComboBox'):
-            self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
+            self.pointLayerComboBox.setFilters(MLPM_PointLayer)
         if hasattr(self, 'referenceLayerComboBox'):
-            self.referenceLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+            self.referenceLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Set default output folder
         if hasattr(self, 'outputFolderLineEdit'):

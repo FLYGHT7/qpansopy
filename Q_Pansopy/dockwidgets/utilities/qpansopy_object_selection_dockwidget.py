@@ -2,6 +2,7 @@
 from qgis.PyQt.QtCore import pyqtSignal
 from qgis.core import QgsMapLayerProxyModel, Qgis
 from qgis.gui import QgsMapLayerComboBox
+from ...qt_compat import MLPM_PointLayer, MLPM_PolygonLayer
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -16,8 +17,8 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
 
         # Setup layer combos
-        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.surfaceLayerComboBox.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
+        self.surfaceLayerComboBox.setFilters(MLPM_PolygonLayer)
         
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())

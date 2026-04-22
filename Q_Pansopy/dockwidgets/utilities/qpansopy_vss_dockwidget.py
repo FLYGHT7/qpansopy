@@ -27,7 +27,7 @@ from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS
+from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer
 import json
 import datetime
 
@@ -71,8 +71,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.outputFolderLineEdit.setText(self.get_desktop_path())
         
         # Filter layers in comboboxes
-        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
+        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
         self.setup_lineedits()

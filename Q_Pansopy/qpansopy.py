@@ -11,7 +11,11 @@ from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePoli
 from qgis.PyQt import sip
 from qgis.PyQt import QtWidgets, QtCore
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication
-from .qt_compat import (Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop)
+from .qt_compat import (
+    Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop,
+    Qt_ScrollBarAsNeeded, Qt_SizeVerCursor, Qt_LeftButton,
+    QEvent_MouseButtonPress, QEvent_MouseMove, QEvent_MouseButtonRelease,
+)
 
 
 # Collect import errors to surface them in initGui()
@@ -445,8 +449,8 @@ class Qpansopy:
             except Exception:
                 pass
             try:
-                log_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-                log_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+                log_widget.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
+                log_widget.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
             except Exception:
                 pass
         except Exception:
@@ -563,7 +567,7 @@ class Qpansopy:
                 handle.setObjectName("qpansopyLogResizeHandle")
                 handle.setFrameShape(QtWidgets.QFrame.NoFrame)
                 handle.setFixedHeight(6)
-                handle.setCursor(Qt.SizeVerCursor)
+                handle.setCursor(Qt_SizeVerCursor)
                 handle.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 # subtle visual cue
                 handle.setStyleSheet("QFrame#qpansopyLogResizeHandle { background: rgba(0,0,0,0.08); border-radius: 2px; }")
@@ -579,11 +583,11 @@ class Qpansopy:
                         self._max = max_h
                     def eventFilter(self, obj, event):
                         et = event.type()
-                        if et == QtCore.QEvent.MouseButtonPress and (event.button() == Qt.LeftButton):
+                        if et == QEvent_MouseButtonPress and (event.button() == Qt_LeftButton):
                             self._press_pos = event.globalPos()
                             self._start_h = self._target.height()
                             return True
-                        if et == QtCore.QEvent.MouseMove and self._press_pos is not None:
+                        if et == QEvent_MouseMove and self._press_pos is not None:
                             dy = event.globalPos().y() - self._press_pos.y()
                             nh = max(self._min, min(self._max, self._start_h + dy))
                             self._target.setFixedHeight(nh)
@@ -594,7 +598,7 @@ class Qpansopy:
                             except Exception:
                                 pass
                             return True
-                        if et == QtCore.QEvent.MouseButtonRelease:
+                        if et == QEvent_MouseButtonRelease:
                             self._press_pos = None
                             self._start_h = None
                             return True

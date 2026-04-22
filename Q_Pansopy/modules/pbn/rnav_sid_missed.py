@@ -4,6 +4,15 @@ from qgis.PyQt.QtGui import QColor
 from qgis.core import Qgis
 from math import radians
 
+# Compat for QGIS 3/4: QgsWkbTypes.LineGeometry → Qgis.GeometryType.Line
+try:
+    _LINE_GEOMETRY = Qgis.GeometryType.Line  # QGIS 4+
+except AttributeError:
+    try:
+        _LINE_GEOMETRY = QgsWkbTypes.LineGeometry  # QGIS 3  # type: ignore[attr-defined]
+    except AttributeError:
+        _LINE_GEOMETRY = 1  # type: ignore[assignment]  # test-stub sentinel
+
 
 def _nm_to_m(nm: float) -> float:
     return nm * 1852.0
@@ -23,7 +32,7 @@ def run_rnav_sid_missed(iface, routing_layer, rnav_mode: str, op_mode: str,
             return False
 
         geom = sel[0].geometry()
-        if geom.isEmpty() or geom.type() != QgsWkbTypes.LineGeometry:
+        if geom.isEmpty() or geom.type() != _LINE_GEOMETRY:
             iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: expected line", level=Qgis.Warning)
             return False
 

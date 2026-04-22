@@ -29,7 +29,7 @@ import datetime
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, Qt, QMimeData
 from qgis.core import QgsMapLayerProxyModel, Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer
 
 
 # Load UI file
@@ -77,7 +77,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setMinimumHeight(300)
         
         # Setup layer combobox
-        self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
