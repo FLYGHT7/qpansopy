@@ -23,7 +23,10 @@ Procedure Analysis and Obstacle Protection Surfaces
 
 from qgis.core import Qgis
 from xml.etree import ElementTree as ET  # namespace registration, Element, write
-import defusedxml.ElementTree as _defused_ET  # safe XML parse (XXE protection)
+try:
+    import defusedxml.ElementTree as _defused_ET  # safe XML parse (XXE protection)
+except ImportError:  # defusedxml not available in QGIS bundled Python
+    import xml.etree.ElementTree as _defused_ET  # type: ignore[no-redef]
 import re
 
 
