@@ -31,6 +31,7 @@ from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
 from ...utils import format_parameters_table
+from ...qt_compat import DOCK_FEATURES_DEFAULT
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -56,9 +57,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        }
        
        # Configure the dock widget to be resizable without forcing main window geometry
-       self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                        QtWidgets.QDockWidget.DockWidgetFloatable |
-                        QtWidgets.QDockWidget.DockWidgetClosable)
+       self.setFeatures(DOCK_FEATURES_DEFAULT)
        try:
            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
        except Exception:

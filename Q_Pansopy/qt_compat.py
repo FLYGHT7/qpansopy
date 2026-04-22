@@ -100,3 +100,22 @@ except ImportError:
 def get_qt_backend() -> str:
     """Return the name of the active Qt backend (``'qgis.PyQt'``, ``'PyQt6'``, or ``'PyQt5'``)."""
     return _QT_BACKEND
+
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible QDockWidget feature flags
+#
+# Qt5 / PyQt5: enums are unscoped  → QDockWidget.DockWidgetMovable
+# Qt6 / PyQt6: enums are scoped    → QDockWidget.DockWidgetFeature.DockWidgetMovable
+# ---------------------------------------------------------------------------
+try:
+    _dw = QDockWidget.DockWidgetFeature  # Qt6 scoped enum namespace
+    DOCK_FEATURES_DEFAULT = (
+        _dw.DockWidgetMovable | _dw.DockWidgetFloatable | _dw.DockWidgetClosable
+    )
+except AttributeError:
+    DOCK_FEATURES_DEFAULT = (           # type: ignore[assignment]
+        QDockWidget.DockWidgetMovable   # type: ignore[attr-defined]
+        | QDockWidget.DockWidgetFloatable   # type: ignore[attr-defined]
+        | QDockWidget.DockWidgetClosable    # type: ignore[attr-defined]
+    )

@@ -29,6 +29,7 @@ import datetime
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, Qt, QMimeData
 from qgis.core import QgsMapLayerProxyModel, Qgis
+from ...qt_compat import DOCK_FEATURES_DEFAULT
 
 
 # Load UI file
@@ -66,11 +67,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.exact_values = {}
         
         # Configure dock widget properties
-        self.setFeatures(
-            QtWidgets.QDockWidget.DockWidgetMovable |
-            QtWidgets.QDockWidget.DockWidgetFloatable |
-            QtWidgets.QDockWidget.DockWidgetClosable
-        )
+        self.setFeatures(DOCK_FEATURES_DEFAULT)
         
         try:
             self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)

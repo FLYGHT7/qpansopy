@@ -27,6 +27,7 @@ from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.core import Qgis
+from ...qt_compat import DOCK_FEATURES_DEFAULT
 import json
 import datetime
 
@@ -56,9 +57,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         }
         
         # Configure the dock widget to be resizable without forcing main window resize
-        self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                         QtWidgets.QDockWidget.DockWidgetFloatable |
-                         QtWidgets.QDockWidget.DockWidgetClosable)
+        self.setFeatures(DOCK_FEATURES_DEFAULT)
         # Allow docking left/right and avoid aggressive size constraints
         try:
             self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
