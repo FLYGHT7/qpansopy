@@ -119,8 +119,7 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
         if routing_layer is None:
             return None
 
-        # Original behavior: select all missed segments automatically
-        routing_layer.selectAll()
+        # Select missed approach segments by expression
         routing_layer.selectByExpression("segment='missed'")
         selected_features = routing_layer.selectedFeatures()
 

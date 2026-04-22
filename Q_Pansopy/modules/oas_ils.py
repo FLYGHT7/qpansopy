@@ -10,7 +10,7 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant, Qt
 from qgis.PyQt.QtGui import QColor
-from qgis.PyQt.QtWidgets import QFileDialog, QDialog, QFormLayout, QLineEdit, QComboBox, QDialogButtonBox, QMessageBox
+from qgis.PyQt.QtWidgets import QDialog, QFormLayout, QLineEdit, QComboBox, QDialogButtonBox, QMessageBox
 from qgis.core import Qgis
 import math
 import os
@@ -54,129 +54,7 @@ def solve_plane_intersection(plane1, plane2, target_height):
         return None
 
 
-def csv_to_structured_json(THR_elev, FAP_elev, MOC_intermediate, FAP_height, ILS_extension_height):
-    """
-    Read OAS constants from a CSV file and convert to structured JSON
-    
-    :param THR_elev: Threshold elevation in meters
-    :param FAP_elev: FAP elevation in feet
-    :param MOC_intermediate: MOC intermediate in meters
-    :param FAP_height: FAP height in meters
-    :param ILS_extension_height: ILS extension height in meters
-    :return: Dictionary with structured data or None if file not selected
-    """
-    global OAS_template, OAS_extended_to_FAP, OAS_W, OAS_X, OAS_Y, OAS_Z
-    from qgis.utils import iface  # noqa: PLC0415 — local import intentional
-    
-    csv_path, _ = QFileDialog.getOpenFileName(None, "Select CSV File", "", "CSV Files (*.csv);;All Files (*)")
-    if not csv_path:
-        return None
-    
-    data = {}
-    current_section = None
-    stop_section = "---OAS Template coordinates -m(meters)"
-    plane_constants = {}
-    
-    with open(csv_path, 'r', encoding='utf-8-sig') as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith('---') and line.strip() == stop_section:
-                break
-            if line.startswith('---'):
-                current_section = line.strip('- \t\n')
-                data[current_section] = {}
-                continue
-            if '\t' in line:
-                parts = [p.strip().rstrip(',') for p in line.split('\t') if p.strip()]
-            else:
-                parts = [p.strip().rstrip(',') for p in re.split(r',|\s{2,}', line) if p.strip()]
-            if len(parts)==2:
-                key, value = parts
-            elif len(parts)>2:
-                key = ' '.join(parts[:-1])
-                value = parts[-1]
-            else:
-                continue
-            key = key.strip().rstrip(',')
-            try:
-                value = float(value)
-            except ValueError:
-                pass
-            if current_section and current_section=="OAS constants":
-                match = re.fullmatch(r'([WXYZ])([ABC])', key)
-                if match:
-                    plane, coeff = match.groups()
-                    plane_key = f"{plane} plane"
-                    if plane_key not in plane_constants:
-                        plane_constants[plane_key] = [None, None, None]
-                    index = "ABC".index(coeff)
-                    plane_constants[plane_key][index] = value
-                    continue
-            if current_section:
-                data[current_section][key] = value
-    
-    if "OAS constants" in data:
-        data["OAS constants"].update(plane_constants)
-    else:
-        data["OAS constants"] = plane_constants
-    
-    required_planes = ["W plane", "X plane", "Y plane", "Z plane"]
-    missing_planes = [p for p in required_planes if p not in data["OAS constants"] or None in data["OAS constants"][p]]
-    
-    if missing_planes:
-        iface.messageBar().pushMessage("Warning", f"Missing plane constants for: {', '.join(missing_planes)}", level=Qgis.Warning)
-        return None
-    else:
-        # Extract plane constants
-        OAS_W = data["OAS constants"]["W plane"]
-        OAS_X = data["OAS constants"]["X plane"]
-        OAS_Y = data["OAS constants"]["Y plane"]
-        OAS_Z = data["OAS constants"]["Z plane"]
-        
-        # Calculate intersections for template
-        lower = {
-            "C": solve_plane_intersection(OAS_W, OAS_X, 0),
-            "D": solve_plane_intersection(OAS_X, OAS_Y, 0),
-            "E": solve_plane_intersection(OAS_Y, OAS_Z, 0)
-        }
-        upper_template = {
-            "C'": solve_plane_intersection(OAS_W, OAS_X, 300),
-            "D'": solve_plane_intersection(OAS_X, OAS_Y, 300),
-            "D0'": solve_plane_intersection(OAS_X, OAS_Y, 300),
-            "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)
-        }
-        OAS_template = {**lower, **upper_template}
-        
-        # Calculate intersections for extended
-        upper_extended = {
-            "C'": solve_plane_intersection(OAS_W, OAS_X, ILS_extension_height),
-            "D'": solve_plane_intersection(OAS_X, OAS_Y, ILS_extension_height),
-            "D0'": solve_plane_intersection(OAS_X, OAS_Y, 300),
-            "E'": solve_plane_intersection(OAS_Y, OAS_Z, 300)  # E' is always at 300m
-        }
-        OAS_extended_to_FAP = {**lower, **upper_extended}
-        
-        # Store in data dictionary
-        data["OAS_template"] = OAS_template
-        data["OAS_extended"] = OAS_extended_to_FAP
-        data["individual_planes"] = {"W": OAS_W, "X": OAS_X, "Y": OAS_Y, "Z": OAS_Z}
-    
-    data["used_parameters"] = {
-        "THR_elev": f"{THR_elev} m",
-        "FAP_elev": f"{FAP_elev} ft",
-        "MOC_intermediate": f"{MOC_intermediate} m",
-        "FAP_height": f"{FAP_height} m",
-        "ILS_extension_height": f"{ILS_extension_height} m"
-    }
-    
-    json_path = os.path.splitext(csv_path)[0] + "_cleaned.json"
-    with open(json_path, 'w', encoding='utf-8') as out_f:
-        json.dump(data, out_f, indent=2)
-    
-    iface.messageBar().pushMessage("Success", f"Cleaned JSON saved to: {json_path}", level=Qgis.Success)
-    return data
+
 
 def build_mirrors(intersect_dict):
     """
@@ -248,7 +126,15 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
     :return: Dictionary with results
     """
     global OAS_template, OAS_extended_to_FAP, OAS_W, OAS_X, OAS_Y, OAS_Z
-    
+
+    # Reset globals to prevent stale data from a previous failed calculation
+    OAS_template = None
+    OAS_extended_to_FAP = None
+    OAS_W = None
+    OAS_X = None
+    OAS_Y = None
+    OAS_Z = None
+
     # Extract parameters
     THR_elev = float(params.get('THR_elev', 0))  # This is already in meters
     THR_elev_raw = params.get('THR_elev_raw', THR_elev)  # Original value before conversion
@@ -483,7 +369,7 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
             # - Geometry is created as PolygonZ, ensuring Z values are written.
             # - AltitudeMode=absolute instructs viewers to respect Z elevations.
             # - MODE=2 keeps single-layer export behavior consistent with previous versions.
-            layer_options = [
+            kml_layer_options = [
                 'MODE=2',
                 'AltitudeMode=absolute'
             ]
@@ -494,7 +380,7 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
                 'utf-8',
                 crs,
                 'KML',
-                layerOptions=layer_options
+                layerOptions=kml_layer_options
             )
             
             # Apply corrections to KML file - Fix altitude mode to absolute for 3D display
@@ -570,6 +456,7 @@ def load_csv_constants(csv_path, THR_elev, FAP_elev, MOC_intermediate, FAP_heigh
     :param ILS_extension_height: ILS extension height in meters
     :return: Dictionary with structured data or None if error occurs
     """
+    from qgis.utils import iface  # noqa: PLC0415 — local import intentional
     global OAS_template, OAS_extended_to_FAP, OAS_W, OAS_X, OAS_Y, OAS_Z
     
     if not csv_path or not os.path.exists(csv_path):

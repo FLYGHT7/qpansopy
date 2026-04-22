@@ -22,7 +22,8 @@ Procedure Analysis and Obstacle Protection Surfaces
 """
 
 from qgis.core import Qgis
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree as ET  # namespace registration, Element, write
+import defusedxml.ElementTree as _defused_ET  # safe XML parse (XXE protection)
 import re
 
 
@@ -46,8 +47,8 @@ def fix_kml_altitude_mode(kml_path):
         ET.register_namespace('', KML_NS)
         ET.register_namespace('gx', GX_NS)
         
-        # Parse the KML file
-        tree = ET.parse(kml_path)
+        # Parse the KML file (using defusedxml for XXE protection)
+        tree = _defused_ET.parse(kml_path)
         root = tree.getroot()
         
         # Find all geometry elements that need altitude mode fix

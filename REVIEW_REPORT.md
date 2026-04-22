@@ -1,4 +1,5 @@
 # QPANSOPY — Code Review Report
+
 **Branch:** `refactor/qpansopy-v1`  
 **Scope:** Post-refactor review (Phases 0–7). Aeronautical formulas excluded from analysis.  
 **Status:** All issues resolved except R7 (architectural, tracked separately) and R12 (new blocker).
@@ -7,12 +8,12 @@
 
 ## Summary
 
-| Severity | Count | Status |
-|----------|-------|--------|
-| 🔴 Blocker | 3 | 2 fixed ✅, 1 open |
-| 🟠 Major | 6 | All fixed ✅ |
-| 🟡 Minor | 4 | All fixed ✅ |
-| **Total** | **13** | |
+| Severity   | Count  | Status             |
+| ---------- | ------ | ------------------ |
+| 🔴 Blocker | 3      | 2 fixed ✅, 1 open |
+| 🟠 Major   | 6      | All fixed ✅       |
+| 🟡 Minor   | 4      | All fixed ✅       |
+| **Total**  | **13** |                    |
 
 ---
 
@@ -36,6 +37,7 @@
 
 **File:** `Q_Pansopy/modules/utilities/selection_of_objects.py`  
 **Impact (double bug):**
+
 1. `qpansopy_object_selection_dockwidget.py` does `from ...modules.utilities.selection_of_objects import extract_objects` — but that function **does not exist** in the file. This is an `ImportError` that will crash the Object Selection dockwidget the moment QGIS loads it.
 2. The file contains **module-level execution code** (instantiates `LayerSelectionDialog`, calls `.exec_()`, runs spatial analysis) — code that was never wrapped in a function or guarded by `if __name__ == '__main__'`. This means **every import of the module runs a blocking dialog**.
 
@@ -51,6 +53,7 @@
 
 **File:** `Q_Pansopy/dockwidgets/ils/qpansopy_oas_ils_dockwidget.py`  
 **Fix applied:**
+
 - Moved `self.csv_path = None` from `validate_inputs()` to the top of `calculate()` (before `request_csv_file()`)
 - Fixed the Python one-liner bug: `"""Validate user inputs"""        self.csv_path = None` was on one line (potential SyntaxError); separated into two lines
 
@@ -60,6 +63,7 @@
 
 **Files fixed:** `basic_ils.py`, `wind_spiral.py`, `vss_straight.py`, `vss_loc.py`, `oas_ils.py`, `lnav_final_approach.py`, `lnav_initial_approach.py`, `lnav_intermediate_approach.py`, `lnav_missed_approach.py`, `gnss_waypoint.py`  
 **Strategy:**
+
 - Files where the entry function receives `iface` directly as a parameter (shadows module-level): just removed the module-level import
 - `lnav_*.py` files: already had `iface = iface_param` inside the function; module-level import removed (was 100% redundant)
 - `gnss_waypoint.py`: function uses `iface_param` consistently throughout; module-level import removed (unused)
@@ -78,6 +82,7 @@
 ### R6 — Bare `except:` silently swallows all exceptions ✅ FIXED
 
 **Files fixed:**
+
 - `Q_Pansopy/utils.py` — Line 115
 - `Q_Pansopy/modules/pbn/pbn_rnav1_arrival.py` — Line 91
 - `Q_Pansopy/modules/pbn/lnav_missed_approach.py` — Line 143
@@ -151,12 +156,12 @@ Zero regressions.
 
 ## Summary
 
-| Severity | Count |
-|----------|-------|
-| 🔴 Blocker | 2 |
-| 🟠 Major | 6 |
-| 🟡 Minor | 4 |
-| **Total** | **12** |
+| Severity   | Count  |
+| ---------- | ------ |
+| 🔴 Blocker | 2      |
+| 🟠 Major   | 6      |
+| 🟡 Minor   | 4      |
+| **Total**  | **12** |
 
 ---
 
@@ -219,6 +224,7 @@ params = { ..., 'csv_path': self.csv_path }  # always None here
 ### R4 — `from qgis.utils import iface` at module level in 11 files
 
 **Files:**
+
 - `Q_Pansopy/modules/basic_ils.py`
 - `Q_Pansopy/modules/wind_spiral.py`
 - `Q_Pansopy/modules/vss_straight.py`
@@ -260,6 +266,7 @@ def log(self, message):
 ### R6 — Bare `except:` silently swallows all exceptions
 
 **Files and lines:**
+
 - `Q_Pansopy/utils.py` — Line 115
 - `Q_Pansopy/modules/pbn/pbn_rnav1_arrival.py` — Line 91
 - `Q_Pansopy/modules/pbn/lnav_missed_approach.py` — Line 143
@@ -274,6 +281,7 @@ def log(self, message):
 
 **File:** `Q_Pansopy/dockwidgets/base_dockwidget.py` — The base class exists with `_run_with_feedback()`, `_load_base_qss()`, `log()`, `get_output_path()` etc.  
 **Affected dockwidgets (all inherit directly from `QtWidgets.QDockWidget`):**
+
 - `qpansopy_vss_dockwidget.py`
 - `qpansopy_vor_dockwidget.py`
 - `qpansopy_conv_initial_dockwidget.py`
@@ -315,6 +323,7 @@ self.parametersLayout.setWidget(0, role, container)
 ### R9 — Wildcard imports in module files
 
 **Files:**
+
 - `Q_Pansopy/modules/conv/conv_initial_approach.py` — Lines 5–7
 - `Q_Pansopy/modules/conv/conv_initial_approach_straight.py` — Lines 7–9
 - `Q_Pansopy/modules/conv/vor_approach.py` — Lines 5–7
@@ -354,7 +363,7 @@ if export_kml:
 ```python
 # Current — visually broken:
             self.verticalLayout.addWidget(self.exportKmlCheckBox)
-        
+
     # Log message                   ← looks like it's at class level
         self.log("QPANSOPY VSS plugin loaded. ...")  ← but this is inside __init__
 

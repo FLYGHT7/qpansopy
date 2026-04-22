@@ -15,7 +15,7 @@ import math
 import os
 import datetime
 import json
-from ..utils import get_selected_feature
+from ..utils import get_selected_feature, fix_kml_altitude_mode
 from .constants import FT_TO_M
 
 def calculate_vss_loc(iface, point_layer, runway_layer, params):
@@ -248,41 +248,13 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
             layerOptions=['MODE=2']
         )
         
-        # Correct KML structure for better visualization
-        def correct_kml_structure(kml_file_path):
-            with open(kml_file_path, 'r', encoding='utf-8') as file:
-                kml_content = file.read()
-            
-            # Add altitude mode
-            kml_content = kml_content.replace('<Polygon>', '<Polygon>\n  <altitudeMode>absolute</altitudeMode>')
-            
-            # Add style
-            style_kml = '''
-            <Style id="style1">
-                <LineStyle>
-                    <color>ff0000ff</color>
-                    <width>2</width>
-                </LineStyle>
-                <PolyStyle>
-                    <fill>1</fill>
-                    <color>ff00007F</color>
-                </PolyStyle>
-            </Style>
-            '''
-            
-            kml_content = kml_content.replace('<Document>', f'<Document>{style_kml}')
-            kml_content = kml_content.replace('<styleUrl>#</styleUrl>', '<styleUrl>#style1</styleUrl>')
-            
-            with open(kml_file_path, 'w', encoding='utf-8') as file:
-                file.write(kml_content)
-        
-        # Apply corrections to KML files
+        # Apply altitude mode fix to KML files
         if vss_error[0] == QgsVectorFileWriter.NoError:
-            correct_kml_structure(vss_export_path)
+            fix_kml_altitude_mode(vss_export_path)
             result['vss_path'] = vss_export_path
         
         if ocs_error[0] == QgsVectorFileWriter.NoError:
-            correct_kml_structure(ocs_export_path)
+            fix_kml_altitude_mode(ocs_export_path)
             result['ocs_path'] = ocs_export_path
     
     # Zoom to appropriate scale

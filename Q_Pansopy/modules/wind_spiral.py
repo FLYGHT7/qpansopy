@@ -15,7 +15,7 @@ import math
 import os
 import datetime
 import json
-from ..utils import get_selected_feature
+from ..utils import get_selected_feature, fix_kml_altitude_mode
 
 def ISA_temperature(adElev, tempRef):
     """Calculate ISA temperature and deviation"""
@@ -290,6 +290,7 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
         
         # Apply corrections to KML file
         if spiral_error[0] == QgsVectorFileWriter.NoError:
+            fix_kml_altitude_mode(spiral_export_path)
             result['spiral_path'] = spiral_export_path
     
     # Show success message
