@@ -15,6 +15,12 @@ from .qt_compat import (
     Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop,
     Qt_ScrollBarAsNeeded, Qt_SizeVerCursor, Qt_LeftButton,
     QEvent_MouseButtonPress, QEvent_MouseMove, QEvent_MouseButtonRelease,
+    QFrame_NoFrame,
+    QSizePolicy_Fixed, QSizePolicy_Minimum, QSizePolicy_Preferred,
+    QSizePolicy_Expanding,
+    QFormLayout_AllNonFixedFieldsGrow,
+    QTextEdit_WidgetWidth,
+    QLayout_SetDefaultConstraint,
 )
 
 
@@ -571,10 +577,10 @@ class Qpansopy:
             log_widget.setMaximumHeight(16777215)
             # We'll control height explicitly via a handle (Fixed vertical policy)
             log_widget.setMinimumHeight(max(60, log_widget.minimumHeight()))
-            log_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            log_widget.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Fixed)
             # Ensure horizontal content never forces wider than the dock
             try:
-                log_widget.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)
+                log_widget.setLineWrapMode(QTextEdit_WidgetWidth)
             except Exception:
                 pass
             try:
@@ -598,7 +604,7 @@ class Qpansopy:
                 parent = parent.parentWidget()
             if isinstance(parent, QtWidgets.QGroupBox):
                 parent.setMaximumHeight(16777215)
-                parent.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+                parent.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
         except Exception:
             pass
 
@@ -606,7 +612,7 @@ class Qpansopy:
         try:
             layout = log_widget.parentWidget().layout() or dock_instance.layout()
             if isinstance(layout, QtWidgets.QFormLayout):
-                layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.AllNonFixedFieldsGrow)
+                layout.setFieldGrowthPolicy(QFormLayout_AllNonFixedFieldsGrow)
         except Exception:
             pass
 
@@ -691,7 +697,7 @@ class Qpansopy:
             log_widget.setFixedHeight(default_h)
             # Prevent the log group from expanding vertically; keep it tight to content
             try:
-                log_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+                log_group.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Fixed)
             except Exception:
                 pass
 
@@ -700,10 +706,10 @@ class Qpansopy:
             if handle is None:
                 handle = QtWidgets.QFrame(log_group)
                 handle.setObjectName("qpansopyLogResizeHandle")
-                handle.setFrameShape(QtWidgets.QFrame.NoFrame)
+                handle.setFrameShape(QFrame_NoFrame)
                 handle.setFixedHeight(6)
                 handle.setCursor(Qt_SizeVerCursor)
-                handle.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                handle.setSizePolicy(QSizePolicy_Expanding, QSizePolicy_Fixed)
                 # subtle visual cue
                 handle.setStyleSheet("QFrame#qpansopyLogResizeHandle { background: rgba(0,0,0,0.08); border-radius: 2px; }")
                 lg_layout.addWidget(handle)
@@ -779,14 +785,14 @@ class Qpansopy:
                     _strip_spacers(root_layout)
                     try:
                         # Use SetDefaultConstraint instead of SetMinAndMaxSize to avoid forcing QGIS window resize
-                        root_layout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
+                        root_layout.setSizeConstraint(QLayout_SetDefaultConstraint)
                     except Exception:
                         pass
 
                 # Ensure every group box hugs its content (no vertical expansion)
                 for gb in root_widget.findChildren(QtWidgets.QGroupBox):
                     try:
-                        gb.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+                        gb.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Minimum)
                     except Exception:
                         pass
 
@@ -879,9 +885,9 @@ class Qpansopy:
             # Create new scroll area
             scroll_area = QtWidgets.QScrollArea()
             scroll_area.setWidgetResizable(True)  # CRITICAL: Allow content to resize
-            scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)  # Seamless appearance
-            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            scroll_area.setFrameShape(QFrame_NoFrame)  # Seamless appearance
+            scroll_area.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
+            scroll_area.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
             
             # Reparent the existing content widget into the scroll area
             scroll_area.setWidget(content_widget)
@@ -1079,8 +1085,8 @@ class Qpansopy:
                     content_widget.setMaximumSize(max_dock_width, max_dock_height)
                     # Also set size policy on content widget to prevent expansion
                     content_policy = content_widget.sizePolicy()
-                    content_policy.setVerticalPolicy(QSizePolicy.Preferred)
-                    content_policy.setHorizontalPolicy(QSizePolicy.Preferred)
+                    content_policy.setVerticalPolicy(QSizePolicy_Preferred)
+                    content_policy.setHorizontalPolicy(QSizePolicy_Preferred)
                     content_widget.setSizePolicy(content_policy)
             else:
                 # Fallback if no screen info available
@@ -1089,16 +1095,16 @@ class Qpansopy:
                 if content_widget:
                     content_widget.setMaximumSize(800, 550)
                     content_policy = content_widget.sizePolicy()
-                    content_policy.setVerticalPolicy(QSizePolicy.Preferred)
-                    content_policy.setHorizontalPolicy(QSizePolicy.Preferred)
+                    content_policy.setVerticalPolicy(QSizePolicy_Preferred)
+                    content_policy.setHorizontalPolicy(QSizePolicy_Preferred)
                     content_widget.setSizePolicy(content_policy)
             
             # Configure size policy to prefer staying within bounds
             # Preferred = can grow/shrink, but prefers its size hint
             # This makes the dock adapt to available space rather than force resize
             size_policy = dock_instance.sizePolicy()
-            size_policy.setVerticalPolicy(QSizePolicy.Preferred)
-            size_policy.setHorizontalPolicy(QSizePolicy.Preferred)
+            size_policy.setVerticalPolicy(QSizePolicy_Preferred)
+            size_policy.setHorizontalPolicy(QSizePolicy_Preferred)
             size_policy.setRetainSizeWhenHidden(False)  # Don't force size when re-showing
             dock_instance.setSizePolicy(size_policy)
             
@@ -1106,7 +1112,7 @@ class Qpansopy:
             # If anything fails, try basic fallback
             try:
                 dock_instance.setMaximumSize(800, 600)
-                size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+                size_policy = QSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
                 dock_instance.setSizePolicy(size_policy)
             except Exception:
                 pass

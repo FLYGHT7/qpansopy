@@ -33,6 +33,7 @@ try:
         QPushButton, QGroupBox, QFileDialog, QMessageBox,
         QHBoxLayout, QVBoxLayout, QFormLayout,
         QCheckBox, QProgressBar, QTextEdit, QScrollArea,
+        QFrame, QSizePolicy, QLayout,
     )
     from qgis.PyQt.QtCore import (  # noqa: F401
         Qt, QEvent, QVariant, pyqtSignal, QRegularExpression,
@@ -53,6 +54,7 @@ except ImportError:
             QPushButton, QGroupBox, QFileDialog, QMessageBox,
             QHBoxLayout, QVBoxLayout, QFormLayout,
             QCheckBox, QProgressBar, QTextEdit, QScrollArea,
+            QFrame, QSizePolicy, QLayout,
         )
         from PyQt6.QtCore import (  # noqa: F401
             Qt, QEvent, pyqtSignal, QRegularExpression,
@@ -85,6 +87,7 @@ except ImportError:
             QPushButton, QGroupBox, QFileDialog, QMessageBox,
             QHBoxLayout, QVBoxLayout, QFormLayout,
             QCheckBox, QProgressBar, QTextEdit, QScrollArea,
+            QFrame, QSizePolicy, QLayout,
         )
         from PyQt5.QtCore import (  # noqa: F401
             Qt, QEvent, QVariant, pyqtSignal, QRegularExpression,
@@ -331,3 +334,101 @@ except ImportError:
     Qgis_GeomType_Null = None     # type: ignore[assignment]
     Qgis_LayerType_Vector = None  # type: ignore[assignment]
     Qgis_LayerType_Raster = None  # type: ignore[assignment]
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible QFrame.Shape enum values
+#
+# Qt5: QFrame.NoFrame / QFrame.StyledPanel etc.  (unscoped)
+# Qt6: QFrame.Shape.NoFrame etc.  (scoped)
+# ---------------------------------------------------------------------------
+try:
+    _fs = QFrame.Shape  # Qt6 scoped enum namespace
+    QFrame_NoFrame = _fs.NoFrame
+    QFrame_StyledPanel = _fs.StyledPanel
+    QFrame_HLine = _fs.HLine
+    QFrame_VLine = _fs.VLine
+except AttributeError:
+    QFrame_NoFrame = QFrame.NoFrame              # type: ignore[attr-defined]
+    QFrame_StyledPanel = QFrame.StyledPanel      # type: ignore[attr-defined]
+    QFrame_HLine = QFrame.HLine                  # type: ignore[attr-defined]
+    QFrame_VLine = QFrame.VLine                  # type: ignore[attr-defined]
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible QSizePolicy.Policy enum values
+#
+# Qt5: QSizePolicy.Preferred, QSizePolicy.Fixed, etc.  (unscoped)
+# Qt6: QSizePolicy.Policy.Preferred etc.  (scoped)
+# ---------------------------------------------------------------------------
+try:
+    _spp = QSizePolicy.Policy  # Qt6 scoped enum namespace
+    QSizePolicy_Fixed = _spp.Fixed
+    QSizePolicy_Minimum = _spp.Minimum
+    QSizePolicy_Maximum = _spp.Maximum
+    QSizePolicy_Preferred = _spp.Preferred
+    QSizePolicy_Expanding = _spp.Expanding
+    QSizePolicy_MinimumExpanding = _spp.MinimumExpanding
+    QSizePolicy_Ignored = _spp.Ignored
+except AttributeError:
+    QSizePolicy_Fixed = QSizePolicy.Fixed                        # type: ignore[attr-defined]
+    QSizePolicy_Minimum = QSizePolicy.Minimum                    # type: ignore[attr-defined]
+    QSizePolicy_Maximum = QSizePolicy.Maximum                    # type: ignore[attr-defined]
+    QSizePolicy_Preferred = QSizePolicy.Preferred                # type: ignore[attr-defined]
+    QSizePolicy_Expanding = QSizePolicy.Expanding                # type: ignore[attr-defined]
+    QSizePolicy_MinimumExpanding = QSizePolicy.MinimumExpanding  # type: ignore[attr-defined]
+    QSizePolicy_Ignored = QSizePolicy.Ignored                    # type: ignore[attr-defined]
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible QFormLayout.FieldGrowthPolicy enum values
+#
+# Qt5: QFormLayout.AllNonFixedFieldsGrow  (unscoped)
+# Qt6: QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow  (scoped)
+# ---------------------------------------------------------------------------
+try:
+    _fgp = QFormLayout.FieldGrowthPolicy  # Qt6 scoped enum namespace
+    QFormLayout_AllNonFixedFieldsGrow = _fgp.AllNonFixedFieldsGrow
+    QFormLayout_FieldsStayAtSizeHint = _fgp.FieldsStayAtSizeHint
+    QFormLayout_ExpandingFieldsGrow = _fgp.ExpandingFieldsGrow
+except AttributeError:
+    QFormLayout_AllNonFixedFieldsGrow = QFormLayout.AllNonFixedFieldsGrow  # type: ignore[attr-defined]
+    QFormLayout_FieldsStayAtSizeHint = QFormLayout.FieldsStayAtSizeHint    # type: ignore[attr-defined]
+    QFormLayout_ExpandingFieldsGrow = QFormLayout.ExpandingFieldsGrow      # type: ignore[attr-defined]
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible QTextEdit.LineWrapMode enum values
+#
+# Qt5: QTextEdit.WidgetWidth / QTextEdit.NoWrap  (unscoped)
+# Qt6: QTextEdit.LineWrapMode.WidgetWidth  (scoped)
+# ---------------------------------------------------------------------------
+try:
+    _lwm = QTextEdit.LineWrapMode  # Qt6 scoped enum namespace
+    QTextEdit_WidgetWidth = _lwm.WidgetWidth
+    QTextEdit_NoWrap = _lwm.NoWrap
+    QTextEdit_FixedPixelWidth = _lwm.FixedPixelWidth
+    QTextEdit_FixedColumnWidth = _lwm.FixedColumnWidth
+except AttributeError:
+    QTextEdit_WidgetWidth = QTextEdit.WidgetWidth          # type: ignore[attr-defined]
+    QTextEdit_NoWrap = QTextEdit.NoWrap                    # type: ignore[attr-defined]
+    QTextEdit_FixedPixelWidth = QTextEdit.FixedPixelWidth  # type: ignore[attr-defined]
+    QTextEdit_FixedColumnWidth = QTextEdit.FixedColumnWidth  # type: ignore[attr-defined]
+
+# ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible QLayout.SizeConstraint enum values
+#
+# Qt5: QLayout.SetDefaultConstraint  (unscoped)
+# Qt6: QLayout.SizeConstraint.SetDefaultConstraint  (scoped)
+# ---------------------------------------------------------------------------
+try:
+    _lsc = QLayout.SizeConstraint  # Qt6 scoped enum namespace
+    QLayout_SetDefaultConstraint = _lsc.SetDefaultConstraint
+    QLayout_SetMinimumSize = _lsc.SetMinimumSize
+    QLayout_SetFixedSize = _lsc.SetFixedSize
+    QLayout_SetMaximumSize = _lsc.SetMaximumSize
+    QLayout_SetMinAndMaxSize = _lsc.SetMinAndMaxSize
+    QLayout_SetNoConstraint = _lsc.SetNoConstraint
+except AttributeError:
+    QLayout_SetDefaultConstraint = QLayout.SetDefaultConstraint  # type: ignore[attr-defined]
+    QLayout_SetMinimumSize = QLayout.SetMinimumSize              # type: ignore[attr-defined]
+    QLayout_SetFixedSize = QLayout.SetFixedSize                  # type: ignore[attr-defined]
+    QLayout_SetMaximumSize = QLayout.SetMaximumSize              # type: ignore[attr-defined]
+    QLayout_SetMinAndMaxSize = QLayout.SetMinAndMaxSize          # type: ignore[attr-defined]
+    QLayout_SetNoConstraint = QLayout.SetNoConstraint            # type: ignore[attr-defined]
