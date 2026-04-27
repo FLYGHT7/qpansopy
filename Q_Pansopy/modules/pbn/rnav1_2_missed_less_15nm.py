@@ -1,12 +1,12 @@
-'''
+﻿'''
 CONV Initial Approach Segment Straight
 '''
 
 myglobals = set(globals().keys())
 
 from qgis.core import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtGui import *
 from qgis.gui import *
 from qgis.PyQt.QtCore import QVariant
 from math import *
@@ -47,7 +47,7 @@ delta = 0
 #
 #
 ##
-##from PyQt5.QtWidgets import QInputDialog
+##from qgis.PyQt.QtWidgets import QInputDialog
 ##def getTextInput(title, message):
 ##    answer = QInputDialog.getText(None, title, message)
 ##    if answer[1]:

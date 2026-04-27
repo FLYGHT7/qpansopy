@@ -37,9 +37,14 @@ Version: 2.0
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 from qgis.core import Qgis
-from qgis.utils import iface
 from math import *
 import os
+from ._lnav_common import (
+    _resolve_routing_layer,
+    _select_segment_features,
+    _extract_segment_geom,
+    _create_area_layer,
+)
 
 def run_intermediate_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
@@ -105,57 +110,20 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
         # Notify user of intermediate approach calculation start
         iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Intermediate Approach (RNP APCH)", level=Qgis.Info)
 
-        # Extract current project's coordinate reference system
-        # Critical for accurate geometric calculations in intermediate phase
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
-        # Validate routing layer input for intermediate approach processing
+        routing_layer = _resolve_routing_layer(iface, routing_layer)
         if routing_layer is None:
-            # Fallback mechanism: attempt to locate routing layer automatically
-            # This searches all project layers for names containing "routing"
-            for layer in QgsProject.instance().mapLayers().values():
-                if "routing" in layer.name().lower():
-                    routing_layer = layer
-                    break
-
-        # Critical validation: ensure routing layer exists for intermediate processing
-        if routing_layer is None:
-            iface.messageBar().pushMessage("No Routing Selected", level=Qgis.Critical)
             return None
 
-        # Enforce manual selection requirement - no automatic feature selection
-        # Intermediate approach requires explicit user selection for proper alignment
-        selected_features = routing_layer.selectedFeatures()
-
-        if not selected_features:
-            iface.messageBar().pushMessage("Please select at least one segment in the routing layer", level=Qgis.Critical)
+        intermediate_features = _select_segment_features(iface, routing_layer, 'intermediate')
+        if intermediate_features is None:
             return None
 
-        # Filter for intermediate approach segments within user selection
-        # Intermediate segments are identified by 'segment' attribute value of 'intermediate'
-        intermediate_features = [feat for feat in selected_features if feat.attribute('segment') == 'intermediate']
-        if not intermediate_features:
-            iface.messageBar().pushMessage("No 'intermediate' segment found in your selection", level=Qgis.Critical)
+        geom_data = _extract_segment_geom(iface, intermediate_features, 'intermediate')
+        if geom_data is None:
             return None
-
-        # Process intermediate approach segments from user selection
-        # Iterate through valid intermediate segments to find first processable one
-        for feat in intermediate_features:
-            try:
-                geom = feat.geometry().asPolyline()
-                if geom and len(geom) >= 2:
-                    start_point = QgsPoint(geom[0])
-                    end_point = QgsPoint(geom[1])
-                    azimuth = start_point.azimuth(end_point)
-                    back_azimuth = azimuth + 180
-                    length = feat.geometry().length()
-                    break
-            except:
-                iface.messageBar().pushMessage("Invalid geometry in selected feature", level=Qgis.Warning)
-                continue
-        else:
-            iface.messageBar().pushMessage("No valid geometry found in selected intermediate segments", level=Qgis.Critical)
-            return None
+        start_point, end_point, azimuth, back_azimuth, length = geom_data
 
         # Calculate point coordinates using the original algorithm
         pts = {}
@@ -191,12 +159,6 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
             pts["m"+str(a)] = start_point.project(i*1852, azimuth-90)
             a += 1
 
-        # Create memory layer
-        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "LNAV Intermediate APCH Segment", "memory")
-        myField = QgsField('Symbol', QVariant.String)
-        v_layer.dataProvider().addAttributes([myField])
-        v_layer.updateFields()
-
         # Area Definition 
         primary_area = ([pts["m2"], pts["m1"], pts["m4"], pts["mm8"], pts["m12"], pts["m10"], pts["mm6"]], 'Primary Area')
         secondary_area_left = ([pts["m3"], pts["m2"], pts["mm6"], pts["m10"], pts["m11"], pts["mm7"]], 'Secondary Area')
@@ -204,26 +166,7 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
 
         areas = (primary_area, secondary_area_left, secondary_area_right)
 
-        # Creating areas
-        pr = v_layer.dataProvider()
-        features = []
-        
-        for area in areas:
-            seg = QgsFeature()
-            seg.setGeometry(QgsPolygon(QgsLineString(area[0]), rings=[]))
-            seg.setAttributes([area[1]])
-            features.append(seg)
-
-        pr.addFeatures(features)
-        v_layer.updateExtents()
-        QgsProject.instance().addMapLayers([v_layer])
-
-        # Apply style (no zoom to respect user's current view)
-        style_path = os.path.join(os.path.dirname(__file__), '..', '..', 'styles', 'primary_secondary_areas.qml')
-        if os.path.exists(style_path):
-            v_layer.loadNamedStyle(style_path)
-
-        iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Intermediate Approach (RNP APCH)", level=Qgis.Success)
+        v_layer = _create_area_layer(map_srid, "LNAV Intermediate APCH Segment", areas, __file__)
         
         return {"intermediate_layer": v_layer}
         

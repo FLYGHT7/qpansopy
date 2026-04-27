@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 ISA Calculator Dialog
@@ -21,11 +21,11 @@ Procedure Analysis and Obstacle Protection Surfaces - ISA Calculator
 ***************************************************************************/
 """
 
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, 
+from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, 
                              QLineEdit, QComboBox, QPushButton, QLabel, 
                              QDialogButtonBox, QMessageBox, QGroupBox, QWidget)
-from PyQt5.QtCore import QRegExp
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt.QtCore import QRegularExpression
+from qgis.PyQt.QtGui import QRegularExpressionValidator
 
 
 class ISACalculatorDialog(QDialog):
@@ -51,8 +51,8 @@ class ISACalculatorDialog(QDialog):
         input_layout = QFormLayout(input_group)
         
         # Create validator for numeric inputs
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
+        regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegularExpressionValidator(regex)
         
         # Aerodrome Elevation
         elev_container = QHBoxLayout()

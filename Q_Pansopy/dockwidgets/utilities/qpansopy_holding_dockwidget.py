@@ -1,7 +1,8 @@
-from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QMimeData
+﻿import os
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QMimeData
 from qgis.core import QgsMapLayerProxyModel
-import os
+from ...qt_compat import MLPM_LineLayer
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_holding_dockwidget.ui'))
@@ -18,11 +19,11 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.last_summary_text = None
 
         # Setup layer selector
-        self.routingLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.routingLayerComboBox.setFilters(MLPM_LineLayer)
 
         # Defaults
         self.altitudeUnitCombo.setCurrentText('ft')
-        self.outputFolderLineEdit.setText(self._get_desktop())
+        self.outputFolderLineEdit.setText(self.get_desktop_path())
 
         # Signals
         self.calculateButton.clicked.connect(self.calculate)
@@ -33,10 +34,9 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.closingPlugin.emit()
         event.accept()
 
-    def _get_desktop(self):
-        if os.name == 'nt':
-            return os.path.join(os.environ.get('USERPROFILE', ''), 'Desktop')
-        return os.path.expanduser('~/Desktop')
+    def get_desktop_path(self) -> str:
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def _browse(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(

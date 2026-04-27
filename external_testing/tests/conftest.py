@@ -17,7 +17,8 @@ def _install_qgis_stubs():
         'QgsProject', 'QgsVectorLayer', 'QgsFeature', 'QgsGeometry',
         'QgsCoordinateReferenceSystem', 'QgsCoordinateTransform', 'QgsPointXY',
         'QgsWkbTypes', 'QgsField', 'QgsFields', 'QgsPoint', 'QgsLineString',
-        'QgsPolygon', 'QgsVectorFileWriter', 'QgsCircularString'
+        'QgsPolygon', 'QgsVectorFileWriter', 'QgsCircularString',
+        'QgsRuleBasedRenderer', 'QgsFillSymbol',
     ]:
         setattr(core, name, _Dummy)
 
@@ -34,8 +35,29 @@ def _install_qgis_stubs():
     PyQt = types.ModuleType('qgis.PyQt')
     qtcore = types.ModuleType('qgis.PyQt.QtCore')
     qtgui = types.ModuleType('qgis.PyQt.QtGui')
+    qtwidgets = types.ModuleType('qgis.PyQt.QtWidgets')
     qtcore.QVariant = object
+    qtcore.Qt = object
     qtgui.QColor = object
+    for widget_name in [
+        'QFileDialog', 'QDialog', 'QFormLayout', 'QLineEdit', 'QComboBox',
+        'QDialogButtonBox', 'QMessageBox', 'QWidget', 'QApplication',
+    ]:
+        setattr(qtwidgets, widget_name, _Dummy)
+
+    # PyQt5 stubs (some modules import PyQt5 directly)
+    pyqt5 = types.ModuleType('PyQt5')
+    pyqt5_qtcore = types.ModuleType('PyQt5.QtCore')
+    pyqt5_qtgui = types.ModuleType('PyQt5.QtGui')
+    pyqt5_qtwidgets = types.ModuleType('PyQt5.QtWidgets')
+    pyqt5_qtcore.QVariant = object
+    pyqt5_qtcore.Qt = object
+    pyqt5_qtgui.QColor = object
+    for widget_name in [
+        'QFileDialog', 'QDialog', 'QFormLayout', 'QLineEdit', 'QComboBox',
+        'QDialogButtonBox', 'QMessageBox', 'QWidget', 'QApplication',
+    ]:
+        setattr(pyqt5_qtwidgets, widget_name, _Dummy)
 
     # qgis.utils stub
     utils = types.ModuleType('qgis.utils')
@@ -49,7 +71,12 @@ def _install_qgis_stubs():
         (PyQt, 'qgis.PyQt'),
         (qtcore, 'qgis.PyQt.QtCore'),
         (qtgui, 'qgis.PyQt.QtGui'),
+        (qtwidgets, 'qgis.PyQt.QtWidgets'),
         (utils, 'qgis.utils'),
+        (pyqt5, 'PyQt5'),
+        (pyqt5_qtcore, 'PyQt5.QtCore'),
+        (pyqt5_qtgui, 'PyQt5.QtGui'),
+        (pyqt5_qtwidgets, 'PyQt5.QtWidgets'),
     ]:
         if name in sys.modules:
             to_restore[name] = sys.modules[name]
@@ -58,7 +85,9 @@ def _install_qgis_stubs():
         yield
     finally:
         # Restore prior modules if any, else remove our stubs
-        for name in ['qgis.PyQt.QtCore', 'qgis.PyQt.QtGui', 'qgis.PyQt', 'qgis.core', 'qgis.utils', 'qgis']:
+        for name in ['PyQt5.QtWidgets', 'PyQt5.QtGui', 'PyQt5.QtCore', 'PyQt5',
+                     'qgis.PyQt.QtWidgets', 'qgis.PyQt.QtCore', 'qgis.PyQt.QtGui',
+                     'qgis.PyQt', 'qgis.core', 'qgis.utils', 'qgis']:
             if name in to_restore:
                 sys.modules[name] = to_restore[name]
             elif name in sys.modules:

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYPointFilterDockWidget
@@ -22,13 +22,13 @@ Procedure Analysis and Obstacle Protection Surfaces - Point Filter Module
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic, QtCore
-from PyQt5.QtCore import pyqtSignal, QRegExp
-from PyQt5.QtGui import QRegExpValidator, QColor
-from PyQt5.QtWidgets import QColorDialog
+from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
+from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
+from qgis.PyQt.QtWidgets import QColorDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem
-from qgis.utils import iface
 from qgis.core import Qgis
+from ...qt_compat import Qgis_GeomType_Point, Qgis_LayerType_Vector
 import datetime
 
 # Use __file__ to get the current script path
@@ -55,10 +55,6 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         }
         self.higher_color = QColor("red")
         self.lower_color = QColor("green")
-        
-        # Set up the user interface from Designer.
-        self.setupUi(self)
-        self.iface = iface
         
         # Hide output/KML/JSON controls not needed for this tool (per #67)
         if hasattr(self, 'outputGroup'):
@@ -88,8 +84,8 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def setup_validators(self):
         """Setup validators for numeric inputs"""
         # Create validator for decimal numbers (including negative)
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
+        regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegularExpressionValidator(regex)
         
         if hasattr(self, 'thrElevLineEdit'):
             self.thrElevLineEdit.setValidator(validator)
@@ -117,7 +113,12 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Replace the original field in the form layout (row 0, column 1)
         try:
             self.parametersLayout.removeWidget(self.thrElevLineEdit)
-            self.parametersLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, container)
+            _field_role = getattr(
+                QtWidgets.QFormLayout,
+                'FieldRole',
+                getattr(QtWidgets.QFormLayout, 'ItemRole', QtWidgets.QFormLayout).FieldRole
+            )
+            self.parametersLayout.setWidget(0, _field_role, container)
         except Exception:
             pass
 
@@ -142,12 +143,8 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 del self.exact_values[key]
 
     def get_desktop_path(self):
-        """Get desktop path for default output folder"""
-        try:
-            import os
-            return os.path.join(os.path.expanduser("~"), "Desktop")
-        except:
-            return ""
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     # Output folder selection removed per #67
 
@@ -200,7 +197,7 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return False
         
         # Check if active layer is a point layer
-        if active_layer.type() != QgsVectorLayer.VectorLayer or active_layer.geometryType() != QgsWkbTypes.PointGeometry:
+        if active_layer.type() != Qgis_LayerType_Vector or active_layer.geometryType() != Qgis_GeomType_Point:
             self.log("Error: Active layer must be a point layer")
             self.iface.messageBar().pushMessage("Error", "Active layer must be a point layer", level=Qgis.Warning)
             return False

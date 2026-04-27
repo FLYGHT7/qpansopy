@@ -1,9 +1,8 @@
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt
+﻿from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsMapLayerProxyModel
+from ...qt_compat import MLPM_LineLayer
 import os
-import datetime
-import runpy
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'pbn', 'qpansopy_lnav_dockwidget.ui'))
@@ -17,7 +16,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
 
         # Setup layer combobox
-        self.routingLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.routingLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -33,9 +32,8 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def get_desktop_path(self):
-        if os.name == 'nt':
-            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-        return os.path.expanduser('~/Desktop')
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(
@@ -79,13 +77,13 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             elif self.initialRadioButton.isChecked():
                 self.log("Calculating Initial Approach...")
                 # Use function from Initial Approach module
-                from ...modules.pbn.PBN_LNAV_Initial_Approach import run_initial_approach
+                from ...modules.pbn.lnav_initial_approach import run_initial_approach
                 result = run_initial_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Initial"
             elif self.intermediateRadioButton.isChecked():
                 self.log("Calculating Intermediate Approach...")
                 # Use function from Intermediate Approach module
-                from ...modules.pbn.PBN_LNAV_Intermediate_Approach import run_intermediate_approach
+                from ...modules.pbn.lnav_intermediate_approach import run_intermediate_approach
                 result = run_intermediate_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Intermediate"
             elif self.missedRadioButton.isChecked():
@@ -103,7 +101,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             else:  # Final approach
                 self.log("Calculating Final Approach...")
                 # Use function from Final Approach module
-                from ...modules.pbn.PBN_LNAV_Final_Approach import run_final_approach
+                from ...modules.pbn.lnav_final_approach import run_final_approach
                 result = run_final_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Final"
 

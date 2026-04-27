@@ -1,10 +1,10 @@
-'''
+﻿'''
 Conventional NDB Approach Areas
 '''
 
 from qgis.core import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from qgis.PyQt.QtCore import *
+from qgis.PyQt.QtGui import *
 from qgis.gui import *
 from qgis.PyQt.QtCore import QVariant
 from math import *
@@ -47,33 +47,6 @@ def run_ndb_approach(iface, routing_layer):
             # End point of template
             end_template = start_point.project(L*1852, azimuth)
             
-            # Calculate half-widths for perfect symmetry
-            # Primary area half-width at start: 1.25 NM (total width = 2.5 NM)
-            primary_half_width_start = 1.25
-            # Primary area half-width at end: (L*tan(10.3°) + 1.25) NM
-            primary_half_width_end = L*tan(radians(10.3)) + 1.25
-            
-            # Secondary area half-width at start: 2.0 NM (total width = 4 NM)
-            secondary_half_width_start = 2.0
-            # Secondary area half-width at end: (L*tan(12°) + 2.0) NM
-            secondary_half_width_end = L*tan(radians(12.0)) + 2.0
-            
-            # Create symmetric points using perpendicular bearings
-            left_bearing = azimuth - 90  # 90 degrees to the left
-            right_bearing = azimuth + 90  # 90 degrees to the right
-            
-            # Primary area points (symmetric about centerline)
-            pts['p1'] = start_point.project(primary_half_width_start*1852, left_bearing)   # Left side start
-            pts['p2'] = start_point.project(primary_half_width_start*1852, right_bearing)  # Right side start
-            pts['p3'] = end_template.project(primary_half_width_end*1852, left_bearing)    # Left side end
-            pts['p4'] = end_template.project(primary_half_width_end*1852, right_bearing)   # Right side end
-            
-            # Secondary area points (symmetric about centerline)
-            pts['s1'] = start_point.project(secondary_half_width_start*1852, left_bearing)   # Left secondary start
-            pts['s2'] = start_point.project(secondary_half_width_start*1852, right_bearing)  # Right secondary start
-            pts['s3'] = end_template.project(secondary_half_width_end*1852, left_bearing)    # Left secondary end
-            pts['s4'] = end_template.project(secondary_half_width_end*1852, right_bearing)   # Right secondary end
-
             # Primary area width at start: ±0.625 NM
             primary_width_start = 0.625
             pts['p1'] = start_point.project(primary_width_start*1852, azimuth-90)  # Left side start

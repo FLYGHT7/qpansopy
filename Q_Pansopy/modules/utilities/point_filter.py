@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 Point Filter Module
@@ -24,8 +24,8 @@ Procedure Analysis and Obstacle Protection Surfaces - Point Filter Module
 import os
 from qgis.core import (QgsVectorLayer, QgsField, QgsFeature, QgsProject, 
                        QgsSymbol)
-from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QVariant
+from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtCore import Qt, QVariant
 
 
 def filter_points_by_elevation(iface, point_layer, thr_elevation, output_dir=None, 

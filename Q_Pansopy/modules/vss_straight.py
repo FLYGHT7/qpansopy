@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Straight In NPA Surface Generator
 """
@@ -8,15 +8,15 @@ from qgis.core import (
     QgsPointXY, QgsWkbTypes, QgsField, QgsFields, QgsPoint,
     QgsLineString, QgsPolygon, QgsVectorFileWriter
 )
-from PyQt5.QtCore import QVariant
-from PyQt5.QtGui import QColor
+from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtGui import QColor
 from qgis.core import Qgis
-from qgis.utils import iface
 import math
 import os
 import datetime
 import json
-from ..utils import get_selected_feature
+from ..utils import get_selected_feature, fix_kml_altitude_mode
+from .constants import FT_TO_M
 
 def calculate_vss_straight(iface, point_layer, runway_layer, params):
     """
@@ -44,9 +44,9 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     RDH_unit = params.get('RDH_unit', 'm')
     
     # Convert units to meters if needed
-    thr_elev = thr_elev_raw if thr_elev_unit == 'm' else thr_elev_raw * 0.3048
-    OCH = OCH_raw if OCH_unit == 'm' else OCH_raw * 0.3048
-    RDH = RDH_raw if RDH_unit == 'm' else RDH_raw * 0.3048
+    thr_elev = thr_elev_raw if thr_elev_unit == 'm' else thr_elev_raw * FT_TO_M
+    OCH = OCH_raw if OCH_unit == 'm' else OCH_raw * FT_TO_M
+    RDH = RDH_raw if RDH_unit == 'm' else RDH_raw * FT_TO_M
     
     # Create a parameters dictionary for JSON storage - store original values
     parameters_dict = {
@@ -95,6 +95,9 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     
     # Get the runway line (in same projected CRS as point)
     runway_geom = runway_feature.geometry().asPolyline()
+    if len(runway_geom) < 2:
+        iface.messageBar().pushMessage("QPANSOPY", "Runway layer must have at least 2 vertices", level=Qgis.Critical)
+        return None
     
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -243,41 +246,13 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
             layerOptions=['MODE=2']
         )
         
-        # Correct KML structure for better visualization
-        def correct_kml_structure(kml_file_path):
-            with open(kml_file_path, 'r') as file:
-                kml_content = file.read()
-            
-            # Add altitude mode
-            kml_content = kml_content.replace('<Polygon>', '<Polygon>\n  <altitudeMode>absolute</altitudeMode>')
-            
-            # Add style
-            style_kml = '''
-            <Style id="style1">
-                <LineStyle>
-                    <color>ff0000ff</color>
-                    <width>2</width>
-                </LineStyle>
-                <PolyStyle>
-                    <fill>1</fill>
-                    <color>ff00007F</color>
-                </PolyStyle>
-            </Style>
-            '''
-            
-            kml_content = kml_content.replace('<Document>', f'<Document>{style_kml}')
-            kml_content = kml_content.replace('<styleUrl>#</styleUrl>', '<styleUrl>#style1</styleUrl>')
-            
-            with open(kml_file_path, 'w') as file:
-                file.write(kml_content)
-        
-        # Apply corrections to KML files
+        # Apply altitude mode fix to KML files
         if vss_error[0] == QgsVectorFileWriter.NoError:
-            correct_kml_structure(vss_export_path)
+            fix_kml_altitude_mode(vss_export_path)
             result['vss_path'] = vss_export_path
         
         if ocs_error[0] == QgsVectorFileWriter.NoError:
-            correct_kml_structure(ocs_export_path)
+            fix_kml_altitude_mode(ocs_export_path)
             result['ocs_path'] = ocs_export_path
     
     # Zoom to appropriate scale

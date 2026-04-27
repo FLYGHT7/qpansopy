@@ -1,11 +1,22 @@
+from __future__ import annotations
+
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsPoint, QgsLineString, QgsPolygon,
-    QgsField
+    QgsField, QgsWkbTypes
 )
 from qgis.core import Qgis
 from qgis.PyQt.QtCore import QVariant
 import math
 import os
+
+# Compat for QGIS 3/4: QgsWkbTypes.LineGeometry → Qgis.GeometryType.Line
+try:
+    _LINE_GEOMETRY = Qgis.GeometryType.Line  # QGIS 4+
+except AttributeError:
+    try:
+        _LINE_GEOMETRY = QgsWkbTypes.LineGeometry  # QGIS 3  # type: ignore[attr-defined]
+    except AttributeError:
+        _LINE_GEOMETRY = 1  # type: ignore[assignment]  # test-stub sentinel
 
 
 def run_rnav_sid_missed(iface, routing_layer, rnav_mode: str, op_mode: str,
@@ -18,8 +29,8 @@ def run_rnav_sid_missed(iface, routing_layer, rnav_mode: str, op_mode: str,
             return False
 
         geom = selection[0].geometry()
-        if geom.isEmpty():
-            iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: empty feature", level=Qgis.Warning)
+        if geom.isEmpty() or geom.type() != _LINE_GEOMETRY:
+            iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: expected line", level=Qgis.Warning)
             return False
 
         line = geom.asPolyline()

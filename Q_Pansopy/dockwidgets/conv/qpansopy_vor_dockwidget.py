@@ -1,8 +1,8 @@
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt
+﻿from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsMapLayerProxyModel
+from ...qt_compat import MLPM_LineLayer
 import os
-import datetime
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'conv', 'qpansopy_vor_dockwidget.ui'))
@@ -16,7 +16,7 @@ class QPANSOPYVORDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
 
         # Setup layer combobox
-        self.routingLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.routingLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -30,9 +30,8 @@ class QPANSOPYVORDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def get_desktop_path(self):
-        if os.name == 'nt':
-            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-        return os.path.expanduser('~/Desktop')
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(

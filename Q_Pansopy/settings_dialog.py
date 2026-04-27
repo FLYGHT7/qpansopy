@@ -1,5 +1,6 @@
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt
+﻿from qgis.PyQt import QtWidgets, QtGui
+from qgis.PyQt.QtCore import Qt
+from .qt_compat import Qt_AlignVCenter
 import os
 
 class SettingsDialog(QtWidgets.QDialog):
@@ -18,7 +19,7 @@ class SettingsDialog(QtWidgets.QDialog):
             logo_label.setPixmap(logo.scaledToHeight(48))
             about_layout.addWidget(logo_label)
         label = QtWidgets.QLabel("<b>QPANSOPY by FLYGHT7</b>")
-        label.setAlignment(Qt.AlignVCenter)
+        label.setAlignment(Qt_AlignVCenter)
         about_layout.addWidget(label)
         layout.addLayout(about_layout)
 

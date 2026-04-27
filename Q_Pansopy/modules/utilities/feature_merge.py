@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 Feature Merge Module
@@ -26,7 +26,7 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsWkbTypes, QgsFeature,
     QgsFields, QgsField, QgsFeatureRequest, Qgis
 )
-from PyQt5.QtCore import QVariant
+from qgis.PyQt.QtCore import QVariant
 
 
 def merge_selected_layers(iface, selected_layers=None, merged_layer_name="Merged_Layer", output_dir=None):

@@ -1,7 +1,8 @@
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal
+﻿from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal
 from qgis.core import QgsMapLayerProxyModel, Qgis
 from qgis.gui import QgsMapLayerComboBox
+from ...qt_compat import MLPM_PointLayer, MLPM_PolygonLayer
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -16,8 +17,8 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
 
         # Setup layer combos
-        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.surfaceLayerComboBox.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
+        self.surfaceLayerComboBox.setFilters(MLPM_PolygonLayer)
         
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -36,9 +37,8 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def get_desktop_path(self):
-        if os.name == 'nt':
-            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-        return os.path.expanduser('~/Desktop')
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(
@@ -98,6 +98,3 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)
             import traceback
             self.log(traceback.format_exc())
-            self.log(f"Error during extraction: {str(e)}")
-            self.iface.messageBar().pushMessage(
-                "Error", str(e), level=Qgis.Critical)

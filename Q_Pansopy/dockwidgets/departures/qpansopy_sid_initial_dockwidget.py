@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYSIDInitialDockWidget
@@ -26,10 +26,10 @@ import os
 import json
 import datetime
 
-from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt, QRegExp, QMimeData
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt, QMimeData
 from qgis.core import QgsMapLayerProxyModel, Qgis
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer
 
 
 # Load UI file
@@ -67,21 +67,17 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.exact_values = {}
         
         # Configure dock widget properties
-        self.setFeatures(
-            QtWidgets.QDockWidget.DockWidgetMovable |
-            QtWidgets.QDockWidget.DockWidgetFloatable |
-            QtWidgets.QDockWidget.DockWidgetClosable
-        )
+        self.setFeatures(DOCK_FEATURES_DEFAULT)
         
         try:
-            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
         except Exception:
             pass
         
         # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize
         
         # Setup layer combobox
-        self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
@@ -103,11 +99,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def setup_validators(self):
         """Configure validators for numeric input fields."""
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
-        
-        # Apply validators to all numeric spin boxes
-        # (Qt SpinBoxes have built-in validation, but LineEdits need this)
+        pass  # SpinBoxes have built-in validation; add setValidator() here if LineEdits are added
 
     def setup_copy_buttons(self):
         """Configure buttons to copy parameters to clipboard."""
@@ -242,8 +234,9 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         Args:
             message (str): Message to log.
         """
-        self.logTextEdit.append(message)
-        self.logTextEdit.ensureCursorVisible()
+        if hasattr(self, 'logTextEdit'):
+            self.logTextEdit.append(message)
+            self.logTextEdit.ensureCursorVisible()
 
     def validate_inputs(self):
         """

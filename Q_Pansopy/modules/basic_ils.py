@@ -6,17 +6,18 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, 
     QgsCoordinateReferenceSystem,
     QgsPointXY, QgsWkbTypes, QgsField, QgsFields, QgsPoint,
-    QgsLineString, QgsPolygon, QgsVectorFileWriter
+    QgsLineString, QgsPolygon, QgsVectorFileWriter,
+    QgsRuleBasedRenderer, QgsFillSymbol
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 from qgis.core import Qgis
-from qgis.utils import iface
 import math
 import os
 import datetime
 import json
-from ..utils import get_selected_feature
+from ..utils import get_selected_feature, fix_kml_altitude_mode
+from .constants import FT_TO_M, ILS_GROUND_LENGTH_M, ILS_APPROACH_1_M, ILS_SPLAY_RATIO, ILS_TRANSITION_SLOPE
 
 def calculate_basic_ils(iface, point_layer, runway_layer, params):
     """
@@ -39,7 +40,7 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     
     # Convert threshold elevation to meters if it's in feet
     if thr_elev_unit == 'ft':
-        thr_elev = thr_elev * 0.3048  # Convert feet to meters
+        thr_elev = thr_elev * FT_TO_M  # Convert feet to meters
         iface.messageBar().pushMessage(
             "Info", 
             f"Converted threshold elevation from {original_thr_elev} ft to {round(thr_elev, 3)} m", 
@@ -100,6 +101,9 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     
     # Get the runway line
     runway_geom = runway_feature.geometry().asPolyline()
+    if len(runway_geom) < 2:
+        iface.messageBar().pushMessage("QPANSOPY", "Runway layer must have at least 2 vertices", level=Qgis.Critical)
+        return None
     
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -144,14 +148,14 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # Ground surface
     gs_center = thr_geom.project(60, back_azimuth)
     gs_a = gs_center.project(150, back_azimuth-90)
-    gs_b = gs_a.project(960, azimuth)
+    gs_b = gs_a.project(ILS_GROUND_LENGTH_M, azimuth)
     gs_d = gs_center.project(150, back_azimuth+90)
-    gs_c = gs_d.project(960, azimuth)
+    gs_c = gs_d.project(ILS_GROUND_LENGTH_M, azimuth)
     
     # Approach surface section 1
-    as1_center = gs_center.project(3000, back_azimuth)
-    as1_a = as1_center.project(3000*.15+150, back_azimuth-90)
-    as1_d = as1_center.project(3000*.15+150, back_azimuth+90)
+    as1_center = gs_center.project(ILS_APPROACH_1_M, back_azimuth)
+    as1_a = as1_center.project(ILS_APPROACH_1_M * ILS_SPLAY_RATIO + 150, back_azimuth-90)
+    as1_d = as1_center.project(ILS_APPROACH_1_M * ILS_SPLAY_RATIO + 150, back_azimuth+90)
     
     # Approach surface section 2
     as2_center = as1_center.project(9600, back_azimuth)
@@ -167,7 +171,7 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # For the lateral divergence at 1800m from start:
     # Standard 15% slope gives lateral spread of 15% of distance = 1800 * 0.15 = 270m
     # Add initial half-width of 150m: total = 150 + 270 = 420m
-    missed_half_width_1800m = 150 + (1800 * 0.15)
+    missed_half_width_1800m = 150 + (1800 * ILS_SPLAY_RATIO)
     
     missed_b = missed_m_center.project(missed_half_width_1800m, back_azimuth-90)
     missed_e = missed_m_center.project(missed_half_width_1800m, back_azimuth+90)
@@ -178,15 +182,15 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # Total distance from threshold = 900 + 12000 = 12900m
     # Lateral spread = 15% of 12900m = 1935m
     # Add initial half-width: total = 150 + 1935 = 2085m
-    missed_half_width_12000m = 150 + (12900 * 0.15)
+    missed_half_width_12000m = 150 + (12900 * ILS_SPLAY_RATIO)
     
     missed_c = missed_f_center.project(missed_half_width_12000m, back_azimuth-90)
     missed_d = missed_f_center.project(missed_half_width_12000m, back_azimuth+90)
     
     # Transition surface side distances
-    transition_distance_1 = (300 - 60) / (14.3/100)
-    transition_distance_2 = (300 / (14.3/100))
-    transition_distance_3 = (300 - 45) / (14.3/100)
+    transition_distance_1 = (300 - 60) / (ILS_TRANSITION_SLOPE / 100)
+    transition_distance_2 = (300 / (ILS_TRANSITION_SLOPE / 100))
+    transition_distance_3 = (300 - 45) / (ILS_TRANSITION_SLOPE / 100)
     
     # Transition surface points
     transition_e1_left = as1_d.project(transition_distance_1, back_azimuth + 90)
@@ -288,10 +292,34 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     # Update layer extents
     v_layer.updateExtents()
     
-    # Style the layer - green with 50% opacity as requested by client
-    v_layer.renderer().symbol().setColor(QColor(0, 255, 0, 127))  # Green with 50% opacity
-    v_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor(0, 255, 0))
-    v_layer.renderer().symbol().symbolLayer(0).setStrokeWidth(0.7)
+    # Style the layer - rule-based renderer so surface boundaries are visible.
+    # Primary surfaces (approach, missed, ground): semi-transparent solid green fill.
+    # Transition surfaces (secondary areas): diagonal-hatch fill.
+    # Both use the same dark green outline colour used in primary_secondary_areas.qml
+    # so individual polygon boundaries are clearly distinguishable.
+    _OUTLINE = '35,139,69,255'  # dark green, matches primary_secondary_areas.qml
+    primary_sym = QgsFillSymbol.createSimple({
+        'color': '0,200,0,120',
+        'outline_color': _OUTLINE,
+        'outline_width': '0.75',
+        'style': 'solid',
+    })
+    transition_sym = QgsFillSymbol.createSimple({
+        'color': '0,200,0,200',
+        'outline_color': _OUTLINE,
+        'outline_width': '0.75',
+        'style': 'b_diagonal',
+    })
+    root_rule = QgsRuleBasedRenderer.Rule(None)
+    primary_rule = QgsRuleBasedRenderer.Rule(primary_sym)
+    primary_rule.setLabel('Primary Surfaces')
+    primary_rule.setFilterExpression("\"ILS_surface\" NOT LIKE 'transition surface%'")
+    root_rule.appendChild(primary_rule)
+    transition_rule = QgsRuleBasedRenderer.Rule(transition_sym)
+    transition_rule.setLabel('Transition Surfaces')
+    transition_rule.setFilterExpression("\"ILS_surface\" LIKE 'transition surface%'")
+    root_rule.appendChild(transition_rule)
+    v_layer.setRenderer(QgsRuleBasedRenderer(root_rule))
     
     # Add layer to the project
     QgsProject.instance().addMapLayer(v_layer)
@@ -326,37 +354,9 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
             layerOptions=['MODE=2']
         )
         
-        # Correct KML structure for better visualization
-        def correct_kml_structure(kml_file_path):
-            with open(kml_file_path, 'r') as file:
-                kml_content = file.read()
-            
-            # Add altitude mode
-            kml_content = kml_content.replace('<Polygon>', '<Polygon>\n  <altitudeMode>absolute</altitudeMode>')
-            
-            # Add style - green with 50% opacity
-            style_kml = '''
-            <Style id="style1">
-                <LineStyle>
-                    <color>ff00ff00</color>
-                    <width>2</width>
-                </LineStyle>
-                <PolyStyle>
-                    <fill>1</fill>
-                    <color>ff00ff7F</color>
-                </PolyStyle>
-            </Style>
-            '''
-            
-            kml_content = kml_content.replace('<Document>', f'<Document>{style_kml}')
-            kml_content = kml_content.replace('<styleUrl>#</styleUrl>', '<styleUrl>#style1</styleUrl>')
-            
-            with open(kml_file_path, 'w') as file:
-                file.write(kml_content)
-        
-        # Apply corrections to KML file
+        # Apply altitude mode fix to KML file
         if kml_error[0] == QgsVectorFileWriter.NoError:
-            correct_kml_structure(kml_export_path)
+            fix_kml_altitude_mode(kml_export_path)
             result['kml_path'] = kml_export_path
     
     # Zoom to appropriate scale
@@ -380,7 +380,7 @@ def copy_parameters_table(params):
     
     # Calculate converted value if necessary
     if original_unit == 'ft':
-        converted_value = float(original_value) * 0.3048
+        converted_value = float(original_value) * FT_TO_M
         display_text = f"{original_value} {original_unit} ({round(converted_value, 3)} m)"
     else:
         display_text = f"{original_value} {original_unit}"

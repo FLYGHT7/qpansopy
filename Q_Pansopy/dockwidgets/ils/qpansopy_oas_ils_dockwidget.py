@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYOASILSDockWidget
@@ -25,12 +25,12 @@ import os
 import json
 import datetime
 import traceback
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMimeData
+from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -59,11 +59,9 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        }
        
        # Configure the dock widget to be resizable without forcing main window geometry
-       self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                        QtWidgets.QDockWidget.DockWidgetFloatable |
-                        QtWidgets.QDockWidget.DockWidgetClosable)
+       self.setFeatures(DOCK_FEATURES_DEFAULT)
        try:
-           self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+           self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
        except Exception:
            pass
        # Aumentar el espaciado en los layouts
@@ -81,8 +79,8 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        self.outputFolderLineEdit.setText(self.get_desktop_path())
        
        # Filter layers in comboboxes
-       self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-       self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+       self.pointLayerComboBox.setFilters(MLPM_PointLayer)
+       self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
        
        # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
        self.setup_lineedits()
@@ -92,12 +90,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        
        # Limitar el tamaño del área de log
        if hasattr(self, 'logTextEdit') and self.logTextEdit is not None:
-           # Use a preferred height but don't enforce a hard maximum
-           try:
-               self.logTextEdit.setMaximumHeight(0)  # 0 means no max; layout manages size
-           except Exception:
-               pass
-           self.logTextEdit.setVisible(True)  # El valor real lo pone qpansopy.py
+           self.logTextEdit.setVisible(True)
        
        # Asegura que el checkbox de KML existe
        if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
@@ -111,7 +104,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
    
    def request_csv_file(self):
        """Request CSV file from user - mandatory for calculation"""
-       from PyQt5.QtWidgets import QFileDialog
+       from qgis.PyQt.QtWidgets import QFileDialog
        
        csv_path, _ = QFileDialog.getOpenFileName(
            self,
@@ -175,13 +168,12 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
    def copy_parameters_for_word(self):
        """Copiar los parámetros OAS ILS en formato tabla para Word"""
-       import json
        from ...utils import format_parameters_table
        
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
        html_chunks = []
-        text_chunks = []
+       text_chunks = []
        found_params = False
        
        for layer in vector_layers:
@@ -258,8 +250,6 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
    def copy_parameters_as_json(self):
        """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""
-       import json
-       import datetime
        
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
@@ -342,8 +332,8 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
    def setup_lineedits(self):
        """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
        # Crear un validador para números decimales
-       regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-       validator = QRegExpValidator(regex)
+       regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+       validator = QRegularExpressionValidator(regex)
        
        # Configurar el espaciado y márgenes del formulario
        self.formLayout.setSpacing(8)
@@ -437,14 +427,9 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        event.accept()
    
    def get_desktop_path(self):
-       """Get the path to the desktop"""
-       if os.name == 'nt':  # Windows
-           return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-       elif os.name == 'posix':  # macOS or Linux
-           return os.path.join(os.path.expanduser('~'), 'Desktop')
-       else:
-           return os.path.expanduser('~')
-   
+       from ...utils import get_desktop_path as _gdp
+       return _gdp()
+
    def browse_output_folder(self):
        """Open a folder browser dialog"""
        folder = QtWidgets.QFileDialog.getExistingDirectory(
@@ -499,6 +484,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
    
    def calculate(self):
        """Run the calculation"""
+       self.csv_path = None
        self.log("Starting calculation...")
        
        # First, request CSV file - this is mandatory

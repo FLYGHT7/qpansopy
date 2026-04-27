@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYVSSDockWidget
@@ -22,12 +22,12 @@ Procedure Analysis and Obstacle Protection Surfaces - VSS Module
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMimeData
+from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
+from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer
 import json
 import datetime
 from ...utils import format_parameters_table
@@ -58,12 +58,10 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         }
         
         # Configure the dock widget to be resizable without forcing main window resize
-        self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                         QtWidgets.QDockWidget.DockWidgetFloatable |
-                         QtWidgets.QDockWidget.DockWidgetClosable)
+        self.setFeatures(DOCK_FEATURES_DEFAULT)
         # Allow docking left/right and avoid aggressive size constraints
         try:
-            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
         except Exception:
             pass
         # Connect signals
@@ -74,11 +72,12 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.outputFolderLineEdit.setText(self.get_desktop_path())
         
         # Filter layers in comboboxes
-        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
+        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
         self.setup_lineedits()
+        self._setup_tooltips()
         
         # Conectar botones de copia si existen en el UI
         if hasattr(self, 'copyWordButton'):
@@ -94,26 +93,40 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
             self.exportKmlCheckBox.setChecked(True)
             self.verticalLayout.addWidget(self.exportKmlCheckBox)
-        
-    # Log message
+
+        # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
 
+    def _setup_tooltips(self) -> None:
+        """Set helpful tooltips on critical VSS input fields."""
+        if hasattr(self, 'rwyWidthLineEdit'):
+            self.rwyWidthLineEdit.setToolTip(
+                "Runway Width\nUnit: m\nTypical values: 30, 45, 60 m (ICAO Annex 14)")
+        if hasattr(self, 'thrElevLineEdit'):
+            self.thrElevLineEdit.setToolTip(
+                "Threshold Elevation\nUnit: m or ft (select with dropdown)\nRange: -1000 to 15000 ft")
+        if hasattr(self, 'stripWidthLineEdit'):
+            self.stripWidthLineEdit.setToolTip(
+                "Strip Width (half-width from centreline)\nUnit: m\nICAO PANS-OPS Doc 8168")
+        if hasattr(self, 'OCHLineEdit'):
+            self.OCHLineEdit.setToolTip(
+                "Obstacle Clearance Height (OCH)\nUnit: m or ft\nMinimum height above threshold elevation")
+        if hasattr(self, 'RDHLineEdit'):
+            self.RDHLineEdit.setToolTip(
+                "Reference Datum Height (RDH)\nUnit: m or ft\nDefault: 15 m for ILS / RNAV approach")
+        if hasattr(self, 'VPALineEdit'):
+            self.VPALineEdit.setToolTip(
+                "Visual Path Angle (VPA)\nUnit: degrees\nTypical: 3.00° | Range: 2.50° to 3.50°")
+        if hasattr(self, 'runwayLayerComboBox'):
+            self.runwayLayerComboBox.setToolTip(
+                "Runway centreline layer (line geometry)")
+        if hasattr(self, 'pointLayerComboBox'):
+            self.pointLayerComboBox.setToolTip(
+                "Threshold point layer (point geometry)")
+
     def setup_copy_button(self):
-        """DEPRECATED: Buttons are now in the UI XML"""
+        """DEPRECATED: Buttons are now defined in the UI XML."""
         pass
-        # Configurar botones para copiar parámetros al portapapeles
-        buttons_layout = QtWidgets.QHBoxLayout()
-        self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
-        self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
-        self.copyParamsWordButton.setMinimumHeight(30)
-        self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
-        self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
-        self.copyParamsJsonButton.setMinimumHeight(30)
-        buttons_layout.addWidget(self.copyParamsWordButton)
-        buttons_layout.addWidget(self.copyParamsJsonButton)
-        buttons_widget = QtWidgets.QWidget(self)
-        buttons_widget.setLayout(buttons_layout)
-        self.verticalLayout.addWidget(buttons_widget)
 
     def copy_parameters_for_word(self):
         """Copiar los parámetros VSS como tabla para Word"""
@@ -189,8 +202,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def setup_lineedits(self):
         """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
         # Crear un validador para números decimales
-        regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-        validator = QRegExpValidator(regex)
+        regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+        validator = QRegularExpressionValidator(regex)
         
         # Threshold Elevation con selector de unidades
         self.thrElevLineEdit = QtWidgets.QLineEdit(self)
@@ -294,7 +307,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         old_widget.hide()
         
         # Añadir el nuevo widget
-        layout.setWidget(row, QtWidgets.QFormLayout.FieldRole, new_widget)
+        layout.setWidget(row, FORM_FIELD_ROLE, new_widget)
 
     def store_exact_value(self, param_name, text):
         """Almacenar el valor exacto ingresado por el usuario"""
@@ -312,13 +325,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def get_desktop_path(self):
-        """Get the path to the desktop"""
-        if os.name == 'nt':  # Windows
-            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-        elif os.name == 'posix':  # macOS or Linux
-            return os.path.join(os.path.expanduser('~'), 'Desktop')
-        else:
-            return os.path.expanduser('~')
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         """Open a folder browser dialog"""
@@ -332,9 +340,10 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def log(self, message):
         """Add a message to the log"""
-        self.logTextEdit.append(message)
-        # Ensure the latest message is visible
-        self.logTextEdit.ensureCursorVisible()
+        if hasattr(self, 'logTextEdit') and self.logTextEdit is not None:
+            self.logTextEdit.append(message)
+            # Ensure the latest message is visible
+            self.logTextEdit.ensureCursorVisible()
 
     def validate_inputs(self):
         """Validate user inputs"""

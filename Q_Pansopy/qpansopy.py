@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 QPANSOPY Plugin for QGIS
 Aviation surfaces plugin for QGIS developed by FLYGHT7
@@ -11,7 +11,21 @@ from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePoli
 from qgis.PyQt import sip
 from qgis.PyQt import QtWidgets, QtCore
 from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication, Qgis
+from .qt_compat import (
+    Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop,
+    Qt_ScrollBarAsNeeded, Qt_SizeVerCursor, Qt_LeftButton,
+    QEvent_MouseButtonPress, QEvent_MouseMove, QEvent_MouseButtonRelease,
+    QFrame_NoFrame,
+    QSizePolicy_Fixed, QSizePolicy_Minimum, QSizePolicy_Preferred,
+    QSizePolicy_Expanding,
+    QFormLayout_AllNonFixedFieldsGrow,
+    QTextEdit_WidgetWidth,
+    QLayout_SetDefaultConstraint,
+)
 
+
+# Collect import errors to surface them in initGui()
+_IMPORT_ERRORS: list = []
 
 # Import dock widgets with error handling
 try:
@@ -33,8 +47,7 @@ try:
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
 except ImportError as e:
-    # Don't raise error here, will be handled in initGui
-    pass
+    _IMPORT_ERRORS.append(str(e))
 
 class Qpansopy:
     """
@@ -117,24 +130,31 @@ class Qpansopy:
     def initGui(self):
         """
         Initialize the plugin's graphical user interface.
-        
+
         Creates and configures:
         - Module registry with all available tools
         - Themed toolbars (CONV, ILS, PBN, UTILITIES, DEPARTURES)
         - Menu structure with categorized submenus
         - Action handlers for each tool
         - Settings and About dialogs
-        
+
         Each module is registered with metadata including title, icon,
         tooltip, toolbar assignment, and dock widget class.
-        
+
         The dock widget system uses a single-instance pattern where each
         tool is created once and then shown/hidden on subsequent toggles
         to prevent geometry issues with QGIS main window.
-        
+
         Raises:
             Exception: Displays critical error dialog if initialization fails
         """
+        if _IMPORT_ERRORS:
+            from qgis.PyQt.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                None, "QPANSOPY — Import Error",
+                "One or more plugin modules failed to load:\n\n" + "\n".join(_IMPORT_ERRORS)
+            )
+            return
         try:
             # Unified modules dictionary (single authoritative mapping)
             self.modules: dict = {
@@ -322,8 +342,10 @@ class Qpansopy:
                 self.submenus[toolbar_name].addAction(action)
 
             # Add separators in toolbars
-            self.toolbars['ILS'].addSeparator()
-            self.toolbars['UTILITIES'].addSeparator()
+            if self.toolbars.get('ILS'):
+                self.toolbars['ILS'].addSeparator()
+            if self.toolbars.get('UTILITIES'):
+                self.toolbars['UTILITIES'].addSeparator()
 
             # Add About and Settings entries
             self.menu.setTearOffEnabled(True)
@@ -409,7 +431,10 @@ class Qpansopy:
             if dock_widget_cls is None:
                 run_cb = self.modules[name].get("RUN_ACTION")
                 if callable(run_cb):
-                    run_cb()
+                    try:
+                        run_cb()
+                    except Exception:
+                        pass
                 return
             instance = self.modules[name]["GUI_INSTANCE"] = dock_widget_cls(self.iface)
             title = self.modules[name].get("TITLE", name)
@@ -423,7 +448,7 @@ class Qpansopy:
             except Exception:
                 pass
             try:
-                instance.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+                instance.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
             except Exception:
                 pass
             # Initial configuration
@@ -434,10 +459,6 @@ class Qpansopy:
                         instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
                 except AttributeError:
                     QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
-            try:
-                instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
-            except AttributeError:
-                pass  # Widget doesn't have KML export, silently ignore
             if hasattr(instance, "logTextEdit"):
                 show_log = self.settings.value("qpansopy/show_log", True, type=bool)
                 try:
@@ -467,27 +488,27 @@ class Qpansopy:
                     except Exception:
                         pass
             instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
-            
+
             # CRITICAL: Wrap content in scroll area if not already wrapped (issue #39)
             # Docks without scroll areas request full height of all content causing window resize
             # VSS and Wind Spiral have QScrollArea in UI and work fine
             # LNAV, GNSS, SID Initial, OMNI, Holding don't have it and fail on first opening
             self._ensure_scroll_area_wrapper(instance)
-            
+
             # Set maximum size BEFORE adding to dock area (issue #39)
             self._apply_maximum_size_constraint(instance)
-            
+
             # CRITICAL: Force initial conservative size (issue #39 - first-time cache)
             # On first opening, Qt calculates size based on content sizeHint which can be huge
             # By forcing a small initial size with resize(), Qt caches this instead
             # This prevents the massive initial expansion that resizes QGIS window
             self._force_initial_small_size(instance)
-            
+
             # CRITICAL: Add dock HIDDEN first (issue #39 - first-time opening)
             # This gives Qt the context of the dock area to calculate geometry correctly
             # Without this, Qt doesn't know the available space on first opening
             instance.hide()  # Ensure it's hidden before adding
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, instance)
+            self.iface.addDockWidget(Qt_RightDockWidgetArea, instance)
             self._ensure_dock_anchor(name, instance)
             
             # Now that dock is in the area (hidden), force geometry calculation with proper context
@@ -556,10 +577,10 @@ class Qpansopy:
             log_widget.setMaximumHeight(16777215)
             # We'll control height explicitly via a handle (Fixed vertical policy)
             log_widget.setMinimumHeight(max(60, log_widget.minimumHeight()))
-            log_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            log_widget.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Fixed)
             # Ensure horizontal content never forces wider than the dock
             try:
-                log_widget.setLineWrapMode(QtWidgets.QTextEdit.WidgetWidth)
+                log_widget.setLineWrapMode(QTextEdit_WidgetWidth)
             except Exception:
                 pass
             try:
@@ -569,8 +590,8 @@ class Qpansopy:
             except Exception:
                 pass
             try:
-                log_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-                log_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+                log_widget.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
+                log_widget.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
             except Exception:
                 pass
         except Exception:
@@ -583,7 +604,7 @@ class Qpansopy:
                 parent = parent.parentWidget()
             if isinstance(parent, QtWidgets.QGroupBox):
                 parent.setMaximumHeight(16777215)
-                parent.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+                parent.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
         except Exception:
             pass
 
@@ -591,7 +612,7 @@ class Qpansopy:
         try:
             layout = log_widget.parentWidget().layout() or dock_instance.layout()
             if isinstance(layout, QtWidgets.QFormLayout):
-                layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.AllNonFixedFieldsGrow)
+                layout.setFieldGrowthPolicy(QFormLayout_AllNonFixedFieldsGrow)
         except Exception:
             pass
 
@@ -661,7 +682,7 @@ class Qpansopy:
                         pass
                 # Prefer top alignment for contained widgets
                 try:
-                    lg_layout.setAlignment(Qt.AlignTop)
+                    lg_layout.setAlignment(Qt_AlignTop)
                 except Exception:
                     pass
             except Exception:
@@ -676,7 +697,7 @@ class Qpansopy:
             log_widget.setFixedHeight(default_h)
             # Prevent the log group from expanding vertically; keep it tight to content
             try:
-                log_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+                log_group.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Fixed)
             except Exception:
                 pass
 
@@ -685,10 +706,10 @@ class Qpansopy:
             if handle is None:
                 handle = QtWidgets.QFrame(log_group)
                 handle.setObjectName("qpansopyLogResizeHandle")
-                handle.setFrameShape(QtWidgets.QFrame.NoFrame)
+                handle.setFrameShape(QFrame_NoFrame)
                 handle.setFixedHeight(6)
-                handle.setCursor(Qt.SizeVerCursor)
-                handle.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                handle.setCursor(Qt_SizeVerCursor)
+                handle.setSizePolicy(QSizePolicy_Expanding, QSizePolicy_Fixed)
                 # subtle visual cue
                 handle.setStyleSheet("QFrame#qpansopyLogResizeHandle { background: rgba(0,0,0,0.08); border-radius: 2px; }")
                 lg_layout.addWidget(handle)
@@ -703,11 +724,11 @@ class Qpansopy:
                         self._max = max_h
                     def eventFilter(self, obj, event):
                         et = event.type()
-                        if et == QtCore.QEvent.MouseButtonPress and (event.button() == Qt.LeftButton):
+                        if et == QEvent_MouseButtonPress and (event.button() == Qt_LeftButton):
                             self._press_pos = event.globalPos()
                             self._start_h = self._target.height()
                             return True
-                        if et == QtCore.QEvent.MouseMove and self._press_pos is not None:
+                        if et == QEvent_MouseMove and self._press_pos is not None:
                             dy = event.globalPos().y() - self._press_pos.y()
                             nh = max(self._min, min(self._max, self._start_h + dy))
                             self._target.setFixedHeight(nh)
@@ -718,7 +739,7 @@ class Qpansopy:
                             except Exception:
                                 pass
                             return True
-                        if et == QtCore.QEvent.MouseButtonRelease:
+                        if et == QEvent_MouseButtonRelease:
                             self._press_pos = None
                             self._start_h = None
                             return True
@@ -756,7 +777,7 @@ class Qpansopy:
                     try:
                         for j in range(layout.count()):
                             layout.setStretch(j, 0)
-                        layout.setAlignment(Qt.AlignTop)
+                        layout.setAlignment(Qt_AlignTop)
                     except Exception:
                         pass
 
@@ -764,14 +785,14 @@ class Qpansopy:
                     _strip_spacers(root_layout)
                     try:
                         # Use SetDefaultConstraint instead of SetMinAndMaxSize to avoid forcing QGIS window resize
-                        root_layout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
+                        root_layout.setSizeConstraint(QLayout_SetDefaultConstraint)
                     except Exception:
                         pass
 
                 # Ensure every group box hugs its content (no vertical expansion)
                 for gb in root_widget.findChildren(QtWidgets.QGroupBox):
                     try:
-                        gb.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+                        gb.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Minimum)
                     except Exception:
                         pass
 
@@ -864,9 +885,9 @@ class Qpansopy:
             # Create new scroll area
             scroll_area = QtWidgets.QScrollArea()
             scroll_area.setWidgetResizable(True)  # CRITICAL: Allow content to resize
-            scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)  # Seamless appearance
-            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            scroll_area.setFrameShape(QFrame_NoFrame)  # Seamless appearance
+            scroll_area.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
+            scroll_area.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
             
             # Reparent the existing content widget into the scroll area
             scroll_area.setWidget(content_widget)
@@ -1064,8 +1085,8 @@ class Qpansopy:
                     content_widget.setMaximumSize(max_dock_width, max_dock_height)
                     # Also set size policy on content widget to prevent expansion
                     content_policy = content_widget.sizePolicy()
-                    content_policy.setVerticalPolicy(QSizePolicy.Preferred)
-                    content_policy.setHorizontalPolicy(QSizePolicy.Preferred)
+                    content_policy.setVerticalPolicy(QSizePolicy_Preferred)
+                    content_policy.setHorizontalPolicy(QSizePolicy_Preferred)
                     content_widget.setSizePolicy(content_policy)
             else:
                 # Fallback if no screen info available
@@ -1074,16 +1095,16 @@ class Qpansopy:
                 if content_widget:
                     content_widget.setMaximumSize(800, 550)
                     content_policy = content_widget.sizePolicy()
-                    content_policy.setVerticalPolicy(QSizePolicy.Preferred)
-                    content_policy.setHorizontalPolicy(QSizePolicy.Preferred)
+                    content_policy.setVerticalPolicy(QSizePolicy_Preferred)
+                    content_policy.setHorizontalPolicy(QSizePolicy_Preferred)
                     content_widget.setSizePolicy(content_policy)
             
             # Configure size policy to prefer staying within bounds
             # Preferred = can grow/shrink, but prefers its size hint
             # This makes the dock adapt to available space rather than force resize
             size_policy = dock_instance.sizePolicy()
-            size_policy.setVerticalPolicy(QSizePolicy.Preferred)
-            size_policy.setHorizontalPolicy(QSizePolicy.Preferred)
+            size_policy.setVerticalPolicy(QSizePolicy_Preferred)
+            size_policy.setHorizontalPolicy(QSizePolicy_Preferred)
             size_policy.setRetainSizeWhenHidden(False)  # Don't force size when re-showing
             dock_instance.setSizePolicy(size_policy)
             
@@ -1091,7 +1112,7 @@ class Qpansopy:
             # If anything fails, try basic fallback
             try:
                 dock_instance.setMaximumSize(800, 600)
-                size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+                size_policy = QSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
                 dock_instance.setSizePolicy(size_policy)
             except Exception:
                 pass
@@ -1177,17 +1198,17 @@ class Qpansopy:
     def show_about_dialog(self):
         """
         Display the About dialog with plugin information.
-        
+
         Shows a modal dialog containing:
         - FLYGHT7 logo (if available)
         - Plugin title and developer information
         - GitHub repository link
-        
+
         The dialog provides users with version information and
         access to the project's GitHub page for documentation and support.
         """
-        from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QHBoxLayout
-        from PyQt5.QtGui import QPixmap
+        from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QLabel, QHBoxLayout
+        from qgis.PyQt.QtGui import QPixmap
         dlg = QDialog()
         dlg.setWindowTitle("About QPANSOPY")
         layout = QVBoxLayout(dlg)

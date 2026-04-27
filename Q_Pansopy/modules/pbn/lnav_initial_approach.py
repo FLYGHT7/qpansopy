@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 PBN LNAV Initial Approach (RNP APCH) Generator
 
@@ -29,9 +29,14 @@ Version: 2.0
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 from qgis.core import Qgis
-from qgis.utils import iface
 from math import *
 import os
+from ._lnav_common import (
+    _resolve_routing_layer,
+    _select_segment_features,
+    _extract_segment_geom,
+    _create_area_layer,
+)
 
 def run_initial_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
@@ -93,51 +98,20 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
         
         iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Initial Approach (RNP APCH)", level=Qgis.Info)
 
-        # Get Projected Coordinate System for the QGIS Project 
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
-        # Use the provided routing layer instead of searching
+        routing_layer = _resolve_routing_layer(iface, routing_layer)
         if routing_layer is None:
-            # Fallback: search for routing layer
-            for layer in QgsProject.instance().mapLayers().values():
-                if "routing" in layer.name().lower():
-                    routing_layer = layer
-                    break
-
-        if routing_layer is None:
-            iface.messageBar().pushMessage("No Routing Selected", level=Qgis.Critical)
             return None
 
-        # Use only the user's current selection - do not auto-select
-        selected_features = routing_layer.selectedFeatures()
-
-        if not selected_features:
-            iface.messageBar().pushMessage("Please select at least one segment in the routing layer", level=Qgis.Critical)
+        initial_features = _select_segment_features(iface, routing_layer, 'initial')
+        if initial_features is None:
             return None
 
-        # Find initial segment in the user's selection
-        initial_features = [feat for feat in selected_features if feat.attribute('segment') == 'initial']
-        if not initial_features:
-            iface.messageBar().pushMessage("No 'initial' segment found in your selection", level=Qgis.Critical)
+        geom_data = _extract_segment_geom(iface, initial_features, 'initial')
+        if geom_data is None:
             return None
-
-        # Process the user's selected features - use the first valid initial segment found
-        for feat in initial_features:
-            try:
-                geom = feat.geometry().asPolyline()
-                if geom and len(geom) >= 2:
-                    start_point = QgsPoint(geom[0])
-                    end_point = QgsPoint(geom[1])
-                    azimuth = start_point.azimuth(end_point)
-                    back_azimuth = azimuth + 180
-                    length = feat.geometry().length()
-                    break
-            except:
-                iface.messageBar().pushMessage("Invalid geometry in selected feature", level=Qgis.Warning)
-                continue
-        else:
-            iface.messageBar().pushMessage("No valid geometry found in selected initial segments", level=Qgis.Critical)
-            return None
+        start_point, end_point, azimuth, back_azimuth, length = geom_data
 
         # Calculate point coordinates using the original algorithm
 
@@ -166,41 +140,19 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
             pts["m"+str(a)] = line_start
             a += 1
 
-        # Create memory layer
-        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "Initial APCH Segment", "memory")
-        myField = QgsField('Symbol', QVariant.String)
-        v_layer.dataProvider().addAttributes([myField])
-        v_layer.updateFields()
-
-        # Area Definition 
+        # Area Definition
         primary_area = ([pts["m2"], pts["m1"], pts["m4"], pts["m8"], pts["m0"], pts["m6"]], 'Primary Area')
         secondary_area_left = ([pts["m3"], pts["m2"], pts["m6"], pts["m7"]], 'Secondary Area')
         secondary_area_right = ([pts["m4"], pts["m5"], pts["m9"], pts["m8"]], 'Secondary Area')
 
         areas = (primary_area, secondary_area_left, secondary_area_right)
 
-        # Creating areas
-        pr = v_layer.dataProvider()
-        features = []
-        
-        for area in areas:
-            seg = QgsFeature()
-            seg.setGeometry(QgsPolygon(QgsLineString(area[0]), rings=[]))
-            seg.setAttributes([area[1]])
-            features.append(seg)
+        v_layer = _create_area_layer(map_srid, "Initial APCH Segment", areas, __file__)
 
-        pr.addFeatures(features)
-        v_layer.updateExtents()
-        QgsProject.instance().addMapLayers([v_layer])
-
-        # Apply style (no zoom to respect user's current view)
-        style_path = os.path.join(os.path.dirname(__file__), '..', '..', 'styles', 'primary_secondary_areas.qml')
-        if os.path.exists(style_path):
-            v_layer.loadNamedStyle(style_path)
         iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Initial Approach (RNP APCH)", level=Qgis.Success)
-        
+
         return {"initial_layer": v_layer}
-        
+
     except Exception as e:
         iface.messageBar().pushMessage("Error", f"Error in initial approach: {str(e)}", level=Qgis.Critical)
         return None

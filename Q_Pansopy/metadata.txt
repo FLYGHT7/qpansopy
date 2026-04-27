@@ -2,33 +2,41 @@
 
 [general]
 name=QPANSOPY
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.34
+qgisMaximumVersion=4.99
 description=QPANSOPY Plugin for QGIS - Procedure Analysis and Obstacle Protection Surfaces
-version=0.2
-author=Your Name
-email=your.email@example.com
+version=0.4
+author=FLYGHT7
+email=flyght7@users.noreply.github.com
 
-about=QPANSOPY Plugin for QGIS to create aviation surfaces including VSS, OCS, and ILS protection surfaces according to ICAO standards.
+about=QPANSOPY Plugin for QGIS to create aviation surfaces including VSS, OCS, ILS, OAS, Wind Spiral and PBN-LNAV protection surfaces according to ICAO PANS-OPS Doc 8168 standards. Compatible with QGIS 3.34 LTR and QGIS 4.x (Qt6).
 
-tracker=http://github.com/yourusername/qpansopy/issues
-repository=http://github.com/yourusername/qpansopy
+tracker=https://github.com/FLYGHT7/qpansopy/issues
+repository=https://github.com/FLYGHT7/qpansopy
 # End of mandatory metadata
 
 # Recommended items:
 
 hasProcessingProvider=no
-# Uncomment the following line and add your changelog:
-changelog=Version 0.2
+changelog=Version 0.4
+    - QGIS 4 / Qt6 compatibility: all imports migrated to qgis.PyQt shim
+    - QRegExp replaced with QRegularExpression (Qt6 requirement)
+    - Added BasePansopyDockWidget base class centralising log/error/feedback
+    - Added _run_with_feedback() to disable Calculate button during execution
+    - Added QSS stylesheet for consistent dark-mode dockwidget styling
+    - Added field tooltips on ILS and VSS dockwidgets (threshold elevation, runway width)
+    - Removed unused imports and dead code across all dockwidgets
+    - Phase 3–5 module refactoring: constants.py, LNAV shared helpers, desktop-path centralised
+  Version 0.2
     - Fixed inputs to accept decimal values
     - Improved panel management (only one panel shown at a time)
     - All feedback messages in English
     - Fixed Basic ILS surface styling (green with 50% opacity)
     - Prevented KML overwriting by using timestamps in filenames
-    - Improved UI layout and responsiveness
 
-tags=python, aviation, aeronautical, navigation, surfaces, VSS, OCS, ILS
+tags=python, aviation, aeronautical, navigation, surfaces, VSS, OCS, ILS, ICAO, PANS-OPS, instrument approach
 
-homepage=http://github.com/yourusername/qpansopy
+homepage=https://github.com/FLYGHT7/qpansopy
 category=Plugins
 icon=icons/qpansopy_icon.png
 # experimental flag

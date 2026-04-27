@@ -1,6 +1,7 @@
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt
+﻿from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsMapLayerProxyModel
+from ...qt_compat import MLPM_PointLayer, MLPM_LineLayer
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -16,8 +17,8 @@ class QPANSOPYGNSSWaypointDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
 
         # Setup layer comboboxes
-        self.waypointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.routingLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.waypointLayerComboBox.setFilters(MLPM_PointLayer)
+        self.routingLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -35,9 +36,8 @@ class QPANSOPYGNSSWaypointDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def get_desktop_path(self):
-        if os.name == 'nt':
-            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-        return os.path.expanduser('~/Desktop')
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(

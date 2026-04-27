@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYILSDockWidget
@@ -25,13 +25,13 @@ import os
 import json
 import datetime
 from collections import OrderedDict
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QRegExp, QMimeData
-from PyQt5.QtGui import QRegExpValidator
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMimeData
+from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
 from ...utils import format_parameters_table
+from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -57,11 +57,9 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        }
        
        # Configure the dock widget to be resizable without forcing main window geometry
-       self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                        QtWidgets.QDockWidget.DockWidgetFloatable |
-                        QtWidgets.QDockWidget.DockWidgetClosable)
+       self.setFeatures(DOCK_FEATURES_DEFAULT)
        try:
-           self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+           self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
        except Exception:
            pass
        # Connect signals
@@ -72,11 +70,12 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.outputFolderLineEdit.setText(self.get_desktop_path())
        
        # Filter layers in comboboxes
-       self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.PointLayer)
-       self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+       self.pointLayerComboBox.setFilters(MLPM_PointLayer)
+       self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
        
        # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
        self.setup_lineedits()
+       self._setup_tooltips()
        
        # Añadir botón para copiar parámetros
        self.setup_copy_button()
@@ -93,6 +92,24 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Log message
        self.log("QPANSOPY ILS plugin loaded. Select layers and parameters, then click Calculate.")
    
+   def _setup_tooltips(self) -> None:
+       """Set helpful tooltips on critical input fields."""
+       if hasattr(self, 'thrElevLineEdit'):
+           self.thrElevLineEdit.setToolTip(
+               "Threshold Elevation\nUnit: m or ft (select with dropdown)\nRange: -1000 to 15000 ft")
+       if hasattr(self, 'runwayLayerComboBox'):
+           self.runwayLayerComboBox.setToolTip(
+               "Runway centreline layer (line geometry)")
+       if hasattr(self, 'pointLayerComboBox'):
+           self.pointLayerComboBox.setToolTip(
+               "Threshold point layer (point geometry)\nMust contain the runway threshold point")
+       if hasattr(self, 'outputFolderLineEdit'):
+           self.outputFolderLineEdit.setToolTip(
+               "Output folder for KML and result files")
+       if hasattr(self, 'exportKmlCheckBox'):
+           self.exportKmlCheckBox.setToolTip(
+               "Export calculated surfaces to KML file in the output folder")
+
    def setup_copy_button(self):
        """Configurar botones para copiar parámetros al portapapeles"""
        # Crear un layout horizontal para los botones
@@ -160,8 +177,8 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                                params_text += f"  - {formatted_key}: {value}\n"
                            
                            params_text += "\n"
-                       except json.JSONDecodeError:
-                           params_text += f"  Error: Could not parse parameters JSON\n\n"
+                       except json.JSONDecodeError as e:
+                           params_text += f"  Error: Could not parse parameters JSON: {e}\n\n"
                
                params_text += "\n"
        
@@ -187,26 +204,26 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        html_blocks = []
        found_params = False
 
-        for layer in vector_layers:
-            has_ils_params = False
-            if 'parameters' not in [field.name() for field in layer.fields()]:
-                continue
+       for layer in vector_layers:
+           has_ils_params = False
+           if 'parameters' not in [field.name() for field in layer.fields()]:
+               continue
 
-            for feature in layer.getFeatures():
-                params_json = feature.attribute('parameters')
-                if not params_json:
-                    continue
+           for feature in layer.getFeatures():
+               params_json = feature.attribute('parameters')
+               if not params_json:
+                   continue
 
-                try:
-                    params_dict = json.loads(params_json)
-                except json.JSONDecodeError:
-                    continue
+               try:
+                   params_dict = json.loads(params_json)
+               except json.JSONDecodeError:
+                   continue
 
-                calculation_type = params_dict.get('calculation_type', '')
-                if calculation_type and 'Basic ILS' in calculation_type:
-                    has_ils_params = True
-                    layer_params = OrderedDict()
-                    layer_sections = {}
+               calculation_type = params_dict.get('calculation_type', '')
+               if calculation_type and 'Basic ILS' in calculation_type:
+                   has_ils_params = True
+                   layer_params = OrderedDict()
+                   layer_sections = {}
 
                    thr_value = params_dict.get('thr_elev', '')
                    thr_unit = params_dict.get('thr_elev_unit', 'm')
@@ -348,8 +365,8 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
    def setup_lineedits(self):
        """Configurar QLineEdit para los campos numéricos y añadir selectores de unidades"""
        # Crear un validador para números decimales
-       regex = QRegExp(r"[-+]?[0-9]*\.?[0-9]+")
-       validator = QRegExpValidator(regex)
+       regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
+       validator = QRegularExpressionValidator(regex)
        
        # Threshold Elevation con selector de unidades
        self.thrElevLineEdit = QtWidgets.QLineEdit(self)
@@ -378,23 +395,19 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.units[param_name] = unit
    
    def replace_widget_in_form(self, old_widget, new_widget):
-       """Reemplazar un widget en un QFormLayout"""
+       """Reemplazar un widget en un QFormLayout."""
        parent = old_widget.parent()
        form_layout = parent.layout()
-       
-       # Encontrar la fila donde está el widget
+       if not isinstance(form_layout, QtWidgets.QFormLayout):
+           return
+
        for i in range(form_layout.rowCount()):
-           if form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole) and form_layout.itemAt(i, QtWidgets.QFormLayout.FieldRole).widget() == old_widget:
-               # Obtener la etiqueta
-               label_item = form_layout.itemAt(i, QtWidgets.QFormLayout.LabelRole)
-               
-               # Eliminar el widget antiguo
+           field_item = form_layout.itemAt(i, FORM_FIELD_ROLE)
+           if field_item is not None and field_item.widget() == old_widget:
                form_layout.removeWidget(old_widget)
                old_widget.hide()
-               
-               # Añadir el nuevo widget
-               form_layout.setWidget(i, QtWidgets.QFormLayout.FieldRole, new_widget)
-               break
+               form_layout.setWidget(i, FORM_FIELD_ROLE, new_widget)
+               return
    
    def store_exact_value(self, param_name, text):
        """Almacenar el valor exacto ingresado por el usuario"""
@@ -412,14 +425,9 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        event.accept()
    
    def get_desktop_path(self):
-       """Get the path to the desktop"""
-       if os.name == 'nt':  # Windows
-           return os.path.join(os.environ['USERPROFILE'], 'Desktop')
-       elif os.name == 'posix':  # macOS or Linux
-           return os.path.join(os.path.expanduser('~'), 'Desktop')
-       else:
-           return os.path.expanduser('~')
-   
+       from ...utils import get_desktop_path as _gdp
+       return _gdp()
+
    def browse_output_folder(self):
        """Open a folder browser dialog"""
        folder = QtWidgets.QFileDialog.getExistingDirectory(

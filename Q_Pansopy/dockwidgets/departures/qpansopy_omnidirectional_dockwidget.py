@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYOmnidirectionalDockWidget
@@ -20,11 +20,11 @@ Procedure Analysis - Omnidirectional SID Departure Surface Tool
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic
-from PyQt5.QtCore import pyqtSignal, Qt
+from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsProject, QgsMapLayerProxyModel
-from qgis.utils import iface
 from qgis.core import Qgis
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer
 
 
 # Use __file__ to get the current script path
@@ -44,11 +44,9 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
         
         # Configure the dock widget to be resizable
-        self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                         QtWidgets.QDockWidget.DockWidgetFloatable |
-                         QtWidgets.QDockWidget.DockWidgetClosable)
+        self.setFeatures(DOCK_FEATURES_DEFAULT)
         try:
-            self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
         except Exception:
             pass
         # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize
@@ -58,7 +56,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.directionButton.clicked.connect(self.toggle_direction)
         
         # Filter layers in comboboxes - Runway layer should be a line
-        self.runwayLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         
         # Direction state: False = Start to End, True = End to Start
         self.is_reversed = False
@@ -74,6 +72,9 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
             self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
             self.exportKmlCheckBox.setChecked(False)
+            # Add the fallback checkbox to the layout so it is visible
+            if hasattr(self, "verticalLayout") and self.verticalLayout is not None:
+                self.verticalLayout.addWidget(self.exportKmlCheckBox)
         
         # Log message
         self.log("QPANSOPY Omnidirectional SID plugin loaded.")

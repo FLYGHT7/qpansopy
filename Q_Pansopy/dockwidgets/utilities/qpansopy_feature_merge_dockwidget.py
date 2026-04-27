@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYFeatureMergeDockWidget
@@ -22,13 +22,12 @@ Procedure Analysis and Obstacle Protection Surfaces - Feature Merge Module
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, uic, QtCore
-from PyQt5.QtCore import pyqtSignal, QRegExp
-from PyQt5.QtGui import QRegExpValidator, QColor
-from PyQt5.QtWidgets import QColorDialog
+from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
+from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
+from qgis.PyQt.QtWidgets import QColorDialog
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel, QgsVectorFileWriter
 from qgis.gui import QgsMapLayerComboBox
-from qgis.utils import iface
 from qgis.core import Qgis
 import json
 import datetime
@@ -79,12 +78,8 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Note: exportKmlCheckBox doesn't need connection - it's checked during merge execution
 
     def get_desktop_path(self):
-        """Get desktop path for default output folder"""
-        try:
-            import os
-            return os.path.join(os.path.expanduser("~"), "Desktop")
-        except:
-            return ""
+        from ...utils import get_desktop_path as _gdp
+        return _gdp()
 
     def browse_output_folder(self):
         """Browse for output folder"""
@@ -175,7 +170,11 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Log results
             if result:
                 self.log(f"Layer merging completed successfully!")
-                self.log(f"Merged layer: {result.get('merged_layer').name()}")
+                merged_layer = result.get('merged_layer')
+                if merged_layer is not None:
+                    self.log(f"Merged layer: {merged_layer.name()}")
+                else:
+                    self.log("Warning: merged_layer is None — layer may not have been created")
                 self.log(f"Total features: {result.get('total_features', 0)}")
                 self.log(f"Geometry type: {result.get('geometry_type', 'Unknown')}")
                 self.log(f"CRS: {result.get('crs', 'Unknown')}")

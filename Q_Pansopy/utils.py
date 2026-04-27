@@ -22,7 +22,11 @@ Procedure Analysis and Obstacle Protection Surfaces
 """
 
 from qgis.core import Qgis
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree as ET  # namespace registration, Element, write
+try:
+    import defusedxml.ElementTree as _defused_ET  # safe XML parse (XXE protection)
+except ImportError:  # defusedxml not available in QGIS bundled Python
+    import xml.etree.ElementTree as _defused_ET  # type: ignore[no-redef]
 import re
 
 
@@ -46,8 +50,8 @@ def fix_kml_altitude_mode(kml_path):
         ET.register_namespace('', KML_NS)
         ET.register_namespace('gx', GX_NS)
         
-        # Parse the KML file
-        tree = ET.parse(kml_path)
+        # Parse the KML file (using defusedxml for XXE protection)
+        tree = _defused_ET.parse(kml_path)
         root = tree.getroot()
         
         # Find all geometry elements that need altitude mode fix
@@ -112,7 +116,7 @@ def fix_kml_altitude_mode(kml_path):
                 f.write(content)
             
             return True
-        except:
+        except Exception:
             return False
 
 
@@ -249,3 +253,16 @@ def format_parameters_table(title, params_dict, sections=None, as_html=False):
             table += f"{param_name:<25} {str(value):<15} {unit}\n"
 
     return table
+
+
+import pathlib
+
+
+def get_desktop_path() -> str:
+    """Return the current user's Desktop path as a string.
+
+    Uses :func:`pathlib.Path.home` for cross-platform compatibility
+    and returns a plain ``str`` so existing dockwidget code that treats
+    the result as a file-system path continues to work unchanged.
+    """
+    return str(pathlib.Path.home() / "Desktop")
