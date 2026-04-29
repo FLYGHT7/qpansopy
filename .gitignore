@@ -10,4 +10,6 @@ skills-lock.json
 
 #logs
 doc/
+docs/
+CLAUDE.md
 DEVELOPMENT_PLAN.md
