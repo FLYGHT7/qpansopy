@@ -90,14 +90,16 @@ class QPANSOPYConvInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             else:
                 params['moc_unit'] = 'ft'
 
-            result = run_conv_initial_approach(self.iface, routing_layer, params)
+            result = run_conv_initial_approach(
+                self.iface, routing_layer, params,
+                export_kml=export_kml,
+                output_dir=output_dir,
+            )
 
-            # Log results
             if result:
                 self.log("CONV Initial Approach Areas calculation completed successfully")
                 if export_kml:
-                    # Add KML export code here if available
-                    self.log(f"KML export would go to: {output_dir}")
+                    self.log(f"KML export written to: {output_dir}")
                 
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
