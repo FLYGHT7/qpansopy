@@ -120,6 +120,97 @@ def fix_kml_altitude_mode(kml_path):
             return False
 
 
+def fix_kml_polygon_fill_color(kml_path, fill_color_kml, line_color_kml=None):
+    """
+    Inject/fix polygon fill color in a KML file to match the QGIS layer style.
+
+    KML colors use AABBGGRR hex format. Examples:
+      Green 50% transparent: '7f00c800'  (QColor(0,200,0,127))
+      Red   50% transparent: '7f0000ff'  (QColor(255,0,0,127))
+
+    :param kml_path:       Path to the KML file to patch.
+    :param fill_color_kml: Fill color string in AABBGGRR format.
+    :param line_color_kml: Optional outline color string in AABBGGRR format.
+    :return: True if successful, False otherwise.
+    """
+    try:
+        KML_NS = 'http://www.opengis.net/kml/2.2'
+        GX_NS  = 'http://www.google.com/kml/ext/2.2'
+
+        ET.register_namespace('', KML_NS)
+        ET.register_namespace('gx', GX_NS)
+
+        tree = _defused_ET.parse(kml_path)
+        root = tree.getroot()
+
+        for style_elem in root.findall(f'.//{{{KML_NS}}}Style'):
+            # --- PolyStyle (fill) ---
+            poly_style = style_elem.find(f'{{{KML_NS}}}PolyStyle')
+            if poly_style is None:
+                poly_style = ET.SubElement(style_elem, f'{{{KML_NS}}}PolyStyle')
+
+            color_elem = poly_style.find(f'{{{KML_NS}}}color')
+            if color_elem is None:
+                color_elem = ET.SubElement(poly_style, f'{{{KML_NS}}}color')
+            color_elem.text = fill_color_kml
+
+            fill_elem = poly_style.find(f'{{{KML_NS}}}fill')
+            if fill_elem is None:
+                fill_elem = ET.SubElement(poly_style, f'{{{KML_NS}}}fill')
+            fill_elem.text = '1'
+
+            outline_elem = poly_style.find(f'{{{KML_NS}}}outline')
+            if outline_elem is None:
+                outline_elem = ET.SubElement(poly_style, f'{{{KML_NS}}}outline')
+            outline_elem.text = '1'
+
+            # --- LineStyle (outline) — optional ---
+            if line_color_kml:
+                line_style = style_elem.find(f'{{{KML_NS}}}LineStyle')
+                if line_style is None:
+                    line_style = ET.SubElement(style_elem, f'{{{KML_NS}}}LineStyle')
+                line_color_elem = line_style.find(f'{{{KML_NS}}}color')
+                if line_color_elem is None:
+                    line_color_elem = ET.SubElement(line_style, f'{{{KML_NS}}}color')
+                line_color_elem.text = line_color_kml
+
+        tree.write(kml_path, encoding='utf-8', xml_declaration=True)
+        return True
+
+    except Exception:
+        # Fallback: regex injection of PolyStyle block after each </LineStyle>
+        try:
+            with open(kml_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            poly_block = (
+                f'<PolyStyle>'
+                f'<color>{fill_color_kml}</color>'
+                f'<fill>1</fill>'
+                f'<outline>1</outline>'
+                f'</PolyStyle>'
+            )
+
+            # Replace existing PolyStyle blocks
+            content = re.sub(
+                r'<PolyStyle>.*?</PolyStyle>',
+                poly_block,
+                content,
+                flags=re.DOTALL
+            )
+
+            # If no PolyStyle existed, inject after </LineStyle>
+            if '<PolyStyle>' not in content:
+                content = content.replace('</LineStyle>', f'</LineStyle>{poly_block}')
+
+            with open(kml_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            return True
+        except Exception:
+            return False
+
+
 def get_selected_feature(layer, show_error):
     """
     Selecciona la feature a usar según la lógica:
