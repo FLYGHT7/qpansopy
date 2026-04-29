@@ -144,12 +144,26 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
             primary_ring = [pts["m2"], pts["m0"], pts["m4"], pts["m8"], pts["m1"], pts["m6"]]
             primary_area = (primary_ring, 'Primary Area', '-')
             
-            # Secondary Area Left
-            sec_left_ring = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
-            secondary_area_left = (sec_left_ring, 'Secondary Area', 'Left')
-            
-            # Secondary Area Right
-            sec_right_ring = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+            # Determine Left/Right from the actual geometry so the label is correct
+            # regardless of which direction the routing line was drawn.
+            # Cross product (2D, y-up): fdx*dy - fdy*dx < 0 → point is to the RIGHT.
+            _fdx = sin(radians(azimuth))
+            _fdy = cos(radians(azimuth))
+
+            def _area_side(pt):
+                dx = pt.x() - start_point.x()
+                dy = pt.y() - start_point.y()
+                return 'Right' if (_fdx * dy - _fdy * dx) < 0 else 'Left'
+
+            # m2 is the +2.5 NM inner point; its side determines ring-to-label mapping
+            if _area_side(pts["m2"]) == 'Right':
+                sec_right_ring = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
+                sec_left_ring  = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+            else:
+                sec_left_ring  = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
+                sec_right_ring = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+
+            secondary_area_left  = (sec_left_ring,  'Secondary Area', 'Left')
             secondary_area_right = (sec_right_ring, 'Secondary Area', 'Right')
             
             areas = (primary_area, secondary_area_left, secondary_area_right)
