@@ -10,7 +10,7 @@ from qgis.PyQt.QtCore import QVariant
 from math import *
 import os
 import datetime
-from ..utils import fix_kml_altitude_mode, fix_kml_polygon_fill_color
+from ...utils import fix_kml_altitude_mode, fix_kml_polygon_fill_color
 
 # Qt5 / Qt6 compatible field-type constants for QgsField constructors.
 # QGIS 3.34+ / Qt6 deprecates QVariant.Type; QMetaType.Type is the replacement.
