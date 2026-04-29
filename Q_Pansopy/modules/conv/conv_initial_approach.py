@@ -10,6 +10,7 @@ from qgis.PyQt.QtCore import QVariant
 from math import *
 import os
 import datetime
+from ..utils import fix_kml_altitude_mode, fix_kml_polygon_fill_color
 
 # Qt5 / Qt6 compatible field-type constants for QgsField constructors.
 # QGIS 3.34+ / Qt6 deprecates QVariant.Type; QMetaType.Type is the replacement.
@@ -288,7 +289,6 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
             # KML export
             if export_kml and output_dir:
                 try:
-                    from ...utils import fix_kml_altitude_mode, fix_kml_polygon_fill_color
                     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                     kml_path = os.path.join(output_dir, f'conv_initial_approach_{timestamp}.kml')
                     crs = QgsCoordinateReferenceSystem("EPSG:4326")
