@@ -6,10 +6,10 @@ Q_Pansopy_2.zip
 #agents skills
 .agents/
 .claude/
+CLAUDE.md
 skills-lock.json
 
 #logs
 doc/
 docs/
-CLAUDE.md
 DEVELOPMENT_PLAN.md

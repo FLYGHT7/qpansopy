@@ -1,7 +1,7 @@
 ﻿import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QMimeData
-from qgis.core import QgsMapLayerProxyModel
+from qgis.core import QgsMapLayerProxyModel, Qgis
 from ...qt_compat import MLPM_LineLayer
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -55,8 +55,10 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log('Error: Please select a routing layer')
             return
 
-        if lyr.selectedFeatureCount() == 0:
-            self.log('Error: Please select one segment before calculation')
+        if lyr.selectedFeatureCount() != 1:
+            msg = 'Select exactly one segment in the routing layer before calculating'
+            self.log(f'Error: {msg}')
+            self.iface.messageBar().pushMessage('QPANSOPY', msg, level=Qgis.Warning)
             return
 
         try:
