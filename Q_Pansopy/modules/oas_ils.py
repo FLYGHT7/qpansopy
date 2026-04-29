@@ -18,7 +18,7 @@ import datetime
 import json
 import numpy as np
 import re
-from ..utils import get_selected_feature, fix_kml_altitude_mode
+from ..utils import get_selected_feature, fix_kml_altitude_mode, fix_kml_polygon_fill_color
 
 # Global variables to store computed values
 OAS_template = None
@@ -386,9 +386,25 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
             
             # Apply corrections to KML file - Fix altitude mode to absolute for 3D display
             if oas_error[0] == QgsVectorFileWriter.NoError:
-                # Fix the KML to use absolute altitude mode instead of clampToGround
-                if fix_kml_altitude_mode(oas_export_path):
+                # Fix altitude mode first, then inject QGIS fill colours so Google Earth
+                # renders the polygon area with the same colour + 50 % transparency as QGIS.
+                # KML colours use AABBGGRR hex format.
+                # Extended: QColor(0,200,0,127)  → 7f00c800 fill, ff458b23 outline
+                # Template:  QColor(255,0,0,127) → 7f0000ff fill, ff0000b4 outline
+                if key == 'Extended':
+                    kml_fill = '7f00c800'
+                    kml_line = 'ff458b23'
+                else:
+                    kml_fill = '7f0000ff'
+                    kml_line = 'ff0000b4'
+
+                altitude_ok = fix_kml_altitude_mode(oas_export_path)
+                color_ok    = fix_kml_polygon_fill_color(oas_export_path, kml_fill, kml_line)
+
+                if altitude_ok and color_ok:
                     iface.messageBar().pushMessage("Success", f"KML exported with absolute altitude: {oas_export_path}", level=Qgis.Success)
+                elif altitude_ok:
+                    iface.messageBar().pushMessage("Warning", f"KML exported but polygon fill colour fix failed: {oas_export_path}", level=Qgis.Warning)
                 else:
                     iface.messageBar().pushMessage("Warning", f"KML exported but altitude mode fix failed: {oas_export_path}", level=Qgis.Warning)
                 result[f'oas_path_{key.lower()}'] = oas_export_path
