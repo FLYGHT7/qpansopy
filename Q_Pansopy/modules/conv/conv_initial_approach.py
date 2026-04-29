@@ -9,8 +9,19 @@ from qgis.gui import *
 from qgis.PyQt.QtCore import QVariant
 from math import *
 import os
+import datetime
 
-def run_conv_initial_approach(iface, routing_layer, params=None):
+# Qt5 / Qt6 compatible field-type constants for QgsField constructors.
+# QGIS 3.34+ / Qt6 deprecates QVariant.Type; QMetaType.Type is the replacement.
+try:
+    from qgis.PyQt.QtCore import QMetaType as _QMetaType
+    _T_DOUBLE = _QMetaType.Type.Double
+    _T_STRING = _QMetaType.Type.QString
+except (ImportError, AttributeError):
+    _T_DOUBLE = QVariant.Double
+    _T_STRING = QVariant.String
+
+def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=False, output_dir=None):
     """
     Generate CONV Initial Approach areas (primary and secondary) with true 3D Z values.
 
@@ -65,9 +76,6 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
             angle0 = start_point.azimuth(end_point) + 180
             length0 = feat.geometry().length()
             
-            # Debug information
-            iface.messageBar().pushMessage("Debug:", f"Length: {length0/1852:.2f} NM, Azimuth: {angle0:.1f}°", level=Qgis.Info)
-                
             azimuth = angle0
             
             pts = {}
@@ -128,13 +136,11 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
             # Create memory layer
             v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "CONV Initial Approach Areas", "memory")
             fields = [
-                QgsField('Symbol', QVariant.String),
-                QgsField('area_side', QVariant.String),
-                QgsField('proc_alt_ft', QVariant.Double),
-                QgsField('moc', QVariant.Double),
-                QgsField('moc_unit', QVariant.String),
-                QgsField('z_primary_m', QVariant.Double),
-                QgsField('z_outer_m', QVariant.Double)
+                QgsField('Symbol',       _T_STRING),
+                QgsField('area_side',    _T_STRING),
+                QgsField('proc_alt_ft',  _T_DOUBLE),
+                QgsField('moc',          _T_DOUBLE),
+                QgsField('moc_unit',     _T_STRING),
             ]
             v_layer.dataProvider().addAttributes(fields)
             v_layer.updateFields()
@@ -144,12 +150,26 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
             primary_ring = [pts["m2"], pts["m0"], pts["m4"], pts["m8"], pts["m1"], pts["m6"]]
             primary_area = (primary_ring, 'Primary Area', '-')
             
-            # Secondary Area Left
-            sec_left_ring = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
-            secondary_area_left = (sec_left_ring, 'Secondary Area', 'Left')
-            
-            # Secondary Area Right
-            sec_right_ring = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+            # Determine Left/Right from the actual geometry so the label is correct
+            # regardless of which direction the routing line was drawn.
+            # Cross product (2D, y-up): fdx*dy - fdy*dx < 0 → point is to the RIGHT.
+            _fdx = sin(radians(azimuth))
+            _fdy = cos(radians(azimuth))
+
+            def _area_side(pt):
+                dx = pt.x() - start_point.x()
+                dy = pt.y() - start_point.y()
+                return 'Right' if (_fdx * dy - _fdy * dx) < 0 else 'Left'
+
+            # m2 is the +2.5 NM inner point; its side determines ring-to-label mapping
+            if _area_side(pts["m2"]) == 'Right':
+                sec_right_ring = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
+                sec_left_ring  = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+            else:
+                sec_left_ring  = [pts["m3"], pts["m2"], pts["m6"], pts["m7"]]
+                sec_right_ring = [pts["m4"], pts["m5"], pts["m9"], pts["m8"]]
+
+            secondary_area_left  = (sec_left_ring,  'Secondary Area', 'Left')
             secondary_area_right = (sec_right_ring, 'Secondary Area', 'Right')
             
             areas = (primary_area, secondary_area_left, secondary_area_right)
@@ -191,7 +211,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                 return QgsGeometry(polygon)
 
             try:
-                # Primary area: all vertices at z_primary
+                # Primary area: uniform Z = z_primary.
                 geom = create_polygon_with_z(primary_area[0], z_primary)
                 f = QgsFeature()
                 f.setGeometry(geom)
@@ -201,8 +221,6 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
-                    round(z_primary, 2),
-                    round(z_outer, 2)
                 ])
                 pr.addFeatures([f])
                 features_created += 1
@@ -210,8 +228,9 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                 iface.messageBar().pushMessage("Error creating primary area:", str(area_error), level=Qgis.Warning)
 
             try:
-                # Secondary left: [outer(+5), inner(+2.5), inner(+2.5), outer(+5)]
-                # Points order: m3(outer), m2(inner), m6(inner), m7(outer)
+                # Secondary left: inner vertices at z_primary, outer vertices at z_outer.
+                # Z is encoded per-vertex in 3D geometry; flat z attributes are NULL for
+                # secondary features to avoid misleading column values.
                 geom = create_polygon_with_z(secondary_area_left[0], [z_outer, z_primary, z_primary, z_outer])
                 f = QgsFeature()
                 f.setGeometry(geom)
@@ -221,8 +240,6 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
-                    round(z_primary, 2),
-                    round(z_outer, 2)
                 ])
                 pr.addFeatures([f])
                 features_created += 1
@@ -230,8 +247,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                 iface.messageBar().pushMessage("Error creating secondary left area:", str(area_error), level=Qgis.Warning)
 
             try:
-                # Secondary right: [inner(-2.5), outer(-5), outer(-5), inner(-2.5)]
-                # Points order: m4(inner), m5(outer), m9(outer), m8(inner)
+                # Secondary right: inner vertices at z_primary, outer vertices at z_outer.
                 geom = create_polygon_with_z(secondary_area_right[0], [z_primary, z_outer, z_outer, z_primary])
                 f = QgsFeature()
                 f.setGeometry(geom)
@@ -241,8 +257,6 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
                     procedure_altitude_ft,
                     moc_value,
                     moc_unit,
-                    round(z_primary, 2),
-                    round(z_outer, 2)
                 ])
                 pr.addFeatures([f])
                 features_created += 1
@@ -267,11 +281,40 @@ def run_conv_initial_approach(iface, routing_layer, params=None):
 
             iface.messageBar().pushMessage(
                 "QPANSOPY:",
-                f"Finished CONV Initial Approach Segment - {features_created} areas created for {features_processed} features (Z_primary={z_primary:.2f} m, Z_outer={z_outer:.2f} m)",
+                f"Finished CONV Initial Approach Segment - {features_created} areas created (Z_primary={z_primary:.2f} m, Z_outer={z_outer:.2f} m)",
                 level=Qgis.Success
             )
+
+            # KML export
+            if export_kml and output_dir:
+                try:
+                    from ...utils import fix_kml_altitude_mode, fix_kml_polygon_fill_color
+                    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    kml_path = os.path.join(output_dir, f'conv_initial_approach_{timestamp}.kml')
+                    crs = QgsCoordinateReferenceSystem("EPSG:4326")
+                    kml_error = QgsVectorFileWriter.writeAsVectorFormat(
+                        v_layer,
+                        kml_path,
+                        'utf-8',
+                        crs,
+                        'KML',
+                        layerOptions=['MODE=2', 'AltitudeMode=absolute'],
+                    )
+                    if kml_error[0] == QgsVectorFileWriter.NoError:
+                        altitude_ok = fix_kml_altitude_mode(kml_path)
+                        # Green 50 % transparent fill to match primary_secondary_areas style
+                        color_ok = fix_kml_polygon_fill_color(kml_path, '7f00c800', 'ff458b23')
+                        if altitude_ok and color_ok:
+                            iface.messageBar().pushMessage("Success", f"KML exported: {kml_path}", level=Qgis.Success)
+                        else:
+                            iface.messageBar().pushMessage("Warning", f"KML exported but post-processing failed: {kml_path}", level=Qgis.Warning)
+                    else:
+                        iface.messageBar().pushMessage("Warning", f"KML export failed (error {kml_error[0]})", level=Qgis.Warning)
+                except Exception as kml_err:
+                    iface.messageBar().pushMessage("Warning", f"KML export error: {kml_err}", level=Qgis.Warning)
+
             features_processed += 1
-            
+
         return True
         
     except Exception as e:
