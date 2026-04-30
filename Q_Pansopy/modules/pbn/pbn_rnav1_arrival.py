@@ -27,6 +27,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant
 import os
 import math
+from ._lnav_common import _resolve_routing_layer
 
 
 def run_rnav1_arrival(iface, routing_layer, params=None):
@@ -53,21 +54,11 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
     output_dir = params.get('output_dir', None)
     
     try:
-        iface.messageBar().pushMessage(
-            "QPANSOPY:", 
-            "Executing RNAV 1 Arrival Segment", 
-            level=Qgis.Info
-        )
-
         # Get Projected Coordinate System
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
+        routing_layer = _resolve_routing_layer(iface, routing_layer)
         if routing_layer is None:
-            iface.messageBar().pushMessage(
-                "Error", 
-                "No routing layer provided", 
-                level=Qgis.Critical
-            )
             return None
 
         # Get user's current selection
@@ -75,25 +66,30 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
 
         if not selected_features:
             iface.messageBar().pushMessage(
-                "Error", 
-                "Please select at least one segment in the routing layer", 
+                "QPANSOPY",
+                "Please select at least one segment in the routing layer",
                 level=Qgis.Critical
             )
             return None
 
-        # Try to find arrival segment, but don't fail if attribute doesn't exist
-        arrival_features = []
-        try:
-            arrival_features = [
-                feat for feat in selected_features 
-                if feat.attribute('segment') == 'arrival'
-            ]
-        except Exception:
-            pass  # Attribute doesn't exist, use all selected
-        
+        arrival_features = [
+            feat for feat in selected_features
+            if feat.attribute('segment') == 'arrival'
+        ]
+
         if not arrival_features:
-            # Use all selected features if no 'arrival' attribute found
-            arrival_features = selected_features
+            iface.messageBar().pushMessage(
+                "QPANSOPY",
+                "No 'arrival' segment found in your selection",
+                level=Qgis.Critical
+            )
+            return None
+
+        iface.messageBar().pushMessage(
+            "QPANSOPY:",
+            "Executing RNAV 1 Arrival Segment",
+            level=Qgis.Info
+        )
 
         # Process the first valid feature
         start_point = None
