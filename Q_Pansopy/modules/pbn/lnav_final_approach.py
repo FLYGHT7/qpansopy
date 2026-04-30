@@ -86,9 +86,6 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
         # Initialize QGIS interface from parameter
         iface = iface_param
         
-        # Notify user of calculation start
-        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Final Approach (RNP APCH)", level=Qgis.Info)
-
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -103,6 +100,8 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
         if geom_data is None:
             return None
         start_point, end_point, azimuth, back_azimuth, length = geom_data
+
+        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Final Approach (RNP APCH)", level=Qgis.Info)
 
         # === ICAO-COMPLIANT PROTECTION AREA CALCULATION ===
         # Initialize coordinate point storage for polygon vertices
