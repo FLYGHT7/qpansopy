@@ -96,8 +96,6 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
         # Use the passed iface parameter
         iface = iface_param
         
-        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Initial Approach (RNP APCH)", level=Qgis.Info)
-
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -111,6 +109,8 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
         geom_data = _extract_segment_geom(iface, initial_features, 'initial')
         if geom_data is None:
             return None
+
+        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Initial Approach (RNP APCH)", level=Qgis.Info)
         start_point, end_point, azimuth, back_azimuth, length = geom_data
 
         # Calculate point coordinates using the original algorithm
