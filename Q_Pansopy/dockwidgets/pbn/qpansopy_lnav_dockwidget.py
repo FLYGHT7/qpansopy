@@ -88,7 +88,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 approach_type = "Intermediate"
             elif self.missedRadioButton.isChecked():
                 self.log("Calculating Missed Approach...")
-                from ...modules.pbn.PBN_LNAV_Missed_Approach import run_missed_approach
+                from ...modules.pbn.lnav_missed_approach import run_missed_approach
                 result = run_missed_approach(self.iface, routing_layer, export_kml, output_dir)
                 approach_type = "Missed Approach"
             elif getattr(self, 'sidRadioButton', None) and self.sidRadioButton.isChecked():
