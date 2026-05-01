@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QPANSOPYPBNTargetDockWidgetBase</class>
+ <widget class="QDockWidget" name="QPANSOPYPBNTargetDockWidgetBase">
+  <property name="windowTitle">
+   <string>QPANSOPY - PBN Target</string>
+  </property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QGroupBox" name="inputGroupBox">
+      <property name="title">
+       <string>Input Layer</string>
+      </property>
+      <layout class="QVBoxLayout" name="inputLayout">
+       <item>
+        <widget class="QgsMapLayerComboBox" name="pointLayerComboBox"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="actionsGroupBox">
+      <property name="title">
+       <string>Actions</string>
+      </property>
+      <layout class="QVBoxLayout" name="actionsLayout">
+       <item>
+        <widget class="QPushButton" name="calculateButton">
+         <property name="text">
+          <string>Generate PBN Target Rings</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="logGroupBox">
+      <property name="title">
+       <string>Log</string>
+      </property>
+      <layout class="QVBoxLayout" name="logLayout">
+       <item>
+        <widget class="QTextEdit" name="logTextEdit">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="verticalSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsmaplayercombobox.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
