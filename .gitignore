@@ -3,6 +3,18 @@ Q_Pansopy_.zip
 Q_Pansopy_1.zip
 Q_Pansopy_2.zip
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# pytest / coverage
+.pytest_cache/
+htmlcov/
+.coverage
+tests/results/
+
 #agents skills
 .agents/
 .claude/
