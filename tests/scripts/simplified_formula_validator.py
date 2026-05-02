@@ -23,9 +23,8 @@ class SimplifiedFormulaValidator:
             "errors": []
         }
         
-        # Add test data directory to path
         current_dir = Path(__file__).parent
-        sys.path.insert(0, str(current_dir / "test_data"))
+        sys.path.insert(0, str(current_dir.parent / "fixtures"))
     
     def run_test(self, test_name, test_function, category):
         """Execute a single test and record results"""
