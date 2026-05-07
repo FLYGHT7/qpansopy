@@ -1,0 +1,26 @@
+[
+  {
+    "id": "vor_at_origin",
+    "description": "At D=0 NM from fix, secondary half-width = 1.25 NM (no splay yet)",
+    "inputs": { "distance_nm": 0.0 },
+    "expected": { "secondary_half_width_nm": 1.2500, "tolerance": 0.0001 }
+  },
+  {
+    "id": "vor_at_5nm",
+    "description": "At D=5 NM, secondary half-width = 1.25 + 5*tan(7.8°) ≈ 1.9349 NM",
+    "inputs": { "distance_nm": 5.0 },
+    "expected": { "secondary_half_width_nm": 1.9349, "tolerance": 0.0001 }
+  },
+  {
+    "id": "vor_at_10nm",
+    "description": "At D=10 NM, secondary half-width = 1.25 + 10*tan(7.8°) ≈ 2.6198 NM",
+    "inputs": { "distance_nm": 10.0 },
+    "expected": { "secondary_half_width_nm": 2.6198, "tolerance": 0.0001 }
+  },
+  {
+    "id": "vor_at_15nm",
+    "description": "At D=15 NM, secondary half-width = 1.25 + 15*tan(7.8°) ≈ 3.3047 NM",
+    "inputs": { "distance_nm": 15.0 },
+    "expected": { "secondary_half_width_nm": 3.3047, "tolerance": 0.0001 }
+  }
+]

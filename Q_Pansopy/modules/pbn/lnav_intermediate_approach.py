@@ -107,9 +107,6 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
         # Initialize QGIS interface from parameter
         iface = iface_param
         
-        # Notify user of intermediate approach calculation start
-        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Intermediate Approach (RNP APCH)", level=Qgis.Info)
-
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -124,6 +121,8 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
         if geom_data is None:
             return None
         start_point, end_point, azimuth, back_azimuth, length = geom_data
+
+        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Intermediate Approach (RNP APCH)", level=Qgis.Info)
 
         # Calculate point coordinates using the original algorithm
         pts = {}

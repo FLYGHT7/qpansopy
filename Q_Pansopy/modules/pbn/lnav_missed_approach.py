@@ -109,8 +109,6 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
         # Use the passed iface parameter
         iface = iface_param
         
-        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Missed Approach (RNP APCH)", level=Qgis.Info)
-
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -124,6 +122,8 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
         if not selected_features:
             iface.messageBar().pushMessage("No 'missed' segment found in routing layer", level=Qgis.Critical)
             return None
+
+        iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Missed Approach (RNP APCH)", level=Qgis.Info)
             
         # Process the selected features - use the first valid missed segment found (original behavior)
         for feat in selected_features:

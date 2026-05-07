@@ -1,0 +1,26 @@
+[
+  {
+    "id": "ndb_at_origin",
+    "description": "At D=0 NM from fix, secondary half-width = 1.25 NM (no splay yet)",
+    "inputs": { "distance_nm": 0.0 },
+    "expected": { "secondary_half_width_nm": 1.25, "tolerance": 0.001 }
+  },
+  {
+    "id": "ndb_at_5nm",
+    "description": "At D=5 NM, secondary half-width = 1.25 + 5*tan(10.3°) ≈ 2.159 NM",
+    "inputs": { "distance_nm": 5.0 },
+    "expected": { "secondary_half_width_nm": 2.159, "tolerance": 0.001 }
+  },
+  {
+    "id": "ndb_at_10nm",
+    "description": "At D=10 NM, secondary half-width = 1.25 + 10*tan(10.3°) ≈ 3.067 NM",
+    "inputs": { "distance_nm": 10.0 },
+    "expected": { "secondary_half_width_nm": 3.067, "tolerance": 0.001 }
+  },
+  {
+    "id": "ndb_at_15nm",
+    "description": "At D=15 NM (max template), secondary half-width = 1.25 + 15*tan(10.3°) ≈ 3.976 NM",
+    "inputs": { "distance_nm": 15.0 },
+    "expected": { "secondary_half_width_nm": 3.976, "tolerance": 0.001 }
+  }
+]

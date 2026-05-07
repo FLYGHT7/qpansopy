@@ -1,0 +1,38 @@
+[
+  {
+    "id": "LEMD_madrid_zone30_north",
+    "description": "Adolfo Suárez Madrid–Barajas — longitude -3.57 → UTM zone 30, northern hemisphere",
+    "inputs": { "lon": -3.57, "lat": 40.47 },
+    "expected": { "zone": 30, "south": false }
+  },
+  {
+    "id": "KMIA_miami_zone17_north",
+    "description": "Miami Intl — longitude -80.29 → UTM zone 17, northern hemisphere",
+    "inputs": { "lon": -80.29, "lat": 25.79 },
+    "expected": { "zone": 17, "south": false }
+  },
+  {
+    "id": "SBGR_sao_paulo_zone23_south",
+    "description": "Guarulhos Intl — longitude -46.47, latitude -23.43 → UTM zone 23, southern hemisphere",
+    "inputs": { "lon": -46.47, "lat": -23.43 },
+    "expected": { "zone": 23, "south": true }
+  },
+  {
+    "id": "NZAA_auckland_zone60_south",
+    "description": "Auckland Intl — longitude 174.79, latitude -37.01 → UTM zone 60, southern hemisphere",
+    "inputs": { "lon": 174.79, "lat": -37.01 },
+    "expected": { "zone": 60, "south": true }
+  },
+  {
+    "id": "WSSS_singapore_zone48_north",
+    "description": "Singapore Changi — longitude 103.99 → UTM zone 48, northern hemisphere",
+    "inputs": { "lon": 103.99, "lat": 1.36 },
+    "expected": { "zone": 48, "south": false }
+  },
+  {
+    "id": "YSSY_sydney_zone56_south",
+    "description": "Sydney Kingsford Smith — longitude 151.17, latitude -33.94 → UTM zone 56, southern hemisphere",
+    "inputs": { "lon": 151.17, "lat": -33.94 },
+    "expected": { "zone": 56, "south": true }
+  }
+]

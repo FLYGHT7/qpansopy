@@ -1,0 +1,32 @@
+[
+  {
+    "id": "sea_level_standard",
+    "description": "Sea level at ISA standard day (15°C): delta_isa = 0",
+    "inputs": { "elev_m": 0.0, "ref_temp_c": 15.0 },
+    "expected": { "temp_isa": 15.0, "delta_isa": 0.0, "tolerance": 0.05 }
+  },
+  {
+    "id": "sea_level_hot_day",
+    "description": "Sea level at +10°C above ISA (25°C): delta_isa = +10",
+    "inputs": { "elev_m": 0.0, "ref_temp_c": 25.0 },
+    "expected": { "temp_isa": 15.0, "delta_isa": 10.0, "tolerance": 0.05 }
+  },
+  {
+    "id": "sea_level_cold_day",
+    "description": "Sea level at -10°C below ISA (5°C): delta_isa = -10",
+    "inputs": { "elev_m": 0.0, "ref_temp_c": 5.0 },
+    "expected": { "temp_isa": 15.0, "delta_isa": -10.0, "tolerance": 0.05 }
+  },
+  {
+    "id": "altitude_1000m_standard",
+    "description": "1000 m elevation, standard day: ISA temp = 15 - 0.00198*1000 = 13.02°C, delta_isa = +1.98°C",
+    "inputs": { "elev_m": 1000.0, "ref_temp_c": 15.0 },
+    "expected": { "temp_isa": 13.02, "delta_isa": 1.98, "tolerance": 0.05 }
+  },
+  {
+    "id": "bogota_standard",
+    "description": "Bogotá El Dorado ~2548 m: ISA temp ≈ 9.95°C; actual ~14°C → delta_isa ≈ +4.05°C",
+    "inputs": { "elev_m": 2548.0, "ref_temp_c": 14.0 },
+    "expected": { "temp_isa": 9.955, "delta_isa": 4.045, "tolerance": 0.05 }
+  }
+]

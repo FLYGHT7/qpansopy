@@ -98,8 +98,6 @@ class QPANSOPYConvInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
             if result:
                 self.log("CONV Initial Approach Areas calculation completed successfully")
-                if export_kml:
-                    self.log(f"KML export written to: {output_dir}")
                 
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")

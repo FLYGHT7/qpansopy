@@ -1,7 +1,7 @@
 import textwrap
 from pathlib import Path
 
-from external_testing.test_oas_csv_parser import parse_constants
+from .oas_csv_parser_helper import parse_constants
 
 
 def test_parse_constants_minimal(tmp_path: Path):
