@@ -13,3 +13,8 @@ doc/
 docs/
 CLAUDE.md
 DEVELOPMENT_PLAN.md
+
+#python cache
+__pycache__/
+*.pyc
+*.pyo

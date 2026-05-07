@@ -1,22 +1,12 @@
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsField,
-    QgsGeometry,
-    QgsCoordinateTransform, QgsCoordinateReferenceSystem, Qgis
+    QgsGeometry, Qgis
 )
 from qgis.PyQt.QtCore import QVariant
 import os
 
 _NM_TO_M = 1852.0
 _SEGMENTS = 360
-
-
-def _utm_crs_for_point(lon_deg, lat_deg):
-    """Return a UTM CRS centred on the given WGS84 coordinates."""
-    zone = int((lon_deg + 180) / 6) + 1
-    south = '+south' if lat_deg < 0 else ''
-    return QgsCoordinateReferenceSystem(
-        f'PROJ:+proj=utm +zone={zone} {south} +datum=WGS84 +units=m +no_defs'
-    )
 
 
 def run_pbn_target(iface, point_layer):
@@ -26,6 +16,16 @@ def run_pbn_target(iface, point_layer):
             iface.messageBar().pushMessage('QPANSOPY', 'No point layer provided', level=Qgis.Critical)
             return None
 
+        layer_crs = point_layer.crs()
+        if layer_crs.isGeographic():
+            iface.messageBar().pushMessage(
+                'QPANSOPY',
+                'Layer CRS must be projected (metre-based). '
+                'Reproject your ARP layer before running PBN Target.',
+                level=Qgis.Critical,
+            )
+            return None
+
         selected = point_layer.selectedFeatures()
         feat = selected[0] if selected else next(point_layer.getFeatures(), None)
 
@@ -33,35 +33,18 @@ def run_pbn_target(iface, point_layer):
             iface.messageBar().pushMessage('QPANSOPY', 'No feature found in the point layer', level=Qgis.Critical)
             return None
 
-        project_crs = iface.mapCanvas().mapSettings().destinationCrs()
-        src_crs = point_layer.crs()
-        wgs84 = QgsCoordinateReferenceSystem('EPSG:4326')
+        geom = feat.geometry()
 
-        geom_src = feat.geometry()
-        to_wgs84 = QgsCoordinateTransform(src_crs, wgs84, QgsProject.instance())
-        geom_wgs84 = QgsGeometry(geom_src)
-        geom_wgs84.transform(to_wgs84)
-        pt_wgs84 = geom_wgs84.asPoint()
-
-        utm_crs = _utm_crs_for_point(pt_wgs84.x(), pt_wgs84.y())
-
-        to_utm = QgsCoordinateTransform(src_crs, utm_crs, QgsProject.instance())
-        geom_utm = QgsGeometry(geom_src)
-        geom_utm.transform(to_utm)
-
-        from_utm = QgsCoordinateTransform(utm_crs, project_crs, QgsProject.instance())
-
-        v_layer = QgsVectorLayer(f'Polygon?crs={project_crs.authid()}', 'PBN_target', 'memory')
+        v_layer = QgsVectorLayer(f'Polygon?crs={layer_crs.authid()}', 'PBN_target', 'memory')
         pr = v_layer.dataProvider()
         pr.addAttributes([QgsField('target', QVariant.String)])
         v_layer.updateFields()
 
         features = []
         for radius_nm, label in [(15, '15 NM ARP'), (30, '30 NM ARP')]:
-            buf_utm = geom_utm.buffer(radius_nm * _NM_TO_M, _SEGMENTS)
-            buf_utm.transform(from_utm)
+            buf = geom.buffer(radius_nm * _NM_TO_M, _SEGMENTS)
             f = QgsFeature()
-            f.setGeometry(buf_utm)
+            f.setGeometry(buf)
             f.setAttributes([label])
             features.append(f)
 
