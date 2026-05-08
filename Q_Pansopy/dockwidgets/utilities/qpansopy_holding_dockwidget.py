@@ -2,7 +2,7 @@
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QMimeData
 from qgis.core import QgsMapLayerProxyModel, Qgis
-from ...qt_compat import MLPM_LineLayer
+from ...qt_compat import MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_holding_dockwidget.ui'))
@@ -20,6 +20,7 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Setup layer selector
         self.routingLayerComboBox.setFilters(MLPM_LineLayer)
+        preseed_active_layer(iface, self.routingLayerComboBox, Qgis_GeomType_Line)
 
         # Defaults
         self.altitudeUnitCombo.setCurrentText('ft')
