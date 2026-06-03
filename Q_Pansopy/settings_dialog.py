@@ -1,7 +1,7 @@
-﻿from qgis.PyQt import QtWidgets, QtGui
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt import QtWidgets, QtGui
 from .qt_compat import Qt_AlignVCenter
 import os
+
 
 class SettingsDialog(QtWidgets.QDialog):
     def __init__(self, parent=None, settings=None):

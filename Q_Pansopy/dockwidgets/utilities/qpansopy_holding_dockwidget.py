@@ -1,7 +1,7 @@
-﻿import os
+import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QMimeData
-from qgis.core import QgsMapLayerProxyModel, Qgis
+from qgis.core import Qgis
 from ...qt_compat import MLPM_LineLayer
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -88,7 +88,8 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                             f"ISA Δ {summary.get('ISA_var_C', 0):.1f}°C | Bank {summary.get('Bank_deg', 0):.1f}° | "
                             f"Leg {summary.get('Leg_min', 0):.2f} min ({summary.get('Leg_nm', 0):.2f} NM) | "
                             f"Turn {summary.get('Turn', '?')} | TAS {summary.get('TAS_kt', 0):.2f} kt | "
-                            f"Rate {summary.get('Rate_deg_s', 0):.3f} °/s | Radius {summary.get('Radius_nm', 0):.3f} NM"
+                            f"Rate {summary.get('Rate_deg_s', 0):.3f} °/s | "
+                            f"Radius {summary.get('Radius_nm', 0):.3f} NM"
                         )
                 self.last_summary = res.get('summary')
                 self.last_summary_text = res.get('summary_text')

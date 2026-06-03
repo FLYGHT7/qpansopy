@@ -34,8 +34,8 @@ Version: 2.0
 """
 
 from qgis.core import (
-    QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, 
-    QgsCoordinateReferenceSystem, QgsPoint, QgsLineString, 
+    QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry,
+    QgsCoordinateReferenceSystem, QgsPoint, QgsLineString,
     QgsPolygon, QgsField, QgsWkbTypes, QgsVectorFileWriter
 )
 from qgis.PyQt.QtCore import QVariant
@@ -44,6 +44,7 @@ import math
 import os
 import datetime
 from ._lnav_common import _resolve_routing_layer, _create_area_layer
+
 
 def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
@@ -108,7 +109,7 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
     try:
         # Use the passed iface parameter
         iface = iface_param
-        
+
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -124,7 +125,7 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
             return None
 
         iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Missed Approach (RNP APCH)", level=Qgis.Info)
-            
+
         # Process the selected features - use the first valid missed segment found (original behavior)
         for feat in selected_features:
             try:
@@ -144,22 +145,22 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
             return None
 
         # ATT tolerance in meters (keep original logic)
-        att = 0.24 * 1852  
-        
+        att = 0.24 * 1852
+
         # Calculate points dictionary (keep original algorithm)
         pts = {}
         a = 0
-        
+
         # Initial points with ATT tolerance
         pts[f"m{a}"] = end_point.project(att, azimuth)
         a += 1
-        
+
         pts[f"m{a}"] = start_point.project(att, back_azimuth)
         a += 1
-        
+
         # Calculate earliest points
         d = (0.475, 0.95, -0.475, -0.95)  # NM
-        
+
         for i in d:
             bearing = azimuth + 90
             angle = 90 - bearing + 180
@@ -167,16 +168,16 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
             angle = math.radians(angle)
             dist_x = i * 1852 * math.cos(angle)
             dist_y = i * 1852 * math.sin(angle)
-            
+
             bx1 = pts["m1"].x() + dist_x
             by2 = pts["m1"].y() + dist_y
-            
+
             pts[f"m{a}"] = QgsPoint(bx1, by2)
             a += 1
-        
+
         # Calculate intermediate points
         d = (-1, -2, 1, 2)  # NM
-        
+
         lengthm = (2 - 0.95) / math.tan(math.radians(15))  # NM
         bearing = azimuth
         angle = 90 - bearing
@@ -184,11 +185,9 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
         angle = math.radians(angle)
         dist_x = lengthm * 1852 * math.cos(angle)
         dist_y = lengthm * 1852 * math.sin(angle)
-        
+
         xm = pts["m1"].x() + dist_x
         ym = pts["m1"].y() + dist_y
-        pm = QgsPoint(xm, ym)
-        
         for i in d:
             TNA_dist = i * 1852
             bearing = azimuth + 90
@@ -197,32 +196,32 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
             angle = math.radians(angle)
             dist_x = TNA_dist * math.cos(angle)
             dist_y = TNA_dist * math.sin(angle)
-            
+
             bx1 = xm + dist_x
             by2 = ym + dist_y
-            
+
             pts[f"mm{a}"] = QgsPoint(bx1, by2)
             a += 1
-        
+
         # Calculate final points
         d = (-1, -2, 1, 2)  # NM
-        
+
         if length / 1852 < 5:
             lengthm = 5.24  # 5 NM default
         else:
             lengthm = length / 1852 + 0.24
-        
+
         bearing = azimuth
         angle = 90 - bearing
         bearing = math.radians(bearing)
         angle = math.radians(angle)
         dist_x = lengthm * 1852 * math.cos(angle)
         dist_y = lengthm * 1852 * math.sin(angle)
-        
+
         xm = pts["m1"].x() + dist_x
         ym = pts["m1"].y() + dist_y
         pf = QgsPoint(xm, ym)
-        
+
         for i in d:
             TNA_dist = i * 1852
             bearing = azimuth + 90
@@ -231,14 +230,14 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
             angle = math.radians(angle)
             dist_x = TNA_dist * math.cos(angle)
             dist_y = TNA_dist * math.sin(angle)
-            
+
             bx1 = xm + dist_x
             by2 = ym + dist_y
-            
+
             pts[f"mm{a}"] = QgsPoint(bx1, by2)
             a += 1
-        
-        # Area Definition 
+
+        # Area Definition
         primary_area = ([pts["m2"], pts["mm6"], pts["mm10"], pf, pts["mm12"], pts["mm8"], pts["m4"], pts["m1"]], 'Primary Area')
         secondary_area_left = ([pts["m2"], pts["m3"], pts["mm7"], pts["mm11"], pts["mm10"], pts["mm6"]], 'Secondary Area')
         secondary_area_right = ([pts["m5"], pts["m4"], pts["mm8"], pts["mm12"], pts["mm13"], pts["mm9"]], 'Secondary Area')
@@ -249,13 +248,13 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
 
         # Export to KML if requested
         result = {'missed_layer': v_layer}
-        
+
         if export_kml and output_dir:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             kml_export_path = os.path.join(output_dir, f'PBN_LNAV_Missed_Approach_{timestamp}.kml')
-            
+
             crs = QgsCoordinateReferenceSystem("EPSG:4326")
-            
+
             kml_error = QgsVectorFileWriter.writeAsVectorFormat(
                 v_layer,
                 kml_export_path,
@@ -264,15 +263,15 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
                 'KML',
                 layerOptions=['MODE=2']
             )
-            
+
             if kml_error[0] == QgsVectorFileWriter.NoError:
                 result['kml_path'] = kml_export_path
                 iface.messageBar().pushMessage("QPANSOPY:", f"KML exported to: {kml_export_path}", level=Qgis.Success)
 
         iface.messageBar().pushMessage("QPANSOPY:", "Finished LNAV Missed Approach (RNP APCH)", level=Qgis.Success)
-        
+
         return result
-        
+
     except Exception as e:
         iface.messageBar().pushMessage("Error", f"Error in missed approach: {str(e)}", level=Qgis.Critical)
         return None

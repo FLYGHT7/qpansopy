@@ -46,6 +46,7 @@ from ._lnav_common import (
     _create_area_layer,
 )
 
+
 def run_intermediate_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
     Execute PBN LNAV Intermediate Approach area calculation and protection surface generation.
@@ -106,7 +107,7 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
     try:
         # Initialize QGIS interface from parameter
         iface = iface_param
-        
+
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -132,11 +133,11 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
         pts["m"+str(a)] = end_point.project(length, back_azimuth)
         a += 1
 
-        # FAF determination 
+        # FAF determination
         pts["m"+str(a)] = end_point
         a += 1
 
-        # Calculating point at FAF location 
+        # Calculating point at FAF location
         d = (0.725, 1.45, -0.725, -1.45)  # NM
         for i in d:
             line_start = end_point.project(i*1852, azimuth-90)
@@ -151,14 +152,14 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
             line_start = int_point.project(i*1852, azimuth-90)
             pts["mm"+str(a)] = line_start
             a += 1
-            
+
         # Calculating point at IF location
         f = (1.25, 2.5, -1.25, -2.5)  # NM
         for i in f:
             pts["m"+str(a)] = start_point.project(i*1852, azimuth-90)
             a += 1
 
-        # Area Definition 
+        # Area Definition
         primary_area = ([pts["m2"], pts["m1"], pts["m4"], pts["mm8"], pts["m12"], pts["m10"], pts["mm6"]], 'Primary Area')
         secondary_area_left = ([pts["m3"], pts["m2"], pts["mm6"], pts["m10"], pts["m11"], pts["mm7"]], 'Secondary Area')
         secondary_area_right = ([pts["m5"], pts["m4"], pts["mm8"], pts["m12"], pts["m13"], pts["mm9"]], 'Secondary Area')
@@ -166,9 +167,9 @@ def run_intermediate_approach(iface_param, routing_layer, export_kml=False, outp
         areas = (primary_area, secondary_area_left, secondary_area_right)
 
         v_layer = _create_area_layer(map_srid, "LNAV Intermediate APCH Segment", areas, __file__)
-        
+
         return {"intermediate_layer": v_layer}
-        
+
     except Exception as e:
         iface.messageBar().pushMessage("Error", f"Error in intermediate approach: {str(e)}", level=Qgis.Critical)
         return None

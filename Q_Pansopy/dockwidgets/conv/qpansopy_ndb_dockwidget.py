@@ -1,11 +1,11 @@
-﻿from qgis.PyQt import QtGui, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt
-from qgis.core import QgsMapLayerProxyModel
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal
 from ...qt_compat import MLPM_LineLayer
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'conv', 'qpansopy_ndb_dockwidget.ui'))
+
 
 class QPANSOPYNDBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -17,10 +17,10 @@ class QPANSOPYNDBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Setup layer combobox
         self.routingLayerComboBox.setFilters(MLPM_LineLayer)
-        
+
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
-        
+
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
@@ -52,12 +52,12 @@ class QPANSOPYNDBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not routing_layer:
             self.log("Error: Please select a routing layer")
             return
-            
+
         # Verify that the user has at least one element selected
         if routing_layer.selectedFeatureCount() == 0:
             self.log("Error: Please select at least one segment in the map before calculation")
             return
-        
+
         # Get export options
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
@@ -73,7 +73,7 @@ class QPANSOPYNDBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 if export_kml:
                     self.log("Note: KML export for NDB approach is not yet implemented.")
                     self.log(f"Output folder selected: {output_dir}")
-                
+
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
             import traceback

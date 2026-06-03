@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 SID Initial Climb Module
@@ -94,7 +94,7 @@ def calculate_isa_temperature(aerodrome_elevation_m, reference_temperature_c):
     """
     temp_isa = 15 - 0.00198 * aerodrome_elevation_m
     delta_isa = reference_temperature_c - temp_isa
-    
+
     return {
         'elevation': aerodrome_elevation_m,
         'temp_ref': reference_temperature_c,
@@ -125,18 +125,18 @@ def calculate_tas_and_turn_parameters(ias_kt, altitude_ft, delta_isa, bank_angle
     # Conversion factor calculation
     k_factor = 171233 * (((288 + delta_isa) - 0.00198 * altitude_ft) ** 0.5) / \
                ((288 - 0.00198 * altitude_ft) ** 2.628)
-    
+
     # True Airspeed
     tas_kt = k_factor * ias_kt
-    
+
     # Rate of turn (limited to 3°/s maximum)
     rate_of_turn = (3431 * tan(radians(bank_angle_deg))) / (pi * tas_kt)
     if rate_of_turn > MAX_RATE_OF_TURN:
         rate_of_turn = MAX_RATE_OF_TURN
-    
+
     # Radius of turn
     radius_of_turn_nm = tas_kt / (20 * pi * rate_of_turn)
-    
+
     return {
         'k_factor': k_factor,
         'tas_kt': tas_kt,
@@ -206,19 +206,19 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     Returns:
         dict: Results dictionary with calculation parameters and layer names.
     """
-    
+
     def log(message):
         """Internal logging helper."""
         if log_callback:
             log_callback(message)
-    
+
     iface.messageBar().pushMessage(
-        "QPANSOPY:", 
-        "Executing SID Initial Climb Calculation", 
+        "QPANSOPY:",
+        "Executing SID Initial Climb Calculation",
         level=Qgis.Info
     )
     log("Starting SID Initial Climb calculation...")
-    
+
     # -------------------------------------------------------------------------
     # Extract parameters
     # -------------------------------------------------------------------------
@@ -232,34 +232,34 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     wind_kt = float(params.get('wind_kt', 30))
     pilot_time_s = float(params.get('pilot_time_s', 11))
     reverse_direction = params.get('reverse_direction', 'NO')
-    
+
     log(f"Parameters: AD Elev={aerodrome_elevation_m}m, DER Elev={der_elevation_m}m")
     log(f"PDG={pdg_percent}%, IAS={ias_kt}kt, Altitude={altitude_ft}ft")
     log(f"Bank={bank_angle_deg}°, Wind={wind_kt}kt, Pilot Time={pilot_time_s}s")
-    
+
     # -------------------------------------------------------------------------
     # ISA and TAS calculations
     # -------------------------------------------------------------------------
     isa_values = calculate_isa_temperature(aerodrome_elevation_m, reference_temp_c)
     log(f"ISA deviation: {isa_values['delta_isa']:.2f}°C")
-    
+
     tas_values = calculate_tas_and_turn_parameters(
         ias_kt, altitude_ft, isa_values['delta_isa'], bank_angle_deg, wind_kt
     )
     log(f"TAS: {tas_values['tas_kt']:.2f}kt, Rate of Turn: {tas_values['rate_of_turn']:.2f}°/s")
     log(f"Radius of Turn: {tas_values['radius_of_turn_nm']:.2f}NM")
-    
+
     # Pilot reaction distance
     pilot_reaction_m = calculate_pilot_reaction_distance(
         pilot_time_s, tas_values['tas_kt'], wind_kt
     )
     pilot_reaction_nm = pilot_reaction_m / 1852
     log(f"Pilot Reaction Distance (c): {pilot_reaction_nm:.4f}NM")
-    
+
     # Wind effect
     wind_effect_nm = calculate_wind_effect(tas_values['rate_of_turn'], wind_kt)
     log(f"Wind Effect (E90): {wind_effect_nm:.4f}NM")
-    
+
     # -------------------------------------------------------------------------
     # Calculate TNA/H distance
     # -------------------------------------------------------------------------
@@ -268,62 +268,62 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     tna_distance_m = (altitude_m - der_elevation_m - 5) / (pdg_percent / 100)
     tna_distance_nm = tna_distance_m / 1852
     log(f"Distance to TNA/H: {tna_distance_nm:.4f}NM ({tna_distance_m:.2f}m)")
-    
+
     # -------------------------------------------------------------------------
     # Get map CRS and validate selection
     # -------------------------------------------------------------------------
     map_crs = iface.mapCanvas().mapSettings().destinationCrs().authid()
-    
+
     selected_features = runway_layer.selectedFeatures()
     if not selected_features:
         log("ERROR: No features selected. Please select a runway feature.")
         iface.messageBar().pushMessage(
-            "QPANSOPY:", 
-            "No features selected. Please select a runway.", 
+            "QPANSOPY:",
+            "No features selected. Please select a runway.",
             level=Qgis.Warning
         )
         return None
-    
+
     # -------------------------------------------------------------------------
     # Extract runway geometry
     # -------------------------------------------------------------------------
     for feature in selected_features:
         runway_geometry = feature.geometry().asPolyline()
-        
+
         if reverse_direction == 'YES':
             start_point = QgsPoint(runway_geometry[-1])
             end_point = QgsPoint(runway_geometry[0])
         else:
             start_point = QgsPoint(runway_geometry[0])
             end_point = QgsPoint(runway_geometry[-1])
-        
+
         azimuth = start_point.azimuth(end_point)
-    
+
     log(f"Runway azimuth: {azimuth:.2f}°")
     log(f"Direction: {'End → Start' if reverse_direction == 'YES' else 'Start → End'}")
-    
+
     # -------------------------------------------------------------------------
     # Calculate construction points (all with Z=0)
     # -------------------------------------------------------------------------
     # Ensure end_point has Z=0
     end_point = point_with_z(end_point, 0.0)
-    
+
     # TNA Start points (at DER)
     tna_start_left = point_with_z(end_point.project(INITIAL_SEMI_WIDTH, azimuth - 90), 0.0)
     tna_start_right = point_with_z(end_point.project(INITIAL_SEMI_WIDTH, azimuth + 90), 0.0)
-    
+
     # TNA End points (at TNA/H reached)
     tna_end_center = point_with_z(end_point.project(tna_distance_m, azimuth), 0.0)
     width_at_tna = INITIAL_SEMI_WIDTH + tna_distance_m * tan(radians(SPLAY_ANGLE))
     tna_end_left = point_with_z(tna_end_center.project(width_at_tna, azimuth - 90), 0.0)
     tna_end_right = point_with_z(tna_end_center.project(width_at_tna, azimuth + 90), 0.0)
-    
+
     # c Point (pilot reaction distance beyond TNA)
     c_point_center = point_with_z(tna_end_center.project(pilot_reaction_m, azimuth), 0.0)
     width_at_c = INITIAL_SEMI_WIDTH + (tna_distance_m + pilot_reaction_m) * tan(radians(SPLAY_ANGLE))
     c_point_left = point_with_z(c_point_center.project(width_at_c, azimuth - 90), 0.0)
     c_point_right = point_with_z(c_point_center.project(width_at_c, azimuth + 90), 0.0)
-    
+
     # -------------------------------------------------------------------------
     # Create protection areas layer
     # -------------------------------------------------------------------------
@@ -334,32 +334,32 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     )
     areas_layer.dataProvider().addAttributes([QgsField('Symbol', QVariant.String)])
     areas_layer.updateFields()
-    
+
     provider = areas_layer.dataProvider()
-    
+
     # Turn Initiation Area (TIA)
     tia_vertices = [end_point, tna_start_left, tna_end_left, tna_end_right, tna_start_right]
     tia_feature = QgsFeature()
     tia_feature.setGeometry(QgsPolygon(QgsLineString(tia_vertices), rings=[]))
     tia_feature.setAttributes(['Turn Initiation Area'])
     provider.addFeatures([tia_feature])
-    
+
     # c Area (pilot reaction buffer)
     c_area_vertices = [tna_end_left, c_point_left, c_point_right, tna_end_right]
     c_area_feature = QgsFeature()
     c_area_feature.setGeometry(QgsPolygon(QgsLineString(c_area_vertices), rings=[]))
     c_area_feature.setAttributes(['c Area'])
     provider.addFeatures([c_area_feature])
-    
+
     areas_layer.updateExtents()
-    
+
     # Style the layer
     areas_layer.renderer().symbol().setColor(QColor("green"))
     areas_layer.renderer().symbol().setOpacity(0.7)
     areas_layer.triggerRepaint()
-    
+
     QgsProject.instance().addMapLayers([areas_layer])
-    
+
     # -------------------------------------------------------------------------
     # Create construction lines layer
     # -------------------------------------------------------------------------
@@ -370,42 +370,42 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     )
     lines_layer.dataProvider().addAttributes([QgsField('id', QVariant.String)])
     lines_layer.updateFields()
-    
+
     lines_provider = lines_layer.dataProvider()
-    
+
     # TNA/H Reached line
     tna_line = QgsGeometry.fromPolyline([tna_end_left, tna_end_center, tna_end_right])
     tna_line_feature = QgsFeature()
     tna_line_feature.setGeometry(tna_line)
     tna_line_feature.setAttributes(['TNA/H Reached'])
     lines_provider.addFeatures([tna_line_feature])
-    
+
     # SS Line (c point line)
     ss_line = QgsGeometry.fromPolyline([c_point_left, c_point_center, c_point_right])
     ss_line_feature = QgsFeature()
     ss_line_feature.setGeometry(ss_line)
     ss_line_feature.setAttributes(['SS LINE'])
     lines_provider.addFeatures([ss_line_feature])
-    
+
     lines_layer.updateExtents()
-    
+
     # Style the lines layer
     lines_layer.renderer().symbol().setColor(QColor("purple"))
     lines_layer.renderer().symbol().setWidth(0.5)
     lines_layer.triggerRepaint()
-    
+
     QgsProject.instance().addMapLayers([lines_layer])
-    
+
     # -------------------------------------------------------------------------
     # Zoom to result
     # -------------------------------------------------------------------------
     canvas = iface.mapCanvas()
     canvas.zoomToFeatureExtent(areas_layer.extent())
-    
+
     scale = canvas.scale()
     if scale < 200000:
         canvas.zoomScale(200000)
-    
+
     # -------------------------------------------------------------------------
     # Generate results text for clipboard
     # -------------------------------------------------------------------------
@@ -413,25 +413,25 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
         altitude_ft, pdg_percent, tna_distance_nm, ias_kt,
         tas_values, bank_angle_deg, wind_kt, pilot_reaction_nm, wind_effect_nm
     )
-    
+
     QApplication.clipboard().setText(results_text)
     log("Results copied to clipboard")
-    
+
     # -------------------------------------------------------------------------
     # Log summary
     # -------------------------------------------------------------------------
     log("=" * 50)
     log("RESULTS SUMMARY:")
-    log(f"Turn Initiation Area created")
-    log(f"c Area created")
-    log(f"Construction lines created")
+    log("Turn Initiation Area created")
+    log("c Area created")
+    log("Construction lines created")
     log(f"Distance to TNA/H: {tna_distance_nm:.4f}NM")
     log(f"TAS: {tas_values['tas_kt']:.2f}kt")
     log(f"Rate of Turn: {tas_values['rate_of_turn']:.2f}°/s")
     log(f"Radius of Turn: {tas_values['radius_of_turn_nm']:.2f}NM")
     log("=" * 50)
     log("SID Initial Climb calculation completed successfully!")
-    
+
     return {
         'areas_layer': 'SID Protection Areas',
         'lines_layer': 'SID Construction Lines',
@@ -445,7 +445,7 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
 
 
 def generate_results_text(altitude_ft, pdg_percent, tna_distance_nm, ias_kt,
-                          tas_values, bank_angle_deg, wind_kt, 
+                          tas_values, bank_angle_deg, wind_kt,
                           pilot_reaction_nm, wind_effect_nm):
     """
     Generate formatted results text for clipboard (tab-separated for Excel/Word paste).
@@ -472,5 +472,5 @@ def generate_results_text(altitude_ft, pdg_percent, tna_distance_nm, ias_kt,
         f'c (NM)\t{round(pilot_reaction_nm, 4)}\n',
         f'E90 (NM)\t{round(wind_effect_nm, 4)}\n'
     ]
-    
+
     return ''.join(lines)

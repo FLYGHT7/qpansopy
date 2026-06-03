@@ -1,11 +1,11 @@
-﻿from qgis.PyQt import QtGui, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt
-from qgis.core import QgsMapLayerProxyModel
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal
 from ...qt_compat import MLPM_LineLayer
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'pbn', 'qpansopy_lnav_dockwidget.ui'))
+
 
 class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -17,10 +17,10 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Setup layer combobox
         self.routingLayerComboBox.setFilters(MLPM_LineLayer)
-        
+
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
-        
+
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
@@ -54,14 +54,14 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not routing_layer:
             self.log("Error: Please select a routing layer")
             return
-            
+
         # NO hacer selecciones automáticas aquí
         # Verificar que el usuario tenga al menos un elemento seleccionado
         if routing_layer.selectedFeatureCount() == 0:
             self.log("Error: Please select at least one segment in the map before calculation")
             self.log("Tip: Use the selection tool to manually select the segment you want to calculate")
             return
-        
+
         # Get export options
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
@@ -112,7 +112,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     self.log(f"KML exported to: {result['kml_path']}")
                 elif export_kml:
                     self.log(f"KML export was requested but not supported for {approach_type} approach")
-                
+
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
             import traceback

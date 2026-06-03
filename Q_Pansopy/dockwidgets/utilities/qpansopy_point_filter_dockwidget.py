@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYPointFilterDockWidget
@@ -22,11 +22,10 @@ Procedure Analysis and Obstacle Protection Surfaces - Point Filter Module
 """
 
 import os
-from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
+from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
 from qgis.PyQt.QtWidgets import QColorDialog
-from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem
 from qgis.core import Qgis
 from ...qt_compat import Qgis_GeomType_Point, Qgis_LayerType_Vector
 import datetime
@@ -45,17 +44,17 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         super(QPANSOPYPointFilterDockWidget, self).__init__(iface.mainWindow())
         self.setupUi(self)
         self.iface = iface
-        
+
         # Initialize exact_values dictionary
         self.exact_values = {}
-        
+
         # Initialize unit and symbology settings
         self.units = {
             'thrElev': 'm'
         }
         self.higher_color = QColor("red")
         self.lower_color = QColor("green")
-        
+
         # Hide output/KML/JSON controls not needed for this tool (per #67)
         if hasattr(self, 'outputGroup'):
             self.outputGroup.setVisible(False)
@@ -64,29 +63,30 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.exportKmlCheckBox.setChecked(False)
         if hasattr(self, 'copyParamsButton'):
             self.copyParamsButton.setVisible(False)
-        
+
         # Setup numeric validator for THR elevation
         self.setup_validators()
-        
+
         # Connect signals for existing UI elements
         self.setup_connections()
-        
+
         # Initialize color button appearances
         self.update_color_button(self.higherColorButton, self.higher_color)
         self.update_color_button(self.lowerColorButton, self.lower_color)
-        
+
         # Add unit combo next to threshold field
         self.setup_thr_elev_with_units()
 
         # Log initial message
-        self.log("Point Filter loaded. Select a point layer with 'elev' field as active layer and set Filter Elevation.")
+        self.log(
+            "Point Filter loaded. Select a point layer with 'elev' field as active layer and set Filter Elevation.")
 
     def setup_validators(self):
         """Setup validators for numeric inputs"""
         # Create validator for decimal numbers (including negative)
         regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegularExpressionValidator(regex)
-        
+
         if hasattr(self, 'thrElevLineEdit'):
             self.thrElevLineEdit.setValidator(validator)
             self.thrElevLineEdit.textChanged.connect(
@@ -127,9 +127,9 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if hasattr(self, 'calculateButton'):
             self.calculateButton.clicked.connect(self.filter_points)
         # Output folder / JSON are hidden; do not wire their actions
-        
+
         # Note: exportKmlCheckBox doesn't need connection - it's checked during filter execution
-        
+
         # Connect symbology controls (these should always exist in the UI)
         self.higherColorButton.clicked.connect(self.choose_higher_color)
         self.lowerColorButton.clicked.connect(self.choose_lower_color)
@@ -189,86 +189,95 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         """Validate user inputs"""
         # Get active layer instead of selected layer
         active_layer = self.iface.activeLayer()
-        
+
         # Check if there's an active layer
         if not active_layer:
             self.log("Error: No active layer. Please select a layer in the Layers panel.")
-            self.iface.messageBar().pushMessage("Error", "No active layer selected. Please select a layer in the Layers panel.", level=Qgis.Warning)
+            self.iface.messageBar().pushMessage(
+                "Error", "No active layer selected. Please select a layer in the Layers panel.",
+                level=Qgis.Warning)
             return False
-        
+
         # Check if active layer is a point layer
         if active_layer.type() != Qgis_LayerType_Vector or active_layer.geometryType() != Qgis_GeomType_Point:
             self.log("Error: Active layer must be a point layer")
             self.iface.messageBar().pushMessage("Error", "Active layer must be a point layer", level=Qgis.Warning)
             return False
-        
+
         # Check if Filter elevation is provided
         if not self.thrElevLineEdit.text():
             self.log("Error: Please enter Filter Elevation value")
             return False
-        
+
         # Validate THR elevation is numeric
         try:
             float(self.thrElevLineEdit.text())
         except ValueError:
             self.log("Error: Filter Elevation must be a valid number")
             return False
-        
+
         # Check if layer has 'elev' field
         if active_layer.fields().indexFromName("elev") == -1:
             self.log("Error: Active layer must have an 'elev' field")
-            self.iface.messageBar().pushMessage("Error", "The 'elev' field is not present in the active layer", level=Qgis.Warning)
+            self.iface.messageBar().pushMessage(
+                "Error", "The 'elev' field is not present in the active layer", level=Qgis.Warning)
             return False
-        
+
         return True
 
     def filter_points(self):
         """Filter points based on THR elevation"""
         self.log("Starting point filtering...")
-        
+
         # Validate inputs
         if not self.validate_inputs():
             return
-        
+
         # Get active layer instead of selected layer
         layer = self.iface.activeLayer()
         thr_elev_input = self.exact_values.get('thrElev', float(self.thrElevLineEdit.text()))
         unit = self.units.get('thrElev', 'm')
         thr_elev_m = float(thr_elev_input) * 0.3048 if unit == 'ft' else float(thr_elev_input)
-        
+
         # Get symbology parameters
         point_size = self.pointSizeSpinBox.value()
-        
+
         # Log the operation
         self.log(f"Using active layer: {layer.name()}")
         self.log(f"Filter Elevation threshold: {thr_elev_input}{unit} (converted: {thr_elev_m:.3f} m)")
-        self.log(f"Symbology - Higher color: {self.higher_color.name()}, Lower color: {self.lower_color.name()}, Size: {point_size}")
-        
+        self.log(
+            f"Symbology - Higher color: {self.higher_color.name()}, "
+            f"Lower color: {self.lower_color.name()}, Size: {point_size}")
+
         try:
             # Import and run the point filter module
             from ...modules.utilities.point_filter import filter_points_by_elevation
-            result = filter_points_by_elevation(self.iface, layer, thr_elev_m, None, 
-                                               self.higher_color, self.lower_color, point_size)
-            
+            result = filter_points_by_elevation(self.iface, layer, thr_elev_m, None,
+                                                self.higher_color, self.lower_color, point_size)
+
             # Log results
             if result:
-                self.log(f"Point filtering completed successfully!")
-                self.log(f"Points above threshold ({self.higher_color.name()}): {result.get('higher_count', 0)} features")
-                self.log(f"Points below threshold ({self.lower_color.name()}): {result.get('lower_count', 0)} features")
+                self.log("Point filtering completed successfully!")
+                self.log(f"Points above threshold ({self.higher_color.name()}): "
+                         f"{result.get('higher_count', 0)} features")
+                self.log(f"Points below threshold ({self.lower_color.name()}): "
+                         f"{result.get('lower_count', 0)} features")
                 self.log(f"Higher layer: {result.get('higher_layer').name()}")
                 self.log(f"Lower layer: {result.get('lower_layer').name()}")
                 self.log("Layers added to project with custom symbology")
                 self.log("Fields added: x_dist, y_dist, z_height (elevation - threshold)")
-                
+
                 # KML/JSON export removed per #67
-                
+
                 # Show success message
-                self.iface.messageBar().pushMessage("QPANSOPY", 
-                    f"Point filtering completed: {result.get('higher_count', 0)} above, {result.get('lower_count', 0)} below threshold", 
+                self.iface.messageBar().pushMessage(
+                    "QPANSOPY",
+                    f"Point filtering completed: {result.get('higher_count', 0)} above, "
+                    f"{result.get('lower_count', 0)} below threshold",
                     level=Qgis.Success)
             else:
                 self.log("Point filtering completed but no results were returned.")
-                
+
         except Exception as e:
             self.log(f"Error during point filtering: {str(e)}")
             import traceback

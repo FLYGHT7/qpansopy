@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYFeatureMergeDockWidget
@@ -22,12 +22,9 @@ Procedure Analysis and Obstacle Protection Surfaces - Feature Merge Module
 """
 
 import os
-from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
-from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
-from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
-from qgis.PyQt.QtWidgets import QColorDialog
-from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel, QgsVectorFileWriter
-from qgis.gui import QgsMapLayerComboBox
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal
+from qgis.core import QgsVectorLayer, QgsVectorFileWriter
 from qgis.core import Qgis
 import json
 import datetime
@@ -44,25 +41,25 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def __init__(self, iface):
         """Constructor."""
         super(QPANSOPYFeatureMergeDockWidget, self).__init__(iface.mainWindow())
-        
+
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.iface = iface
-        
+
         # Make the dock widget floating by default
-        
+
         # Set default output folder
         if hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit.setText(self.get_desktop_path())
-        
+
         # Hide and disable KML export checkbox by default
         if hasattr(self, 'exportKmlCheckBox'):
             self.exportKmlCheckBox.setVisible(False)
             self.exportKmlCheckBox.setChecked(False)
-        
+
         # Connect signals for existing UI elements
         self.setup_connections()
-        
+
         # Log initial message
         self.log("Feature Merge loaded. Select 2+ vector layers in Layers panel and click Merge Layers.")
 
@@ -74,7 +71,7 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.browseButton.clicked.connect(self.browse_output_folder)
         if hasattr(self, 'copyParamsButton'):
             self.copyParamsButton.clicked.connect(self.copy_parameters_as_json)
-        
+
         # Note: exportKmlCheckBox doesn't need connection - it's checked during merge execution
 
     def get_desktop_path(self):
@@ -100,35 +97,39 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         """Validate user inputs"""
         # Get selected layers
         selected_layers = self.iface.layerTreeView().selectedLayers()
-        
+
         # Filter to only vector layers
         selected_layers = [layer for layer in selected_layers if isinstance(layer, QgsVectorLayer)]
-        
+
         # Check if at least 2 layers are selected
         if len(selected_layers) < 2:
             self.log("Error: Select at least two vector layers in the Layers panel.")
-            self.iface.messageBar().pushMessage("Error", "Select at least two vector layers in the Layers panel.", level=Qgis.Warning)
+            self.iface.messageBar().pushMessage(
+                "Error", "Select at least two vector layers in the Layers panel.", level=Qgis.Warning)
             return False, []
-        
+
         # Check geometry and CRS compatibility
         geom_type = selected_layers[0].wkbType()
         crs = selected_layers[0].crs()
-        
+
         for i, layer in enumerate(selected_layers[1:], 1):
             if layer.wkbType() != geom_type:
-                self.log(f"Error: Geometry type mismatch between layer '{selected_layers[0].name()}' and '{layer.name()}'")
-                self.iface.messageBar().pushMessage("Error", f"Geometry types differ between selected layers", level=Qgis.Warning)
+                self.log(
+                    f"Error: Geometry type mismatch between layer '{selected_layers[0].name()}' and '{layer.name()}'")
+
+                self.iface.messageBar().pushMessage(
+                    "Error", "Geometry types differ between selected layers", level=Qgis.Warning)
                 return False, []
             if layer.crs() != crs:
                 self.log(f"Error: CRS mismatch between layer '{selected_layers[0].name()}' and '{layer.name()}'")
-                self.iface.messageBar().pushMessage("Error", f"CRS differ between selected layers", level=Qgis.Warning)
+                self.iface.messageBar().pushMessage("Error", "CRS differ between selected layers", level=Qgis.Warning)
                 return False, []
-        
+
         # Check if layer name is provided
         if not self.layerNameLineEdit.text().strip():
             self.log("Error: Please enter a name for the merged layer")
             return False, []
-        
+
         # Check if output folder exists
         output_folder = self.outputFolderLineEdit.text()
         if not os.path.exists(output_folder):
@@ -138,38 +139,38 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             except Exception as e:
                 self.log(f"Error creating output folder: {str(e)}")
                 return False, []
-        
+
         return True, selected_layers
 
     def merge_layers(self):
         """Merge selected vector layers"""
         self.log("Starting layer merging...")
-        
+
         # Validate inputs
         is_valid, selected_layers = self.validate_inputs()
         if not is_valid:
             return
-        
+
         # Get parameters
         merged_layer_name = self.layerNameLineEdit.text().strip()
         output_dir = self.outputFolderLineEdit.text()
-        
+
         # Check if KML export is requested
         export_kml = self.exportKmlCheckBox.isChecked() if hasattr(self, 'exportKmlCheckBox') else False
-        
+
         # Log the operation
         self.log(f"Merging {len(selected_layers)} layers:")
         for layer in selected_layers:
             self.log(f"  - {layer.name()} ({layer.featureCount()} features)")
-        
+
         try:
             # Import and run the feature merge module
             from ...modules.utilities.feature_merge import merge_selected_layers
             result = merge_selected_layers(self.iface, selected_layers, merged_layer_name, output_dir)
-            
+
             # Log results
             if result:
-                self.log(f"Layer merging completed successfully!")
+                self.log("Layer merging completed successfully!")
                 merged_layer = result.get('merged_layer')
                 if merged_layer is not None:
                     self.log(f"Merged layer: {merged_layer.name()}")
@@ -178,27 +179,29 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.log(f"Total features: {result.get('total_features', 0)}")
                 self.log(f"Geometry type: {result.get('geometry_type', 'Unknown')}")
                 self.log(f"CRS: {result.get('crs', 'Unknown')}")
-                
+
                 # Log individual layer contributions
                 for layer_name, count in result.get('layer_counts', {}).items():
                     self.log(f"  {layer_name}: {count} features")
-                
+
                 # Handle KML export if requested
                 if export_kml:
                     try:
                         self.export_results_to_kml(result.get('merged_layer'), output_dir)
                     except Exception as kml_error:
                         self.log(f"Warning: KML export failed: {str(kml_error)}")
-                
-                self.log("You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
-                
+
+                self.log(
+                    "You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
+
                 # Show success message
-                self.iface.messageBar().pushMessage("QPANSOPY", 
-                    f"Layer merging completed: {result.get('total_features', 0)} features merged", 
+                self.iface.messageBar().pushMessage(
+                    "QPANSOPY",
+                    f"Layer merging completed: {result.get('total_features', 0)} features merged",
                     level=Qgis.Success)
             else:
                 self.log("Layer merging completed but no results were returned.")
-                
+
         except Exception as e:
             self.log(f"Error during layer merging: {str(e)}")
             import traceback
@@ -209,10 +212,10 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         """Export merged results to KML format"""
         if not output_dir or not os.path.exists(output_dir):
             output_dir = self.get_desktop_path()
-        
+
         try:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            
+
             # Export merged layer
             if merged_layer:
                 kml_path = os.path.join(output_dir, f"feature_merge_{timestamp}.kml")
@@ -225,14 +228,13 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 )
                 if error[0] == QgsVectorFileWriter.NoError:
                     self.log(f"Merged layer exported to KML: {kml_path}")
-                    self.iface.messageBar().pushMessage("QPANSOPY", 
-                        f"Feature Merge results exported to KML", 
-                        level=Qgis.Success)
+                    self.iface.messageBar().pushMessage(
+                        "QPANSOPY", "Feature Merge results exported to KML", level=Qgis.Success)
                 else:
                     self.log(f"Error exporting merged layer: {error[1]}")
             else:
                 self.log("Warning: No merged layer to export.")
-                
+
         except Exception as e:
             self.log(f"Error during KML export: {str(e)}")
             raise e
@@ -242,7 +244,7 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Get selected layers
         selected_layers = self.iface.layerTreeView().selectedLayers()
         selected_layers = [layer for layer in selected_layers if isinstance(layer, QgsVectorLayer)]
-        
+
         params_dict = {
             "metadata": {
                 "plugin": "QPANSOPY Feature Merge",
@@ -262,7 +264,7 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'features': 'All features from input layers combined'
             }
         }
-        
+
         if selected_layers:
             params_dict["layer_info"] = {
                 'geometry_type': selected_layers[0].wkbType(),
@@ -270,12 +272,13 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'total_layers': len(selected_layers),
                 'total_features': sum(layer.featureCount() for layer in selected_layers)
             }
-        
+
         params_json = json.dumps(params_dict, indent=2)
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_json)
         self.log("Feature Merge parameters copied to clipboard as JSON.")
-        self.iface.messageBar().pushMessage("QPANSOPY", "Feature Merge parameters copied to clipboard as JSON", level=Qgis.Success)
+        self.iface.messageBar().pushMessage(
+            "QPANSOPY", "Feature Merge parameters copied to clipboard as JSON", level=Qgis.Success)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()

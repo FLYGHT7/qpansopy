@@ -48,7 +48,6 @@ def run_holding_pattern(iface, routing_layer, params: dict):
             iface.messageBar().pushMessage("QPANSOPY", "Invalid geometry: expected a line", level=Qgis.Warning)
             return False
 
-        line = geom.constGet()  # QgsLineString or similar
         pts = geom.asPolyline()
         if not pts or len(pts) < 2:
             iface.messageBar().pushMessage("QPANSOPY", "Routing segment must be a polyline with 2+ vertices", level=Qgis.Warning)

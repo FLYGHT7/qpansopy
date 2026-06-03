@@ -27,8 +27,8 @@ import json
 import datetime
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt, QMimeData
-from qgis.core import QgsMapLayerProxyModel, Qgis
+from qgis.PyQt.QtCore import pyqtSignal, QMimeData
+from qgis.core import Qgis
 from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer
 
 
@@ -40,7 +40,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     """
     Dockwidget for SID Initial Climb protection areas calculation.
-    
+
     This widget provides input controls for:
         - Runway/DER layer selection
         - Aerodrome and DER elevations
@@ -49,50 +49,50 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         - Wind speed, pilot reaction time
         - Direction toggle (Start→End / End→Start)
     """
-    
+
     closingPlugin = pyqtSignal()
 
     def __init__(self, iface):
         """
         Constructor.
-        
+
         Args:
             iface: QGIS interface object.
         """
         super(QPANSOPYSIDInitialDockWidget, self).__init__(iface.mainWindow())
         self.setupUi(self)
         self.iface = iface
-        
+
         # Store exact values entered by user
         self.exact_values = {}
-        
+
         # Configure dock widget properties
         self.setFeatures(DOCK_FEATURES_DEFAULT)
-        
+
         try:
             self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
         except Exception:
             pass
-        
+
         # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize
-        
+
         # Setup layer combobox
         self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
-        
+
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.directionButton.clicked.connect(self.toggle_direction)
-        
+
         # Setup copy buttons
         self.setup_copy_buttons()
-        
+
         # Setup numeric validators
         self.setup_validators()
-        
+
         # Initialize direction state
         self.direction_reversed = False
         self.update_direction_button()
-        
+
         # Log initial message
         self.log("SID Initial Climb module loaded.")
         self.log("Select a runway layer and configure parameters.")
@@ -104,21 +104,21 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def setup_copy_buttons(self):
         """Configure buttons to copy parameters to clipboard."""
         buttons_layout = QtWidgets.QHBoxLayout()
-        
+
         self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
         self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
         self.copyParamsWordButton.setMinimumHeight(30)
-        
+
         self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
         self.copyParamsJsonButton.clicked.connect(self.copy_parameters_as_json)
         self.copyParamsJsonButton.setMinimumHeight(30)
-        
+
         buttons_layout.addWidget(self.copyParamsWordButton)
         buttons_layout.addWidget(self.copyParamsJsonButton)
-        
+
         buttons_widget = QtWidgets.QWidget(self)
         buttons_widget.setLayout(buttons_layout)
-        
+
         self.verticalLayout.addWidget(buttons_widget)
 
     def toggle_direction(self):
@@ -138,7 +138,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def copy_parameters_for_word(self):
         """Copy SID Initial parameters as HTML table for Word."""
         params = self.get_parameters()
-        
+
         param_list = [
             ('Aerodrome Elevation', params['aerodrome_elevation_m'], 'm'),
             ('DER Elevation', params['der_elevation_m'], 'm'),
@@ -151,43 +151,52 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             ('Pilot Reaction Time', params['pilot_time_s'], 's'),
             ('Direction', 'End → Start' if self.direction_reversed else 'Start → End', '')
         ]
-        
+
         # Create HTML table
         html = '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">\n'
-        html += '<tr><th colspan="3" style="background-color: #4472C4; color: white; text-align: center; font-weight: bold;">SID INITIAL CLIMB CALCULATION PARAMETERS</th></tr>\n'
-        html += '<tr style="background-color: #D9E1F2; font-weight: bold;"><th>PARAMETER</th><th>VALUE</th><th>UNIT</th></tr>\n'
-        
+        html += (
+            '<tr><th colspan="3" style="background-color: #4472C4; color: white; '
+            'text-align: center; font-weight: bold;">SID INITIAL CLIMB CALCULATION PARAMETERS</th></tr>\n'
+        )
+        html += (
+            '<tr style="background-color: #D9E1F2; font-weight: bold;">'
+            '<th>PARAMETER</th><th>VALUE</th><th>UNIT</th></tr>\n'
+        )
+
         for i, (name, value, unit) in enumerate(param_list):
             bg_color = '#FFFFFF' if i % 2 == 0 else '#F2F2F2'
-            html += f'<tr style="background-color: {bg_color};"><td>{name}</td><td style="text-align: right;">{value}</td><td>{unit}</td></tr>\n'
-        
+            html += (
+                f'<tr style="background-color: {bg_color};">'
+                f'<td>{name}</td><td style="text-align: right;">{value}</td><td>{unit}</td></tr>\n'
+            )
+
         html += '</table>'
-        
+
         # Set both HTML and plain text to clipboard
         mime_data = QMimeData()
         mime_data.setHtml(html)
-        
+
         # Also set plain text as fallback
         plain_text = "SID INITIAL CLIMB CALCULATION PARAMETERS\n"
         plain_text += "=" * 50 + "\n\n"
         for name, value, unit in param_list:
             plain_text += f"{name}\t{value}\t{unit}\n"
         mime_data.setText(plain_text)
-        
+
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setMimeData(mime_data)
-        
+
         self.log("Parameters copied as table for Word.")
         self.iface.messageBar().pushMessage(
-            "QPANSOPY", 
-            "SID Initial parameters copied as table - paste in Word", 
+            "QPANSOPY",
+            "SID Initial parameters copied as table - paste in Word",
             level=Qgis.Success
         )
 
     def copy_parameters_as_json(self):
         """Copy SID Initial parameters in JSON format."""
         params = self.get_parameters()
-        
+
         params_dict = {
             "metadata": {
                 "plugin": "QPANSOPY SID Initial Climb",
@@ -196,21 +205,21 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             },
             "parameters": params
         }
-        
+
         params_json = json.dumps(params_dict, indent=2)
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_json)
         self.log("Parameters copied to clipboard as JSON.")
         self.iface.messageBar().pushMessage(
-            "QPANSOPY", 
-            "SID Initial parameters copied to clipboard as JSON", 
+            "QPANSOPY",
+            "SID Initial parameters copied to clipboard as JSON",
             level=Qgis.Success
         )
 
     def get_parameters(self):
         """
         Get current parameter values from UI.
-        
+
         Returns:
             dict: Dictionary of all parameters.
         """
@@ -230,7 +239,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def log(self, message):
         """
         Add a message to the log.
-        
+
         Args:
             message (str): Message to log.
         """
@@ -241,7 +250,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def validate_inputs(self):
         """
         Validate user inputs.
-        
+
         Returns:
             bool: True if inputs are valid, False otherwise.
         """
@@ -249,32 +258,32 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.runwayLayerComboBox.currentLayer():
             self.log("Error: Please select a runway/DER layer")
             return False
-        
+
         runway_layer = self.runwayLayerComboBox.currentLayer()
-        
+
         # Log CRS information
         self.log(f"Runway layer CRS: {runway_layer.crs().authid()}")
-        
+
         # Check for feature selection
         if runway_layer.selectedFeatureCount() == 0:
             self.log("Error: Please select a runway feature in the map")
             self.log("Tip: Use the selection tool to select the runway")
             return False
-        
+
         return True
 
     def calculate(self):
         """Run the SID Initial Climb calculation."""
         self.log("Starting SID Initial Climb calculation...")
-        
+
         # Validate inputs
         if not self.validate_inputs():
             return
-        
+
         # Get layer and parameters
         runway_layer = self.runwayLayerComboBox.currentLayer()
         params = self.get_parameters()
-        
+
         # Log parameters
         self.log(f"AD Elevation: {params['aerodrome_elevation_m']}m")
         self.log(f"DER Elevation: {params['der_elevation_m']}m")
@@ -285,18 +294,18 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log(f"Bank Angle: {params['bank_angle_deg']}°")
         self.log(f"Wind: {params['wind_kt']}kt")
         self.log(f"Pilot Time: {params['pilot_time_s']}s")
-        
+
         try:
             # Import and run the calculation module
             from ...modules.departures.sid_initial_climb import run_sid_initial_climb
-            
+
             result = run_sid_initial_climb(
                 self.iface,
                 runway_layer,
                 params,
                 log_callback=self.log
             )
-            
+
             # Log results
             if result:
                 self.log("=" * 40)
@@ -308,7 +317,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.log("Results copied to clipboard.")
             else:
                 self.log("Calculation completed but no results returned.")
-                
+
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
             import traceback

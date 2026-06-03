@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 Feature Merge Module
@@ -42,17 +42,17 @@ def merge_selected_layers(iface, selected_layers=None, merged_layer_name="Merged
     Returns:
         dict: Results with layer information and counts
     """
-    
+
     # Get selected layers if not provided
     if selected_layers is None:
         selected_layers = iface.layerTreeView().selectedLayers()
-    
+
     # Filter to only vector layers
     selected_layers = [layer for layer in selected_layers if isinstance(layer, QgsVectorLayer)]
-    
+
     if len(selected_layers) < 2:
         raise ValueError("Select at least two vector layers.")
-    
+
     # Check geometry and CRS compatibility
     geom_type = selected_layers[0].wkbType()
     crs = selected_layers[0].crs()
@@ -61,27 +61,27 @@ def merge_selected_layers(iface, selected_layers=None, merged_layer_name="Merged
             raise ValueError("Geometry types differ between layers.")
         if layer.crs() != crs:
             raise ValueError("CRS differ between layers.")
-    
+
     # Build union of all fields
     all_fields = QgsFields()
     field_names = {}
-    
+
     for layer in selected_layers:
         for field in layer.fields():
             if field.name() not in field_names:
                 all_fields.append(QgsField(field.name(), field.type()))
                 field_names[field.name()] = field.type()
-    
+
     # Create memory layer
     merged_layer = QgsVectorLayer(f"{QgsWkbTypes.displayString(geom_type)}?crs={crs.authid()}", merged_layer_name, "memory")
     merged_provider = merged_layer.dataProvider()
     merged_provider.addAttributes(all_fields)
     merged_layer.updateFields()
-    
+
     # Add features from each layer
     total_features = 0
     layer_counts = {}
-    
+
     for layer in selected_layers:
         layer_feature_count = 0
         for feature in layer.getFeatures():
@@ -93,12 +93,12 @@ def merge_selected_layers(iface, selected_layers=None, merged_layer_name="Merged
             merged_provider.addFeature(new_feat)
             layer_feature_count += 1
             total_features += 1
-        
+
         layer_counts[layer.name()] = layer_feature_count
-    
+
     merged_layer.updateExtents()
     QgsProject.instance().addMapLayer(merged_layer)
-    
+
     return {
         'success': True,
         'merged_layer': merged_layer,

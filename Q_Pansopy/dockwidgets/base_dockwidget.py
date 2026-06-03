@@ -1,4 +1,4 @@
-﻿import pathlib
+import pathlib
 from qgis.PyQt import QtWidgets
 
 
@@ -102,4 +102,3 @@ class BasePansopyDockWidget(QtWidgets.QDockWidget):
 
     def copy_parameters_as_json(self) -> None:
         pass
-
