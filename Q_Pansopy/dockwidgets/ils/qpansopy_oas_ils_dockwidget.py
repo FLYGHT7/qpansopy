@@ -30,7 +30,7 @@ from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer
 from qgis.core import Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer
+from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -81,7 +81,8 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        # Filter layers in comboboxes
        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
-
+       preseed_active_layer(iface, self.runwayLayerComboBox, Qgis_GeomType_Line)
+       
        # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
        self.setup_lineedits()
 

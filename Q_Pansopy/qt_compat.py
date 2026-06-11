@@ -432,3 +432,24 @@ except AttributeError:
     QLayout_SetMaximumSize = QLayout.SetMaximumSize              # type: ignore[attr-defined]
     QLayout_SetMinAndMaxSize = QLayout.SetMinAndMaxSize          # type: ignore[attr-defined]
     QLayout_SetNoConstraint = QLayout.SetNoConstraint            # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# Active-layer pre-selection helper
+# ---------------------------------------------------------------------------
+
+def preseed_active_layer(iface, combo_box, geom_type) -> None:
+    """Pre-select iface.activeLayer() in combo_box if its geometry matches geom_type.
+
+    geom_type: one of Qgis_GeomType_Line, Qgis_GeomType_Point, Qgis_GeomType_Polygon.
+    All errors are silently swallowed so a missing active layer never breaks __init__.
+    """
+    try:
+        from qgis.core import QgsVectorLayer
+        active = iface.activeLayer()
+        if (active
+                and isinstance(active, QgsVectorLayer)
+                and active.geometryType() == geom_type):
+            combo_box.setLayer(active)
+    except Exception:
+        pass

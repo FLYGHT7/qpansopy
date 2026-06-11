@@ -25,8 +25,10 @@ import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
 from qgis.PyQt.QtGui import QRegularExpressionValidator
-from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, MLPM_PointLayer, MLPM_LineLayer
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.PyQt.QtWidgets import QMessageBox
+from qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
+from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
+from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
 from qgis.core import Qgis
 import json
 import datetime
@@ -73,7 +75,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             self.pointLayerComboBox.setFilters(MLPM_PointLayer)
         if hasattr(self, 'referenceLayerComboBox'):
             self.referenceLayerComboBox.setFilters(MLPM_LineLayer)
-
+            preseed_active_layer(iface, self.referenceLayerComboBox, Qgis_GeomType_Line)
+        
         # Set default output folder
         if hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit.setText(self.get_desktop_path())

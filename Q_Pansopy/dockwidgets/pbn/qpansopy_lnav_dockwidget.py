@@ -1,6 +1,7 @@
-from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
-from ...qt_compat import MLPM_LineLayer
+﻿from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, Qt
+from qgis.core import QgsMapLayerProxyModel
+from ...qt_compat import MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -17,6 +18,7 @@ class QPANSOPYLNAVDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Setup layer combobox
         self.routingLayerComboBox.setFilters(MLPM_LineLayer)
+        preseed_active_layer(iface, self.routingLayerComboBox, Qgis_GeomType_Line)
 
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
