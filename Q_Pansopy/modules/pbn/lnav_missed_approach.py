@@ -43,7 +43,7 @@ from qgis.core import Qgis
 import math
 import os
 import datetime
-from ._lnav_common import _resolve_routing_layer, _create_area_layer
+from ._lnav_common import _resolve_routing_layer, _create_area_layer, _select_segment_features
 
 def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
@@ -115,12 +115,8 @@ def run_missed_approach(iface_param, routing_layer, export_kml=False, output_dir
         if routing_layer is None:
             return None
 
-        # Select missed approach segments by expression
-        routing_layer.selectByExpression("segment='missed'")
-        selected_features = routing_layer.selectedFeatures()
-
-        if not selected_features:
-            iface.messageBar().pushMessage("No 'missed' segment found in routing layer", level=Qgis.Critical)
+        selected_features = _select_segment_features(iface, routing_layer, 'missed')
+        if selected_features is None:
             return None
 
         iface.messageBar().pushMessage("QPANSOPY:", "Executing LNAV Missed Approach (RNP APCH)", level=Qgis.Info)
