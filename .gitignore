@@ -25,4 +25,8 @@ skills-lock.json
 doc/
 docs/
 DEVELOPMENT_PLAN.md
-*.zip
+
+#python cache
+__pycache__/
+*.pyc
+*.pyo
