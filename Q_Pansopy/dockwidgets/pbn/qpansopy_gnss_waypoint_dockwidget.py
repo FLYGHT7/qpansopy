@@ -23,12 +23,12 @@ class QPANSOPYGNSSWaypointDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
-        
+
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
         self.xttSpinBox.valueChanged.connect(self.update_att)
-        
+
         # Initial ATT update
         self.update_att(self.xttSpinBox.value())
 
@@ -62,25 +62,25 @@ class QPANSOPYGNSSWaypointDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         """Run the GNSS waypoint tolerance calculation"""
         waypoint_layer = self.waypointLayerComboBox.currentLayer()
         routing_layer = self.routingLayerComboBox.currentLayer()
-        
+
         if not waypoint_layer:
             self.log("Error: Please select a waypoint (point) layer")
             return
-            
+
         if not routing_layer:
             self.log("Error: Please select a routing (line) layer")
             return
-            
+
         # Check for selection
         if waypoint_layer.selectedFeatureCount() == 0:
             self.log("Error: Please select at least one waypoint in the map")
             self.log("Tip: Use the selection tool to select the waypoint(s)")
             return
-            
+
         if routing_layer.selectedFeatureCount() == 0:
             self.log("Error: Please select the routing segment for azimuth calculation")
             return
-        
+
         # Get parameters
         xtt = self.xttSpinBox.value()
         export_kml = self.exportKmlCheckBox.isChecked()
@@ -88,24 +88,24 @@ class QPANSOPYGNSSWaypointDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         try:
             self.log(f"Creating GNSS Waypoint tolerance with XTT={xtt} NM...")
-            
+
             from ...modules.pbn.gnss_waypoint import run_gnss_waypoint
-            
+
             params = {
                 'xtt': xtt,
                 'export_kml': export_kml,
                 'output_dir': output_dir
             }
-            
+
             result = run_gnss_waypoint(self.iface, waypoint_layer, routing_layer, params)
-            
+
             if result:
                 self.log("GNSS Waypoint tolerance calculation completed successfully")
                 if export_kml and 'kml_path' in result:
                     self.log(f"KML exported to: {result['kml_path']}")
             else:
                 self.log("Calculation completed with no result returned")
-                
+
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
             import traceback

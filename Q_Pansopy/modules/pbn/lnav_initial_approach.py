@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 PBN LNAV Initial Approach (RNP APCH) Generator
 
@@ -37,6 +37,7 @@ from ._lnav_common import (
     _extract_segment_geom,
     _create_area_layer,
 )
+
 
 def run_initial_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
@@ -95,7 +96,7 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
     try:
         # Use the passed iface parameter
         iface = iface_param
-        
+
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -122,18 +123,18 @@ def run_initial_approach(iface_param, routing_layer, export_kml=False, output_di
         pts["m"+str(a)] = end_point.project(length, back_azimuth)
         a += 1
 
-        # IF determination 
+        # IF determination
         pts["m"+str(a)] = end_point
         a += 1
 
-        # Calculating point at IF location 
+        # Calculating point at IF location
         d = (1.25, 2.5, -1.25, -2.5)  # NM
         for i in d:
             line_start = end_point.project(i*1852, azimuth-90)
             pts["m"+str(a)] = line_start
             a += 1
-            
-        # Calculating point at IAF location 
+
+        # Calculating point at IAF location
         d = (1.25, 2.5, -1.25, -2.5)  # NM
         for i in d:
             line_start = start_point.project(i*1852, azimuth-90)

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYOmnidirectionalDockWidget
@@ -20,9 +20,8 @@ Procedure Analysis - Omnidirectional SID Departure Surface Tool
 """
 
 import os
-from qgis.PyQt import QtGui, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt
-from qgis.core import QgsProject, QgsMapLayerProxyModel
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal
 from qgis.core import Qgis
 from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 
@@ -42,7 +41,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.iface = iface
-        
+
         # Configure the dock widget to be resizable
         self.setFeatures(DOCK_FEATURES_DEFAULT)
         try:
@@ -50,25 +49,25 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         except Exception:
             pass
         # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize
-        
+
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.directionButton.clicked.connect(self.toggle_direction)
-        
+
         # Filter layers in comboboxes - Runway layer should be a line
         self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         preseed_active_layer(iface, self.runwayLayerComboBox, Qgis_GeomType_Line)
         
         # Direction state: False = Start to End, True = End to Start
         self.is_reversed = False
-        
+
         # Set default values
         self.derElevationSpinBox.setValue(0.0)
         self.pdgSpinBox.setValue(3.3)
         self.tnaSpinBox.setValue(2000)
         self.msaSpinBox.setValue(6300)
         self.cwyDistanceSpinBox.setValue(0)
-        
+
         # Ensure checkboxes exist
         if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
             self.exportKmlCheckBox = QtWidgets.QCheckBox("Export to KML", self)
@@ -76,7 +75,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Add the fallback checkbox to the layout so it is visible
             if hasattr(self, "verticalLayout") and self.verticalLayout is not None:
                 self.verticalLayout.addWidget(self.exportKmlCheckBox)
-        
+
         # Log message
         self.log("QPANSOPY Omnidirectional SID plugin loaded.")
         self.log("Select runway layer and set parameters, then click Calculate.")
@@ -107,46 +106,46 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.runwayLayerComboBox.currentLayer():
             self.log("Error: Please select a runway layer")
             return False
-        
+
         runway_layer = self.runwayLayerComboBox.currentLayer()
-        
+
         # Log CRS information
         self.log(f"Runway layer CRS: {runway_layer.crs().authid()} ({runway_layer.crs().description()})")
-        
+
         # Check if layer is in projected CRS
         if runway_layer.crs().isGeographic():
             self.log("ERROR: Runway layer is in a geographic coordinate system")
             self.log("ERROR: Calculation will not be performed. Please reproject to a projected CRS")
             return False
-        
+
         self.log(f"SUCCESS: Runway layer uses projected CRS: {runway_layer.crs().authid()}")
-        
+
         # Validate PDG
         pdg = self.pdgSpinBox.value()
         if pdg <= 0 or pdg > 15:
             self.log("Error: PDG must be between 0 and 15%")
             return False
-        
+
         # Validate TNA < MSA
         tna = self.tnaSpinBox.value()
         msa = self.msaSpinBox.value()
         if tna >= msa:
             self.log("Error: TNA must be less than MSA")
             return False
-        
+
         return True
 
     def calculate(self):
         """Run the calculation"""
         self.log("Starting Omnidirectional SID calculation...")
-        
+
         # Validate inputs
         if not self.validate_inputs():
             return
-        
+
         # Get parameters
         runway_layer = self.runwayLayerComboBox.currentLayer()
-        
+
         # Prepare parameters
         params = {
             'der_elevation_m': self.derElevationSpinBox.value(),
@@ -158,18 +157,18 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'include_construction_points': 'YES' if self.constructionPointsCheckBox.isChecked() else 'NO',
             'reverse_direction': 'YES' if self.is_reversed else 'NO'
         }
-        
+
         try:
             # Import and run the omnidirectional SID module
             from ...modules.departures.omnidirectional_sid import run_omnidirectional_sid
-            
+
             result = run_omnidirectional_sid(
-                self.iface, 
-                runway_layer, 
-                params, 
+                self.iface,
+                runway_layer,
+                params,
                 log_callback=self.log
             )
-            
+
             # Log results
             if result:
                 self.log("=" * 50)
@@ -182,19 +181,19 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     self.log(f"Total distance: {total_dist:.2f}m ({total_dist/1852:.2f}NM)")
                 self.log("=" * 50)
                 self.iface.messageBar().pushMessage(
-                    "QPANSOPY", 
-                    "Omnidirectional SID calculation completed successfully", 
+                    "QPANSOPY",
+                    "Omnidirectional SID calculation completed successfully",
                     level=Qgis.Success
                 )
             else:
                 self.log("Calculation completed but no results were returned.")
-                
+
         except Exception as e:
             self.log(f"Error during calculation: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
             self.iface.messageBar().pushMessage(
-                "QPANSOPY", 
-                f"Error: {str(e)}", 
+                "QPANSOPY",
+                f"Error: {str(e)}",
                 level=Qgis.Critical
             )

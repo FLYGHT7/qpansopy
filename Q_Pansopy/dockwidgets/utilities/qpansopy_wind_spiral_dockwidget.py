@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 QPANSOPYWindSpiralDockWidget
@@ -22,11 +22,11 @@ Procedure Analysis and Obstacle Protection Surfaces - Wind Spiral Module
 """
 
 import os
-from qgis.PyQt import QtGui, QtWidgets, uic, QtCore
-from qgis.PyQt.QtCore import pyqtSignal, QFileInfo, Qt, QRegularExpression, QMimeData
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.PyQt.QtWidgets import QMessageBox
-from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
+from qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
 from qgis.core import Qgis
@@ -45,10 +45,10 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
     def __init__(self, iface):
         """Constructor."""
         super(QPANSOPYWindSpiralDockWidgetBase, self).__init__(iface.mainWindow())
-        
+
         # Initialize exact_values dictionary BEFORE setupUi to prevent AttributeError
         self.exact_values = {}
-        
+
         # Initialize ISA calculation metadata
         self.isa_calculation_metadata = {
             'method': 'manual',  # Default to manual input
@@ -59,17 +59,17 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             'temperature_reference': None,
             'isa_variation_calculated': None
         }
-        
+
         # Initialize units dictionary
         self.units = {
             'adElev': 'ft',
             'altitude': 'ft'
         }
-        
+
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.iface = iface
-        
+
         # Setup layer combos (these should already exist from UI file)
         if hasattr(self, 'pointLayerComboBox'):
             self.pointLayerComboBox.setFilters(MLPM_PointLayer)
@@ -80,7 +80,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         # Set default output folder
         if hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit.setText(self.get_desktop_path())
-        
+
         # Connect signals for existing UI elements
         if hasattr(self, 'calculateButton'):
             self.calculateButton.clicked.connect(self.calculate)
@@ -88,10 +88,10 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             self.browseButton.clicked.connect(self.browse_output_folder)
         if hasattr(self, 'copyParamsButton'):
             self.copyParamsButton.clicked.connect(self.copy_parameters_for_word)
-        
+
         # Setup parameter input fields dynamically
         self.setup_dynamic_parameters()
-        
+
         # Log initial message
         self.log("Wind Spiral generator loaded. Set parameters and click Calculate.")
 
@@ -102,31 +102,31 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             # If formLayout doesn't exist, we need to create it
             self.log("Warning: formLayout not found in UI, creating dynamically")
             return
-        
+
         # Improve form layout spacing and alignment
         self.formLayout.setVerticalSpacing(12)
         self.formLayout.setHorizontalSpacing(10)
         self.formLayout.setLabelAlignment(Qt_AlignRight | Qt_AlignVCenter)
         self.formLayout.setFormAlignment(Qt_AlignLeft)
-        
+
         # Create validator for strictly positive numeric inputs (IAS, altitude, bank angle, wind speed)
         regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
         validator = QRegularExpressionValidator(regex)
         # ISA variation allows negatives: use a broader validator (sign, digits, decimal)
         isa_regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]*")
         isa_validator = QRegularExpressionValidator(isa_regex)
-        
+
         # Common styles defined in dockwidget_base.qss — do not set inline here.
         # Setting background-color without color causes white-on-white in dark themes.
         line_edit_style = ""
         combo_box_style = ""
-        
+
         # ISA Variation with Calculator button - aligned with other fields
         isa_container = QtWidgets.QWidget(self)
         isa_layout = QtWidgets.QHBoxLayout(isa_container)
         isa_layout.setContentsMargins(0, 0, 0, 0)
         isa_layout.setSpacing(8)
-        
+
         # ISA Variation LineEdit - same size as other fields
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
         self.isaVarLineEdit.setValidator(isa_validator)
@@ -136,7 +136,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.isaVarLineEdit.setMinimumHeight(28)
         self.isaVarLineEdit.setMaximumHeight(28)
         self.isaVarLineEdit.setStyleSheet(line_edit_style)
-        
+
         # ISA Calculator Button - aligned to same height
         self.isaCalculatorButton = QtWidgets.QPushButton(self)
         self.isaCalculatorButton.setText("🧮")  # Calculator emoji as icon
@@ -146,17 +146,17 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.isaCalculatorButton.setMaximumHeight(28)
         self.isaCalculatorButton.clicked.connect(self.show_isa_calculator_dialog)
         self.isaCalculatorButton.setStyleSheet("")
-        
+
         # Add widgets to layout - LineEdit takes most space, button is fixed
         isa_layout.addWidget(self.isaVarLineEdit)
         isa_layout.addWidget(self.isaCalculatorButton)
-        
+
         # Set the container to have the same height as other form fields
         isa_container.setMinimumHeight(28)
         isa_container.setMaximumHeight(28)
-        
+
         self.formLayout.addRow("ISA Variation (°C):", isa_container)
-        
+
         # IAS
         self.IASLineEdit = QtWidgets.QLineEdit(self)
         self.IASLineEdit.setValidator(validator)
@@ -167,7 +167,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.IASLineEdit.setMaximumHeight(28)
         self.IASLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("IAS (kt):", self.IASLineEdit)
-        
+
         # Altitude with unit selector
         self.altitudeLineEdit = QtWidgets.QLineEdit(self)
         self.altitudeLineEdit.setValidator(validator)
@@ -177,7 +177,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.altitudeLineEdit.setMinimumHeight(28)
         self.altitudeLineEdit.setMaximumHeight(28)
         self.altitudeLineEdit.setStyleSheet(line_edit_style)
-        
+
         self.altitudeUnitCombo = QtWidgets.QComboBox(self)
         self.altitudeUnitCombo.addItems(['ft', 'm'])
         self.altitudeUnitCombo.currentTextChanged.connect(
@@ -187,16 +187,16 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.altitudeUnitCombo.setMinimumWidth(50)
         self.altitudeUnitCombo.setMaximumWidth(60)
         self.altitudeUnitCombo.setStyleSheet(combo_box_style)
-        
+
         altitudeContainer = QtWidgets.QWidget(self)
         altitudeLayout = QtWidgets.QHBoxLayout(altitudeContainer)
         altitudeLayout.setContentsMargins(0, 0, 0, 0)
         altitudeLayout.setSpacing(8)
         altitudeLayout.addWidget(self.altitudeLineEdit)
         altitudeLayout.addWidget(self.altitudeUnitCombo)
-        
+
         self.formLayout.addRow("Altitude:", altitudeContainer)
-        
+
         # Bank Angle
         self.bankAngleLineEdit = QtWidgets.QLineEdit(self)
         self.bankAngleLineEdit.setValidator(validator)
@@ -207,7 +207,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.bankAngleLineEdit.setMaximumHeight(28)
         self.bankAngleLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("Bank Angle (°):", self.bankAngleLineEdit)
-        
+
         # Wind Speed
         self.windSpeedLineEdit = QtWidgets.QLineEdit(self)
         self.windSpeedLineEdit.setValidator(validator)
@@ -218,7 +218,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.windSpeedLineEdit.setMaximumHeight(28)
         self.windSpeedLineEdit.setStyleSheet(line_edit_style)
         self.formLayout.addRow("Wind Speed (kt):", self.windSpeedLineEdit)
-        
+
         # Turn Direction
         self.turnDirectionCombo = QtWidgets.QComboBox(self)
         self.turnDirectionCombo.addItems(['R', 'L'])
@@ -226,17 +226,17 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.turnDirectionCombo.setMaximumHeight(28)
         self.turnDirectionCombo.setStyleSheet(combo_box_style)
         self.formLayout.addRow("Turn Direction:", self.turnDirectionCombo)
-        
+
         # Show Points checkbox
         self.showPointsCheckBox = QtWidgets.QCheckBox("Show intermediate points", self)
         self.showPointsCheckBox.setStyleSheet("")
         self.formLayout.addRow("", self.showPointsCheckBox)
-        
+
         # Export KML checkbox
         self.exportKmlCheckBox = QtWidgets.QCheckBox("Export KML", self)
         self.exportKmlCheckBox.setStyleSheet("")
         self.formLayout.addRow("", self.exportKmlCheckBox)
-        
+
         # Output folder
         if not hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit = QtWidgets.QLineEdit(self)
@@ -245,12 +245,12 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             self.outputFolderLineEdit.setMaximumHeight(28)
             self.outputFolderLineEdit.setStyleSheet(line_edit_style)
             self.formLayout.addRow("Output Folder:", self.outputFolderLineEdit)
-        
+
         # Export KML Checkbox (if not in UI)
         if not hasattr(self, 'exportKmlCheckBox'):
             self.exportKmlCheckBox = QtWidgets.QCheckBox(self)
             self.exportKmlCheckBox.setChecked(True)
-            
+
     def store_exact_value(self, key, value):
         """Store exact value for precise calculations"""
         try:
@@ -258,13 +258,13 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         except ValueError:
             if key in self.exact_values:
                 del self.exact_values[key]
-    
+
     def handle_isa_manual_change(self, text):
         """Handle manual changes to ISA Variation field"""
         self.store_exact_value('isaVar', text)
         # Mark as manual input - no automatic calculations
         self.isa_calculation_metadata['method'] = 'manual'
-    
+
     def update_unit(self, param, unit):
         """Update unit for parameter"""
         self.units[param] = unit
@@ -331,7 +331,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                     clipboard = QtWidgets.QApplication.clipboard()
                     clipboard.setMimeData(mime)
                     self.log("Wind Spiral parameters (from layer) copied to clipboard as a Word table.")
-                    self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied (from layer)", level=Qgis.Success)
+                    self.iface.messageBar().pushMessage(
+                        "QPANSOPY", "Wind Spiral parameters copied (from layer)", level=Qgis.Success)
                     return
         except Exception as e:
             # Non-fatal; fall back to UI values
@@ -413,8 +414,11 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         params_json = json.dumps(params_dict, indent=2)
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(params_json)
-        self.log("Wind Spiral parameters copied to clipboard as JSON. You can now paste them into a JSON editor or processing tool.")
-        self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied to clipboard as JSON", level=Qgis.Success)
+        self.log(
+            "Wind Spiral parameters copied to clipboard as JSON. "
+            "You can now paste them into a JSON editor or processing tool.")
+        self.iface.messageBar().pushMessage(
+            "QPANSOPY", "Wind Spiral parameters copied to clipboard as JSON", level=Qgis.Success)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
@@ -426,23 +430,23 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         if not self.pointLayerComboBox.currentLayer():
             self.log("Error: Please select a point layer")
             return False
-        
+
         if not self.referenceLayerComboBox.currentLayer():
             self.log("Error: Please select a reference layer")
             return False
-        
+
         # Check if point layer is in WGS84
         point_layer = self.pointLayerComboBox.currentLayer()
         if not point_layer.crs().authid() == 'EPSG:4326':
             self.log("Warning: Point layer should be in WGS84 (EPSG:4326)")
             # Continue anyway, but warn the user
-        
+
         # Check if reference layer is in a projected CRS
         reference_layer = self.referenceLayerComboBox.currentLayer()
         if reference_layer.crs().isGeographic():
             self.log("Warning: Reference layer should be in a projected coordinate system")
             # Continue anyway, but warn the user
-        
+
         # Check if output folder exists
         output_folder = self.outputFolderLineEdit.text()
         if not os.path.exists(output_folder):
@@ -452,7 +456,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             except Exception as e:
                 self.log(f"Error creating output folder: {str(e)}")
                 return False
-        
+
         return True
 
     def show_isa_calculator_dialog(self):
@@ -468,26 +472,25 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                 self.isa_calculation_metadata.update(metadata)
                 self.log(f"ISA Variation calculated: {isa_variation:.5f}°C")
 
-
     def calculate(self):
         """Run the calculation"""
         self.log("Starting calculation...")
-        
+
         # Validate inputs
         if not self.validate_inputs():
             return
-        
+
         # Get parameters
         point_layer = self.pointLayerComboBox.currentLayer()
         reference_layer = self.referenceLayerComboBox.currentLayer()
-        
+
         # Use ISA Variation directly from field
         isa_var = self.exact_values.get('isaVar', self.isaVarLineEdit.text())
         try:
             isa_var = float(isa_var)
         except Exception:
             isa_var = 0.0
-        
+
         IAS = self.exact_values.get('IAS', self.IASLineEdit.text())
         altitude = self.exact_values.get('altitude', self.altitudeLineEdit.text())
         bankAngle = self.exact_values.get('bankAngle', self.bankAngleLineEdit.text())
@@ -496,10 +499,10 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         show_points = self.showPointsCheckBox.isChecked()
         export_kml = self.exportKmlCheckBox.isChecked()
         output_dir = self.outputFolderLineEdit.text()
-        
+
         # Units
         altitude_unit = self.units.get('altitude', 'ft')
-        
+
         # Prepare parameters
         params = {
             'isaVar': isa_var,
@@ -513,27 +516,31 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             'export_kml': export_kml,
             'output_dir': output_dir
         }
-        
+
         # Log ISA calculation method
         if self.isa_calculation_metadata['method'] == 'calculated':
             self.log(f"Using calculated ISA Variation: {isa_var}°C")
-            self.log(f"ISA calculation source: {self.isa_calculation_metadata['elevation_original']} {self.isa_calculation_metadata['elevation_unit']} elevation, {self.isa_calculation_metadata['temperature_reference']}°C reference")
+            self.log(
+                f"ISA calculation source: {self.isa_calculation_metadata['elevation_original']} "
+                f"{self.isa_calculation_metadata['elevation_unit']} elevation, "
+                f"{self.isa_calculation_metadata['temperature_reference']}°C reference")
         else:
             self.log(f"Using manual ISA Variation: {isa_var}°C")
-        
+
         # Log used units
         self.log(f"Using units - Altitude: {altitude_unit}")
-        
+
         try:
             # Import here to avoid circular imports
             from ...modules.wind_spiral import calculate_wind_spiral
             result = calculate_wind_spiral(self.iface, point_layer, reference_layer, params)
-            
+
             if result:
                 if export_kml:
                     self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
                 self.log("Calculation completed successfully!")
-                self.log("You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
+                self.log(
+                    "You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
             else:
                 self.log("Calculation completed but no results were returned.")
         except Exception as e:

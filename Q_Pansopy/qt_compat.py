@@ -139,7 +139,7 @@ except AttributeError:
     Qt_RightDockWidgetArea = Qt.RightDockWidgetArea   # type: ignore[attr-defined]
     Qt_LeftDockWidgetArea = Qt.LeftDockWidgetArea     # type: ignore[attr-defined]
     Qt_TopDockWidgetArea = Qt.TopDockWidgetArea       # type: ignore[attr-defined]
-    Qt_BottomDockWidgetArea = Qt.BottomDockWidgetArea # type: ignore[attr-defined]
+    Qt_BottomDockWidgetArea = Qt.BottomDockWidgetArea  # type: ignore[attr-defined]
 
 Qt_ALLOWED_DOCK_AREAS = Qt_LeftDockWidgetArea | Qt_RightDockWidgetArea
 
@@ -196,7 +196,7 @@ try:
     Qt_ScrollBarAlwaysOn = _sbp.ScrollBarAlwaysOn
 except AttributeError:
     Qt_ScrollBarAsNeeded = Qt.ScrollBarAsNeeded   # type: ignore[attr-defined]
-    Qt_ScrollBarAlwaysOff = Qt.ScrollBarAlwaysOff # type: ignore[attr-defined]
+    Qt_ScrollBarAlwaysOff = Qt.ScrollBarAlwaysOff  # type: ignore[attr-defined]
     Qt_ScrollBarAlwaysOn = Qt.ScrollBarAlwaysOn   # type: ignore[attr-defined]
 
 # ---------------------------------------------------------------------------
@@ -215,7 +215,7 @@ except AttributeError:
     Qt_SizeVerCursor = Qt.SizeVerCursor           # type: ignore[attr-defined]
     Qt_SizeHorCursor = Qt.SizeHorCursor           # type: ignore[attr-defined]
     Qt_ArrowCursor = Qt.ArrowCursor               # type: ignore[attr-defined]
-    Qt_PointingHandCursor = Qt.PointingHandCursor # type: ignore[attr-defined]
+    Qt_PointingHandCursor = Qt.PointingHandCursor  # type: ignore[attr-defined]
 
 # ---------------------------------------------------------------------------
 # Qt5/Qt6 compatible Qt.MouseButton enum values
@@ -231,7 +231,7 @@ try:
 except AttributeError:
     Qt_LeftButton = Qt.LeftButton     # type: ignore[attr-defined]
     Qt_RightButton = Qt.RightButton   # type: ignore[attr-defined]
-    Qt_MiddleButton = Qt.MiddleButton # type: ignore[attr-defined]
+    Qt_MiddleButton = Qt.MiddleButton  # type: ignore[attr-defined]
 
 # ---------------------------------------------------------------------------
 # Qt5/Qt6 compatible QEvent.Type enum values
@@ -277,7 +277,7 @@ try:
     except AttributeError:
         MLPM_PointLayer = _QgsMLPM.PointLayer    # type: ignore[attr-defined]
         MLPM_LineLayer = _QgsMLPM.LineLayer       # type: ignore[attr-defined]
-        MLPM_PolygonLayer = _QgsMLPM.PolygonLayer # type: ignore[attr-defined]
+        MLPM_PolygonLayer = _QgsMLPM.PolygonLayer  # type: ignore[attr-defined]
         MLPM_VectorLayer = _QgsMLPM.VectorLayer   # type: ignore[attr-defined]
         MLPM_RasterLayer = _QgsMLPM.RasterLayer   # type: ignore[attr-defined]
         MLPM_NoGeometry = _QgsMLPM.NoGeometry     # type: ignore[attr-defined]
@@ -316,8 +316,8 @@ try:
     except AttributeError:
         Qgis_GeomType_Point = _QgsWkbTypes.PointGeometry    # type: ignore[attr-defined]
         Qgis_GeomType_Line = _QgsWkbTypes.LineGeometry       # type: ignore[attr-defined]
-        Qgis_GeomType_Polygon = _QgsWkbTypes.PolygonGeometry # type: ignore[attr-defined]
-        Qgis_GeomType_Unknown = _QgsWkbTypes.UnknownGeometry # type: ignore[attr-defined]
+        Qgis_GeomType_Polygon = _QgsWkbTypes.PolygonGeometry  # type: ignore[attr-defined]
+        Qgis_GeomType_Unknown = _QgsWkbTypes.UnknownGeometry  # type: ignore[attr-defined]
         Qgis_GeomType_Null = _QgsWkbTypes.NullGeometry       # type: ignore[attr-defined]
     try:
         _layer_type = _Qgis.LayerType

@@ -281,20 +281,20 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         ... }
         >>> result = run_omnidirectional_sid(iface, runway_layer, params, print)
     """
-    
+
     def log(message):
         """Internal logging helper."""
         if log_callback:
             log_callback(message)
-    
+
     # Notify user via message bar
     iface.messageBar().pushMessage(
-        "QPANSOPY:", 
-        "Executing Omnidirectional SID Calculation", 
+        "QPANSOPY:",
+        "Executing Omnidirectional SID Calculation",
         level=Qgis.Info
     )
     log("Starting Omnidirectional SID calculation...")
-    
+
     # -------------------------------------------------------------------------
     # Extract and validate parameters
     # -------------------------------------------------------------------------
@@ -306,61 +306,61 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     allow_turns_before_der = params.get('allow_turns_before_der', 'NO')
     include_construction_points = params.get('include_construction_points', 'NO')
     reverse_direction = params.get('reverse_direction', 'NO')
-    
+
     log(f"Parameters: DER Elev={der_elevation_m}m, PDG={pdg_percent}%, "
         f"TNA={tna_ft}ft, MSA={msa_ft}ft")
     log(f"CWY Distance={cwy_distance_m}m, Turns before DER={allow_turns_before_der}")
     log(f"Direction: {'End → Start (reversed)' if reverse_direction == 'YES' else 'Start → End (normal)'}")
-    
+
     # -------------------------------------------------------------------------
     # Calculate area distances and elevations
     # -------------------------------------------------------------------------
-    
+
     # Area 1: From DER to 120m height
     distance_area_1 = calculate_area_1_distance(pdg_percent)
     elevation_at_der = der_elevation_m + INITIAL_HEIGHT_ABOVE_DER
-    elevation_area_1 = (der_elevation_m + INITIAL_HEIGHT_ABOVE_DER + 
+    elevation_area_1 = (der_elevation_m + INITIAL_HEIGHT_ABOVE_DER +
                         distance_area_1 * ((pdg_percent - OCS_MARGIN) / 100))
-    
+
     log(f"Area 1: Distance={distance_area_1:.2f}m, Elevation={elevation_area_1:.2f}m")
-    
+
     # Area 2: From 120m to TNA
     distance_area_2 = calculate_area_2_distance(pdg_percent, der_elevation_m, tna_ft)
-    elevation_area_2 = (elevation_area_1 + 
+    elevation_area_2 = (elevation_area_1 +
                         distance_area_2 * ((pdg_percent - OCS_MARGIN) / 100))
-    
+
     log(f"Area 2: Distance={distance_area_2:.2f}m, Elevation={elevation_area_2:.2f}m")
-    
+
     # Area 3: Circular buffer to MSA
     distance_area_3 = calculate_area_3_distance(
         pdg_percent, msa_ft, tna_ft, distance_area_1, distance_area_2
     )
     elevation_area_3 = feet_to_meters(msa_ft)
-    
+
     log(f"Area 3: Distance={distance_area_3:.2f}m, Elevation={elevation_area_3:.2f}m")
-    
+
     # -------------------------------------------------------------------------
     # Get map CRS and validate runway selection
     # -------------------------------------------------------------------------
     map_crs = iface.mapCanvas().mapSettings().destinationCrs().authid()
-    
+
     selected_features = runway_layer.selectedFeatures()
-    
+
     if not selected_features:
         log("ERROR: No features selected in runway layer. Please select a runway feature.")
         iface.messageBar().pushMessage(
-            "QPANSOPY:", 
-            "No features selected. Please select a runway.", 
+            "QPANSOPY:",
+            "No features selected. Please select a runway.",
             level=Qgis.Warning
         )
         return None
-    
+
     # -------------------------------------------------------------------------
     # Extract runway geometry and calculate azimuth
     # -------------------------------------------------------------------------
     for feature in selected_features:
         runway_geometry = feature.geometry().asPolyline()
-        
+
         # Apply direction based on user selection
         if reverse_direction == 'YES':
             # Reversed: End to Start (DER at start of line, threshold at end)
@@ -370,27 +370,27 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
             # Normal: Start to End (threshold at start, DER at end)
             threshold_point = QgsPoint(runway_geometry[0])
             der_point = QgsPoint(runway_geometry[1])
-        
+
         runway_azimuth = threshold_point.azimuth(der_point)
-    
+
     log(f"Runway azimuth: {runway_azimuth:.2f}°")
-    
+
     # -------------------------------------------------------------------------
     # Calculate area widths based on splay angles
     # -------------------------------------------------------------------------
     width_area_1 = INITIAL_SEMI_WIDTH + distance_area_1 * tan(radians(AREA_1_SPLAY_ANGLE))
     width_area_2 = width_area_1 + distance_area_2 * tan(radians(AREA_2_SPLAY_ANGLE))
-    
+
     log(f"Width Area 1: {width_area_1:.2f}m, Width Area 2: {width_area_2:.2f}m")
-    
+
     # -------------------------------------------------------------------------
     # Create construction points
     # -------------------------------------------------------------------------
     construction_points = {}
-    
+
     # Area 0 (at DER/CWY)
     create_projected_point(
-        'point_0_center', der_point, cwy_distance_m, 
+        'point_0_center', der_point, cwy_distance_m,
         runway_azimuth, elevation_at_der, construction_points
     )
     create_projected_point(
@@ -401,7 +401,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         'point_0_right', construction_points['point_0_center'], INITIAL_SEMI_WIDTH,
         runway_azimuth + 90, elevation_at_der, construction_points
     )
-    
+
     # Area 1 limit points
     create_projected_point(
         'point_1_center', construction_points['point_0_center'], distance_area_1,
@@ -415,7 +415,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         'point_1_right', construction_points['point_1_center'], width_area_1,
         runway_azimuth + 90, elevation_area_1, construction_points
     )
-    
+
     # Area 2 limit points
     create_projected_point(
         'point_2_center', construction_points['point_1_center'], distance_area_2,
@@ -429,7 +429,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         'point_2_right', construction_points['point_2_center'], width_area_2,
         runway_azimuth + 90, elevation_area_2, construction_points
     )
-    
+
     # Takeoff point (600m from threshold) for turns-before-DER option
     create_projected_point(
         'point_takeoff_center', threshold_point, TAKEOFF_POINT_DISTANCE,
@@ -443,7 +443,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         'point_takeoff_right', construction_points['point_takeoff_center'], INITIAL_SEMI_WIDTH,
         runway_azimuth + 90, elevation_at_der, construction_points
     )
-    
+
     # -------------------------------------------------------------------------
     # Create construction points layer (optional)
     # -------------------------------------------------------------------------
@@ -454,18 +454,18 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     )
     construction_layer.dataProvider().addAttributes([QgsField('id', QVariant.String)])
     construction_layer.updateFields()
-    
+
     for point_name, point_geometry in construction_points.items():
         provider = construction_layer.dataProvider()
         feature = QgsFeature()
         feature.setGeometry(point_geometry)
         feature.setAttributes([point_name])
         provider.addFeatures([feature])
-    
+
     if include_construction_points == 'YES':
         QgsProject.instance().addMapLayers([construction_layer])
         log("Construction points layer added")
-    
+
     # -------------------------------------------------------------------------
     # Create polygon surfaces layer
     # -------------------------------------------------------------------------
@@ -477,9 +477,9 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     )
     surfaces_layer.dataProvider().addAttributes([QgsField('omni_area', QVariant.String)])
     surfaces_layer.updateFields()
-    
+
     surfaces_geometries = {}
-    
+
     # Create Area 1 polygon
     create_polygon_surface(
         'Area 1',
@@ -494,7 +494,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         surfaces_layer,
         surfaces_geometries
     )
-    
+
     # Create Area 2 polygon
     create_polygon_surface(
         'Area 2',
@@ -509,7 +509,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         surfaces_layer,
         surfaces_geometries
     )
-    
+
     # Create Before DER area if enabled
     if allow_turns_before_der == 'YES':
         create_polygon_surface(
@@ -525,7 +525,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
             surfaces_layer,
             surfaces_geometries
         )
-    
+
     # -------------------------------------------------------------------------
     # Create Area 3 (circular buffer minus other areas)
     # -------------------------------------------------------------------------
@@ -533,24 +533,24 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     area_3_buffer = QgsGeometry.fromPointXY(buffer_center).buffer(
         distance_area_3, BUFFER_SEGMENTS
     )
-    
+
     # Subtract Area 1 and Area 2 from the buffer
     area_3_geometry = area_3_buffer.difference(surfaces_geometries['Area 2'])
     area_3_geometry = area_3_geometry.difference(surfaces_geometries['Area 1'])
-    
+
     # Subtract Before DER area if it exists
     if allow_turns_before_der == 'YES':
         area_3_geometry = area_3_geometry.difference(surfaces_geometries['Before DER'])
-    
+
     # Add Area 3 to layer
     provider = surfaces_layer.dataProvider()
     area_3_feature = QgsFeature()
     area_3_feature.setGeometry(area_3_geometry)
     area_3_feature.setAttributes(['Area 3'])
     provider.addFeatures([area_3_feature])
-    
+
     surfaces_layer.updateExtents()
-    
+
     # -------------------------------------------------------------------------
     # Apply default styling
     # -------------------------------------------------------------------------
@@ -558,10 +558,10 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     surfaces_layer.renderer().symbol().setColor(QColor("blue"))
     iface.layerTreeView().refreshLayerSymbology(iface.activeLayer().id())
     surfaces_layer.triggerRepaint()
-    
+
     # Add layer to project
     QgsProject.instance().addMapLayers([surfaces_layer])
-    
+
     # -------------------------------------------------------------------------
     # Log results summary
     # -------------------------------------------------------------------------
@@ -576,7 +576,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         f"({meters_to_nautical_miles(distance_area_3):.2f}NM)")
     log("=" * 50)
     log("Omnidirectional SID calculation completed successfully!")
-    
+
     return {
         'layer_name': layer_name,
         'areas': ['Area 1', 'Area 2', 'Area 3'],

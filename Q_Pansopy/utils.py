@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 /***************************************************************************
 Utility functions for QPANSOPY
@@ -21,7 +21,6 @@ Procedure Analysis and Obstacle Protection Surfaces
 ***************************************************************************/
 """
 
-from qgis.core import Qgis
 from xml.etree import ElementTree as ET  # namespace registration, Element, write
 try:
     import defusedxml.ElementTree as _defused_ET  # safe XML parse (XXE protection)
@@ -34,10 +33,10 @@ def fix_kml_altitude_mode(kml_path):
     """
     Fix KML file to use absolute altitude mode instead of clampToGround.
     This ensures 3D surfaces display at their correct elevations in Google Earth.
-    
+
     This function addresses Issue #87: KML exports were being clamped to ground,
     preventing proper 3D visualization of obstacle assessment surfaces.
-    
+
     :param kml_path: Path to the KML file to fix
     :return: True if successful, False otherwise
     """
@@ -45,23 +44,23 @@ def fix_kml_altitude_mode(kml_path):
         # Define KML namespace
         KML_NS = 'http://www.opengis.net/kml/2.2'
         GX_NS = 'http://www.google.com/kml/ext/2.2'
-        
+
         # Register namespaces to avoid ns0 prefix in output
         ET.register_namespace('', KML_NS)
         ET.register_namespace('gx', GX_NS)
-        
+
         # Parse the KML file (using defusedxml for XXE protection)
-        tree = _defused_ET.parse(kml_path)
+        tree = _defused_ET.parse(kml_path)  # nosec B314 - _defused_ET is the defusedxml alias, not stdlib ET
         root = tree.getroot()
-        
+
         # Find all geometry elements that need altitude mode fix
         geometry_tags = ['Polygon', 'MultiGeometry', 'LineString', 'LinearRing', 'Point']
-        
+
         for tag in geometry_tags:
             for geom in root.findall(f'.//{{{KML_NS}}}{tag}'):
                 # Check if altitudeMode already exists
                 altitude_mode = geom.find(f'{{{KML_NS}}}altitudeMode')
-                
+
                 if altitude_mode is not None:
                     # Change existing altitudeMode to absolute
                     altitude_mode.text = 'absolute'
@@ -70,51 +69,52 @@ def fix_kml_altitude_mode(kml_path):
                     altitude_mode = ET.Element('altitudeMode')
                     altitude_mode.text = 'absolute'
                     geom.insert(0, altitude_mode)
-                
+
                 # Also handle gx:altitudeMode if present (Google Earth extension)
                 gx_altitude_mode = geom.find(f'{{{GX_NS}}}altitudeMode')
                 if gx_altitude_mode is not None:
                     gx_altitude_mode.text = 'absolute'
-        
+
         # Write the modified KML back to file
         tree.write(kml_path, encoding='utf-8', xml_declaration=True)
-        
+
         # Read the file and ensure proper structure
         with open(kml_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
         # Ensure proper XML declaration at the beginning
         if not content.startswith('<?xml'):
             content = '<?xml version="1.0" encoding="UTF-8"?>\n' + content
-        
+
         with open(kml_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        
+
         return True
-        
-    except Exception as e:
+
+    except Exception:
         # If XML parsing fails, try regex fallback
         try:
             with open(kml_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             # Replace clampToGround and relativeToGround with absolute
             content = re.sub(
                 r'<altitudeMode>\s*(clampToGround|relativeToGround)\s*</altitudeMode>',
                 '<altitudeMode>absolute</altitudeMode>',
                 content
             )
-            
+
             # Also handle gx:altitudeMode
-            content = re.sub(
-                r'<gx:altitudeMode>\s*(clampToSeaFloor|relativeToSeaFloor|clampToGround|relativeToGround)\s*</gx:altitudeMode>',
-                '<altitudeMode>absolute</altitudeMode>',
-                content
+            gx_pattern = (
+                r'<gx:altitudeMode>\s*'
+                r'(clampToSeaFloor|relativeToSeaFloor|clampToGround|relativeToGround)'
+                r'\s*</gx:altitudeMode>'
             )
-            
+            content = re.sub(gx_pattern, '<altitudeMode>absolute</altitudeMode>', content)
+
             with open(kml_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-            
+
             return True
         except Exception:
             return False
@@ -135,12 +135,12 @@ def fix_kml_polygon_fill_color(kml_path, fill_color_kml, line_color_kml=None):
     """
     try:
         KML_NS = 'http://www.opengis.net/kml/2.2'
-        GX_NS  = 'http://www.google.com/kml/ext/2.2'
+        GX_NS = 'http://www.google.com/kml/ext/2.2'
 
         ET.register_namespace('', KML_NS)
         ET.register_namespace('gx', GX_NS)
 
-        tree = _defused_ET.parse(kml_path)
+        tree = _defused_ET.parse(kml_path)  # nosec B314 - _defused_ET is the defusedxml alias, not stdlib ET
         root = tree.getroot()
 
         for style_elem in root.findall(f'.//{{{KML_NS}}}Style'):
@@ -240,6 +240,7 @@ def get_selected_feature(layer, show_error):
             show_error("Multiple features found but none selected. Please select one feature.")
             return None
 
+
 def format_parameters_table(title, params_dict, sections=None, as_html=False):
     """
     Format parameters as a standardized table for Word/text output.
@@ -288,7 +289,10 @@ def format_parameters_table(title, params_dict, sections=None, as_html=False):
                     for sub_key, sub_val in val.items():
                         if str(sub_key).endswith('_unit'):
                             continue
-                        sec = sections.get(sub_key, group or (key if not sections else 'General')) if sections else (group or key or 'General')
+                        sec = (
+                            sections.get(sub_key, group or 'General')
+                            if sections else (group or key or 'General')
+                        )
                         unit = ''
                         # First look for unit alongside sub_key in this dict
                         unit = val.get(f"{sub_key}_unit", '')
@@ -320,16 +324,28 @@ def format_parameters_table(title, params_dict, sections=None, as_html=False):
     if as_html:
         # Build simple HTML table with alternating row colors for Word
         html = []
-        html.append('<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt;">')
-        html.append(f'<tr style="background-color:#4472C4;color:white;font-weight:bold;text-align:center;"><th colspan="3">{title}</th></tr>')
+        html.append(
+            '<table border="1" cellpadding="5" cellspacing="0"'
+            ' style="border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt;">'
+        )
+        html.append(
+            f'<tr style="background-color:#4472C4;color:white;font-weight:bold;text-align:center;">'
+            f'<th colspan="3">{title}</th></tr>'
+        )
         for sec in section_order:
             section_rows = [(p, v, u) for s, p, v, u in entries if s == sec]
             html.append(f'<tr style="background-color:#D9E1F2;font-weight:bold;"><td colspan="3">{sec}</td></tr>')
-            html.append('<tr style="background-color:#F2F2F2;font-weight:bold;"><td>Parameter</td><td>Value</td><td>Unit</td></tr>')
+            html.append(
+                '<tr style="background-color:#F2F2F2;font-weight:bold;">'
+                '<td>Parameter</td><td>Value</td><td>Unit</td></tr>'
+            )
             for idx, (param_key, value, unit) in enumerate(section_rows):
                 bg = '#FFFFFF' if idx % 2 == 0 else '#F9F9F9'
                 param_name = str(param_key).replace('_', ' ').title()
-                html.append(f'<tr style="background-color:{bg};"><td>{param_name}</td><td style="text-align:right;">{value}</td><td>{unit}</td></tr>')
+                html.append(
+                    f'<tr style="background-color:{bg};">'
+                    f'<td>{param_name}</td><td style="text-align:right;">{value}</td><td>{unit}</td></tr>'
+                )
         html.append('</table>')
         return ''.join(html)
 

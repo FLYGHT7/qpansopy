@@ -33,6 +33,7 @@ from ._lnav_common import (
     _create_area_layer,
 )
 
+
 def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=None):
     """
     Execute PBN LNAV Final Approach area calculation and protection surface generation.
@@ -85,7 +86,7 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
     try:
         # Initialize QGIS interface from parameter
         iface = iface_param
-        
+
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
         routing_layer = _resolve_routing_layer(iface, routing_layer)
@@ -122,7 +123,7 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
         # Based on ICAO Doc 9613 - RNP APCH corridor dimensions
         # Standard corridor half-widths at MAPt: ±0.475 NM (primary), ±0.95 NM (secondary)
         d = (0.475, 0.95, -0.475, -0.95)  # Nautical miles - ICAO standardized values
-        
+
         # Generate corridor boundary points perpendicular to approach track
         for i in d:
             # Project laterally from MAPt at 90° to approach track
@@ -142,7 +143,7 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
             line_start = int_var.project(i*1852, azimuth-90)
             pts["mm"+str(a)] = line_start
             a += 1
-       
+
         # 5. Final Approach Fix (FAF) Corridor Boundaries
         # Maximum corridor width at FAF: ±0.725 NM (primary), ±1.45 NM (secondary)
         f = (0.725, 1.45, -0.725, -1.45)  # Nautical miles - ICAO standardized values
@@ -153,7 +154,7 @@ def run_final_approach(iface_param, routing_layer, export_kml=False, output_dir=
 
         # Primary protection area (central corridor with highest obstacle clearance)
         primary_area = ([pts["m2"], pts["m1"], pts["m4"], pts["mm8"], pts["m12"], pts["m10"], pts["mm6"]], 'Primary Area')
-        
+
         # Secondary protection areas (lateral extensions with reduced obstacle clearance)
         secondary_area_left = ([pts["m3"], pts["m2"], pts["mm6"], pts["m10"], pts["m11"], pts["mm7"]], 'Secondary Area')
         secondary_area_right = ([pts["m5"], pts["m4"], pts["mm8"], pts["m12"], pts["m13"], pts["mm9"]], 'Secondary Area')

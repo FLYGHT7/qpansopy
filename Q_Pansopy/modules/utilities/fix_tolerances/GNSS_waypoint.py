@@ -1,4 +1,4 @@
-﻿'''
+'''
 GNSS Waypoint
 '''
 
@@ -15,7 +15,7 @@ from math import *
 from qgis.core import Qgis
 iface.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint", level=Qgis.Info)
 
-XTT = 1.0 # XTT siempre mas que ATT 
+XTT = 1.0  # XTT siempre mas que ATT
 
 # map_srid
 map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -27,8 +27,7 @@ selection = layer.selectedFeatures()
 # Gets x,y
 for feat in selection:
     p_geom = feat.geometry().asPoint()
-    #print (p_geom)
-
+    # print (p_geom)
 
 
 for layer in QgsProject.instance().mapLayers().values():
@@ -36,7 +35,7 @@ for layer in QgsProject.instance().mapLayers().values():
         layer = layer
         selection = layer.selectedFeatures()
         geom=selection[0].geometry().asPolyline()
-        #print (geom)
+        # print (geom)
         start_point = QgsPoint(geom[-1])
         end_point = QgsPoint(geom[0])
         angle0=start_point.azimuth(end_point)+180
@@ -44,11 +43,11 @@ for layer in QgsProject.instance().mapLayers().values():
         back_angle0 = angle0+180
         print ("angle:",angle0,length0/1852)
 
-#initial true azimuth data
+# initial true azimuth data
 azimuth =angle0
 
 
-#Create memory layer
+# Create memory layer
 v_layer = QgsVectorLayer("Polygon?crs="+map_srid, "Tolerances", "memory")
 XTTn = QgsField( 'XTT', QVariant.String)
 ATTn = QgsField( 'ATT', QVariant.String)
@@ -58,42 +57,39 @@ v_layer.updateFields()
 pr = v_layer.dataProvider()
 
 # create a new feature
-#rect = QgsRectangle(p_geom,QgsPointXY(276024,1726660))
-#print (rect)
+# rect = QgsRectangle(p_geom,QgsPointXY(276024,1726660))
+# print (rect)
 rect = QgsRectangle.fromCenterAndSize(p_geom,2*XTT*1852,2*0.8*XTT*1852)
-#print (rect)
+# print (rect)
 
 
 polygon = QgsGeometry.fromRect(rect)
 
 
-#print (polygon)
+# print (polygon)
 centroid = polygon.centroid().asPoint()
 polygon.rotate(azimuth, centroid)
-#print (polygon)
+# print (polygon)
 seg = QgsFeature()
 seg.setGeometry(polygon)
 seg.setAttributes( [str(XTT)+' NM',str(0.8*XTT)+' NM'] )
 pr.addFeatures( [ seg ] )
 print (seg)
 
-## update extent of the layer (not necessary)
+# update extent of the layer (not necessary)
 v_layer.updateExtents()
 
 
-# Change style of layer 
+# Change style of layer
 v_layer.renderer().symbol().setOpacity(.3)
 v_layer.renderer().symbol().setColor(QColor("blue"))
-#v_layer.renderer().symbol().setWidth(0.5)
+# v_layer.renderer().symbol().setWidth(0.5)
 iface.layerTreeView().refreshLayerSymbology( iface.activeLayer().id() )
 v_layer.triggerRepaint()
 
 
-# show the line  
+# show the line
 QgsProject.instance().addMapLayers([v_layer])
-
-
-
 
 
 iface.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint Finished", level=Qgis.Success)

@@ -1,4 +1,4 @@
-﻿'''
+'''
 CONV Initial Approach Segment Straight
 '''
 
@@ -21,6 +21,7 @@ try:
 except (ImportError, AttributeError):
     _T_DOUBLE = QVariant.Double
     _T_STRING = QVariant.String
+
 
 def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=False, output_dir=None):
     """
@@ -48,37 +49,37 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
         z_primary = proc_alt_m - moc_m
         z_outer = z_primary + moc_m  # equals proc_alt_m
 
-        # Get Projected Coordinate System for the QGIS Project 
+        # Get Projected Coordinate System for the QGIS Project
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
-        
+
         # Verify routing layer is provided
         if not routing_layer:
             iface.messageBar().pushMessage("No routing layer provided", level=Qgis.Critical)
             return False
-        
+
         # Check if there are selected features
         selection = routing_layer.selectedFeatures()
         if not selection:
             iface.messageBar().pushMessage("No features selected in routing layer", level=Qgis.Critical)
             return False
-            
+
         iface.messageBar().pushMessage("QPANSOPY:", "Executing CONV Initial Approach Segment Straight", level=Qgis.Info)
-        
+
         features_processed = 0
         for feat in selection:
             geom = feat.geometry().asPolyline()
             if len(geom) < 2:
                 iface.messageBar().pushMessage("Invalid geometry - need at least 2 points", level=Qgis.Warning)
                 continue
-                
+
             # Note: Using the original logic with start_point as geom[-1] and end_point as geom[0]
             start_point = QgsPoint(geom[-1])
             end_point = QgsPoint(geom[0])
             angle0 = start_point.azimuth(end_point) + 180
             length0 = feat.geometry().length()
-            
+
             azimuth = angle0
-            
+
             pts = {}
             a = 0
 
@@ -88,10 +89,10 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
             bearing = radians(bearing)
             angle = radians(angle)
             dist_x, dist_y = (length0 * cos(angle), length0 * sin(angle))
-            
+
             pts["m"+str(a)] = QgsPoint(end_point.x() + dist_x, end_point.y() + dist_y)
             a += 1
-            
+
             pts["m"+str(a)] = QgsPoint(end_point.x(), end_point.y())
             a += 1
 
@@ -110,7 +111,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
                 line_start = QgsPoint(bx1, by2)
                 pts["m"+str(a)] = line_start
                 a += 1
-                
+
             # calculating top points
             d = (2.5, 5, -2.5, -5)  # NM
 
@@ -150,7 +151,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
             # Primary Area
             primary_ring = [pts["m2"], pts["m0"], pts["m4"], pts["m8"], pts["m1"], pts["m6"]]
             primary_area = (primary_ring, 'Primary Area', '-')
-            
+
             # Determine Left/Right from the actual geometry so the label is correct
             # regardless of which direction the routing line was drawn.
             # Cross product (2D, y-up): fdx*dy - fdy*dx < 0 → point is to the RIGHT.
@@ -172,8 +173,6 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
 
             secondary_area_left  = (sec_left_ring,  'Secondary Area', 'Left')
             secondary_area_right = (sec_right_ring, 'Secondary Area', 'Right')
-            
-            areas = (primary_area, secondary_area_left, secondary_area_right)
 
             # Create polygon features
             pr = v_layer.dataProvider()
@@ -190,25 +189,25 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
                 # Ensure z_values is a list matching ring_points length
                 if not isinstance(z_values, (list, tuple)):
                     z_values = [z_values] * len(ring_points)
-                
+
                 # Create 3D points with explicit Z values
                 points_3d = []
                 for i, pt in enumerate(ring_points):
                     z = z_values[i] if i < len(z_values) else z_values[-1]
                     points_3d.append(QgsPoint(pt.x(), pt.y(), float(z)))
-                
+
                 # Close the ring by adding the first point at the end if not already closed
                 if len(points_3d) > 0:
                     first_pt = points_3d[0]
                     last_pt = points_3d[-1]
                     if first_pt.x() != last_pt.x() or first_pt.y() != last_pt.y():
                         points_3d.append(QgsPoint(first_pt.x(), first_pt.y(), first_pt.z()))
-                
+
                 # Create the polygon geometry
                 line_string = QgsLineString(points_3d)
                 polygon = QgsPolygon()
                 polygon.setExteriorRing(line_string)
-                
+
                 return QgsGeometry(polygon)
 
             try:
@@ -316,7 +315,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
             features_processed += 1
 
         return True
-        
+
     except Exception as e:
         iface.messageBar().pushMessage("Error creating CONV Initial Approach areas", str(e), level=Qgis.Critical)
         import traceback

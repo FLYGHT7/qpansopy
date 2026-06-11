@@ -49,10 +49,10 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
     """
     if params is None:
         params = {}
-    
+
     export_kml = params.get('export_kml', False)
     output_dir = params.get('output_dir', None)
-    
+
     try:
         # Get Projected Coordinate System
         map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -96,7 +96,7 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
         end_point = None
         azimuth = None
         length = None
-        
+
         for feat in arrival_features:
             try:
                 geom = feat.geometry().asPolyline()
@@ -109,11 +109,11 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
                     break
             except Exception:
                 continue
-        
+
         if start_point is None:
             iface.messageBar().pushMessage(
-                "Error", 
-                "No valid geometry found in selected segments", 
+                "Error",
+                "No valid geometry found in selected segments",
                 level=Qgis.Critical
             )
             return None
@@ -128,7 +128,7 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
         angle_rad = math.radians(angle)
         dist_x = length * math.cos(angle_rad)
         dist_y = length * math.sin(angle_rad)
-        
+
         pts["m" + str(a)] = QgsPoint(end_point.x() + dist_x, end_point.y() + dist_y)
         a += 1
 
@@ -163,8 +163,8 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
 
         # Create memory layer
         v_layer = QgsVectorLayer(
-            f"PolygonZ?crs={map_srid}", 
-            "PBN RNAV 1/2 Arrival", 
+            f"PolygonZ?crs={map_srid}",
+            "PBN RNAV 1/2 Arrival",
             "memory"
         )
         v_layer.dataProvider().addAttributes([QgsField('Symbol', QVariant.String)])
@@ -173,15 +173,15 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
         # Define areas
         # Primary Area
         primary_coords = [
-            pts["m2"], pts["m0"], pts["m4"], 
+            pts["m2"], pts["m0"], pts["m4"],
             pts["m8"], pts["m1"], pts["m6"]
         ]
-        
+
         # Secondary Area Left
         secondary_left_coords = [
             pts["m3"], pts["m2"], pts["m6"], pts["m7"]
         ]
-        
+
         # Secondary Area Right
         secondary_right_coords = [
             pts["m4"], pts["m5"], pts["m9"], pts["m8"]
@@ -196,7 +196,7 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
         # Create features
         pr = v_layer.dataProvider()
         features = []
-        
+
         for coords, symbol in areas:
             seg = QgsFeature()
             seg.setGeometry(QgsPolygon(QgsLineString(coords), rings=[]))
@@ -209,8 +209,8 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
 
         # Apply style
         style_path = os.path.join(
-            os.path.dirname(__file__), 
-            '..', '..', 'styles', 
+            os.path.dirname(__file__),
+            '..', '..', 'styles',
             'primary_secondary_areas.qml'
         )
         if os.path.exists(style_path):
@@ -224,14 +224,14 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
         v_layer.removeSelection()
 
         iface.messageBar().pushMessage(
-            "QPANSOPY:", 
-            "Finished RNAV 1/2 Arrival (<30NM)", 
+            "QPANSOPY:",
+            "Finished RNAV 1/2 Arrival (<30NM)",
             level=Qgis.Success
         )
 
         # KML Export if requested
         result = {"arrival_layer": v_layer}
-        
+
         if export_kml and output_dir:
             try:
                 from ..utilities.kml_export import export_layer_to_kml
@@ -245,8 +245,8 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
 
     except Exception as e:
         iface.messageBar().pushMessage(
-            "Error", 
-            f"Error in RNAV 1 Arrival: {str(e)}", 
+            "Error",
+            f"Error in RNAV 1 Arrival: {str(e)}",
             level=Qgis.Critical
         )
         return None

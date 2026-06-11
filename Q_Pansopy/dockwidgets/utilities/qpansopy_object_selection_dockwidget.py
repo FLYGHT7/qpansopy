@@ -1,12 +1,12 @@
-﻿from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import QgsMapLayerProxyModel, Qgis
-from qgis.gui import QgsMapLayerComboBox
+from qgis.core import Qgis
 from ...qt_compat import MLPM_PointLayer, MLPM_PolygonLayer
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_object_selection_dockwidget.ui'))
+
 
 class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -19,10 +19,10 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Setup layer combos
         self.pointLayerComboBox.setFilters(MLPM_PointLayer)
         self.surfaceLayerComboBox.setFilters(MLPM_PolygonLayer)
-        
+
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
-        
+
         # Connect signals
         self.setup_connections()
 
@@ -58,23 +58,23 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         try:
             point_layer = self.pointLayerComboBox.currentLayer()
             surface_layer = self.surfaceLayerComboBox.currentLayer()
-            
+
             if not point_layer or not surface_layer:
                 self.log("Error: Please select both input layers")
                 return
-            
+
             # Get options
             export_kml = self.exportKmlCheckBox.isChecked()
             output_dir = self.outputFolderLineEdit.text() if export_kml else None
             use_selection_only = self.useSelectionOnlyCheckBox.isChecked()
-            
+
             # Mensaje de inicio de procesamiento
             self.log("Starting object extraction...")
             self.iface.messageBar().pushMessage("QPANSOPY", "Extracting objects...", level=Qgis.Info)
-            
+
             # Importar directamente la función de extracción y ejecutarla
             from ...modules.utilities.selection_of_objects import extract_objects
-            
+
             # IMPORTANTE: Ejecutar directamente la función sin abrir diálogos
             result = extract_objects(
                 self.iface,
@@ -84,7 +84,7 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 output_dir=output_dir,
                 use_selection_only=use_selection_only
             )
-            
+
             # Mostrar resultados
             if result:
                 msg = f"Extracted {result['count']} objects"
@@ -92,7 +92,7 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     msg += f"\nKML exported to: {result['kml_path']}"
                 self.log(msg)
                 self.iface.messageBar().pushMessage("QPANSOPY", msg, level=Qgis.Success)
-    
+
         except Exception as e:
             self.log(f"Error during extraction: {str(e)}")
             self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)

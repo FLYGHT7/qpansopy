@@ -5,12 +5,12 @@ Aviation surfaces plugin for QGIS developed by FLYGHT7
 Copyright (C) 2020-2025 FLYGHT7
 """
 import os
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
+from qgis.PyQt.QtCore import QSettings
 from qgis.PyQt.QtGui import QIcon, QGuiApplication
-from qgis.PyQt.QtWidgets import QAction, QMenu, QToolBar, QMessageBox, QSizePolicy
+from qgis.PyQt.QtWidgets import QAction, QMenu, QMessageBox, QSizePolicy
 from qgis.PyQt import sip
 from qgis.PyQt import QtWidgets, QtCore
-from qgis.core import QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsApplication, Qgis
+from qgis.core import QgsProject, QgsVectorLayer, QgsApplication, Qgis
 from .qt_compat import (
     Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop,
     Qt_ScrollBarAsNeeded, Qt_SizeVerCursor, Qt_LeftButton,
@@ -36,7 +36,6 @@ try:
     from .dockwidgets.ils.qpansopy_oas_ils_dockwidget import QPANSOPYOASILSDockWidgetBase
     from .dockwidgets.utilities.qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
-    from .dockwidgets.utilities.qpansopy_feature_merge_dockwidget import QPANSOPYFeatureMergeDockWidget
     from .dockwidgets.utilities.qpansopy_holding_dockwidget import QPANSOPYHoldingDockWidget
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.pbn.qpansopy_gnss_waypoint_dockwidget import QPANSOPYGNSSWaypointDockWidget
@@ -50,20 +49,21 @@ try:
 except ImportError as e:
     _IMPORT_ERRORS.append(str(e))
 
+
 class Qpansopy:
     """
     QPANSOPY - Aviation Surfaces Plugin for QGIS
-    
+
     Performance-Based Navigation (PBN) and Conventional procedure design tool
     for QGIS, implementing ICAO Doc 9613 and ICAO Annex 4 standards.
-    
+
     This plugin provides comprehensive tools for designing and analyzing:
     - ILS and OAS surfaces
     - PBN LNAV/RNAV procedures (arrivals, SID, missed approaches)
     - Conventional navigation procedures (VOR, NDB)
     - Utility tools (VSS, Wind Spiral, Holding patterns)
     - Departure protection surfaces
-    
+
     Developed by FLYGHT7
     Copyright (C) 2020-2025 FLYGHT7
     """
@@ -71,14 +71,14 @@ class Qpansopy:
     def __init__(self, iface):
         """
         Initialize the QPANSOPY plugin.
-        
+
         Sets up the plugin environment including toolbars, menus, settings,
         and dock widget management infrastructure.
-        
+
         Args:
             iface (QgsInterface): QGIS interface instance providing access to
                 the QGIS application at runtime.
-        
+
         Attributes:
             modules (dict): Registry of all available tools and their configurations
             toolbars (dict): Collection of categorized toolbars (CONV, ILS, PBN, etc.)
@@ -89,12 +89,11 @@ class Qpansopy:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-        
+
         # Create actions
         self.actions = []
         self.menu = None  # Will be initialized in initGui
 
-        
         # Initialize toolbars to None
         self.toolbars = {
             'CONV': None,
@@ -107,7 +106,7 @@ class Qpansopy:
         # Track a reference dock to keep geometry stable
         self.dock_anchor = None
         self.dock_anchor_name = None
-        
+
         # Verify icons directory exists
         self.icons_dir = os.path.join(self.plugin_dir, 'icons')
         if not os.path.exists(self.icons_dir):
@@ -126,7 +125,6 @@ class Qpansopy:
 
         # Initialize modules dictionary
         self.modules = {}
-
 
     def initGui(self):
         """
@@ -215,7 +213,7 @@ class Qpansopy:
                     "DOCK_WIDGET": QPANSOPYGNSSWaypointDockWidget,
                     "GUI_INSTANCE": None
                 },
-                
+
                 "VOR_CONV": {
                     "TITLE": "VOR",
                     "TOOLBAR": "CONV",
@@ -290,10 +288,10 @@ class Qpansopy:
                     "GUI_INSTANCE": None
                 }
             }
-            
+
             # If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
             self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None, "DEPARTURES": None}
-            
+
             # Crear el menú QPANSOPY
             menuBar = self.iface.mainWindow().menuBar()
             self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
@@ -309,10 +307,9 @@ class Qpansopy:
             self.toolbars['PBN'] = self.iface.addToolBar("QPANSOPY - PBN")
             self.toolbars['PBN'].setObjectName("QPANSOPYPBNToolBar")
 
-            
             self.toolbars['DEPARTURES'] = self.iface.addToolBar("QPANSOPY - DEPARTURES")
             self.toolbars['DEPARTURES'].setObjectName("QPANSOPYDEPARTURESToolBar")
-            
+
             self.toolbars['UTILITIES'] = self.iface.addToolBar("QPANSOPY - UTILITIES")
             self.toolbars['UTILITIES'].setObjectName("QPANSOPYUTILITIESToolBar")
 
@@ -369,17 +366,16 @@ class Qpansopy:
         except Exception as e:
             QMessageBox.critical(self.iface.mainWindow(), "QPANSOPY Error", f"Error initializing plugin: {str(e)}")
 
-
     def unload(self):
         """
         Clean up and remove the plugin from QGIS interface.
-        
+
         Performs complete teardown of all plugin components:
         - Removes menu and all menu actions
         - Removes and deletes all toolbars
         - Closes and removes all dock widgets
         - Clears module registry
-        
+
         Called automatically when the plugin is unloaded or QGIS closes.
         """
         # Remove menu
@@ -393,34 +389,33 @@ class Qpansopy:
                 toolbar.deleteLater()
         # Remove the actions from the Toolbar
         if hasattr(self, 'modules') and self.modules:
-            for name,properties in self.modules.items():
+            for name, properties in self.modules.items():
                 if properties["GUI_INSTANCE"] is not None:
                     self.iface.removeDockWidget(properties["GUI_INSTANCE"])
                     self.modules[name]["GUI_INSTANCE"] = None
 
-
     def toggle_dock(self, name=None, checked=False):
         """
         Toggle visibility of a tool's dock widget.
-        
+
         Manages the lifecycle and visibility of dock widgets using a single-instance
         pattern. On first invocation, creates and configures the dock widget.
         Subsequent calls show/hide the existing instance.
-        
+
         When showing a dock, automatically hides all other tool docks to maintain
         a clean workspace and prevent QGIS window geometry issues.
-        
+
         Args:
             name (str, optional): Module key from self.modules dictionary.
                 If None, the function returns without action.
             checked (bool, optional): Action checked state (not used, for signal compatibility).
-        
+
         Behavior:
             - First call: Creates dock widget, configures settings, adds to QGIS interface
             - Subsequent calls: Toggles visibility (show/hide)
             - Always maintains dock_anchor reference for stable tabification
             - Hides sibling docks when showing to avoid overlap
-        
+
         Configuration applied to new docks:
             - Object name and window title
             - Allowed dock areas (left/right)
@@ -431,7 +426,7 @@ class Qpansopy:
         # If name is None, simply return without doing anything
         if name is None:
             return
-            
+
         instance = self.modules[name]["GUI_INSTANCE"]
         if instance is None:
             # Create and register the dock widget once; later toggles just show/hide
@@ -465,9 +460,11 @@ class Qpansopy:
             if name != "PointFilter":
                 try:
                     if hasattr(instance, "exportKmlCheckBox"):
-                        instance.exportKmlCheckBox.setChecked(self.settings.value("qpansopy/enable_kml", False, type=bool))
+                        instance.exportKmlCheckBox.setChecked(
+                            self.settings.value("qpansopy/enable_kml", False, type=bool))
                 except AttributeError:
-                    QMessageBox.warning(self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
+                    QMessageBox.warning(
+                        self.iface.mainWindow(), "QPANSOPY Error", "This Widget has no KML Export Button")
             if hasattr(instance, "logTextEdit"):
                 show_log = self.settings.value("qpansopy/show_log", True, type=bool)
                 try:
@@ -519,10 +516,10 @@ class Qpansopy:
             instance.hide()  # Ensure it's hidden before adding
             self.iface.addDockWidget(Qt_RightDockWidgetArea, instance)
             self._ensure_dock_anchor(name, instance)
-            
+
             # Now that dock is in the area (hidden), force geometry calculation with proper context
             self._force_initial_geometry_calculation(instance)
-            
+
             # Hide other docks BEFORE showing this one to prevent simultaneous visibility
             self._hide_other_docks(name)
             # Additional event processing to ensure geometry updates complete (issue #39)
@@ -547,29 +544,29 @@ class Qpansopy:
     def _ensure_resizable_log(self, dock_instance):
         """
         Configure log panel to be resizable without forcing QGIS window resize.
-        
+
         Implements a custom resize handle for the log text edit widget that allows
         users to adjust log panel height independently. This prevents the dock widget
         from imposing strict size constraints on the QGIS main window.
-        
+
         Args:
             dock_instance: Dock widget instance containing a logTextEdit widget.
-        
+
         Configuration steps:
             1. Removes restrictive height constraints from log widget
             2. Sets flexible size policies
             3. Configures word wrapping to prevent horizontal overflow
             4. Adds custom resize handle below log panel
             5. Optimizes layout to prevent forced window geometry changes
-        
+
         The resize handle allows vertical adjustment within min/max bounds while
         keeping other dock elements fixed in size.
-        
+
         Changes from issue #39 fix:
             - Changed layout constraint from SetMinAndMaxSize to SetDefaultConstraint
             - Changed GroupBox size policy from Fixed to Minimum
             - Removed forced geometry recalculation (adjustSize/updateGeometry)
-        
+
         These changes prevent QGIS from displaying geometry warnings and resizing
         the entire application window when switching between tool docks.
         """
@@ -720,7 +717,8 @@ class Qpansopy:
                 handle.setCursor(Qt_SizeVerCursor)
                 handle.setSizePolicy(QSizePolicy_Expanding, QSizePolicy_Fixed)
                 # subtle visual cue
-                handle.setStyleSheet("QFrame#qpansopyLogResizeHandle { background: rgba(0,0,0,0.08); border-radius: 2px; }")
+                handle.setStyleSheet(
+                    "QFrame#qpansopyLogResizeHandle { background: rgba(0,0,0,0.08); border-radius: 2px; }")
                 lg_layout.addWidget(handle)
 
                 class _HandleFilter(QtCore.QObject):
@@ -731,6 +729,7 @@ class Qpansopy:
                         self._start_h = None
                         self._min = min_h
                         self._max = max_h
+
                     def eventFilter(self, obj, event):
                         et = event.type()
                         if et == QEvent_MouseButtonPress and (event.button() == Qt_LeftButton):
@@ -759,7 +758,7 @@ class Qpansopy:
                 # keep references to avoid GC
                 log_group._qpansopy_logHandle = handle
                 log_group._qpansopy_logHandleFilter = hf
-            
+
             # Additionally compact the entire dock layout to remove big gray gaps
             try:
                 root_widget = None
@@ -811,18 +810,19 @@ class Qpansopy:
                 pass
         except Exception:
             pass
+
     def on_dock_closed(self, name):
         """
         Handle dock widget closure event.
-        
+
         Cleans up references when a tool dock is closed by the user.
         If the closed dock was the anchor dock, promotes another visible
         dock to become the new anchor.
-        
+
         Args:
             name (str): Module key from self.modules dictionary identifying
                 the dock that was closed.
-        
+
         Side effects:
             - Clears GUI_INSTANCE reference in modules registry
             - Updates dock_anchor if necessary via _promote_anchor()
@@ -831,14 +831,13 @@ class Qpansopy:
         if self.dock_anchor_name == name:
             self._promote_anchor()
 
-
     def _hide_other_docks(self, active_name):
         """
         Hide all dock widgets except the specified active one.
-        
+
         Maintains a clean workspace by ensuring only one tool dock is visible
         at a time. This prevents dock overlap and geometry conflicts.
-        
+
         Args:
             active_name (str): Module key of the dock that should remain visible.
         """
@@ -848,7 +847,7 @@ class Qpansopy:
             other_instance = other_properties["GUI_INSTANCE"]
             if other_instance and other_instance.isVisible():
                 other_instance.hide()
-        
+
         # Process pending events to ensure hide operations complete before showing new dock
         # This prevents geometry conflicts when switching rapidly between tools (issue #39)
         try:
@@ -859,18 +858,18 @@ class Qpansopy:
     def _ensure_scroll_area_wrapper(self, dock_instance):
         """
         Wrap dock content in QScrollArea if not already wrapped.
-        
+
         Docks with scroll areas (VSS, Wind Spiral) work perfectly because the scroll
         area has a fixed size and content scrolls within it. Docks without scroll areas
         (LNAV, GNSS, SID Initial, OMNI, Holding) request full content height on first
         opening, forcing QGIS window resize.
-        
+
         This method detects if content is already in a scroll area, and if not,
         wraps it in one programmatically.
-        
+
         Args:
             dock_instance: The QDockWidget instance to check/wrap
-            
+
         Issue #39: First-time opening of docks without scroll areas causes window
         resize because content requests its full preferred height all at once.
         """
@@ -878,18 +877,18 @@ class Qpansopy:
             content_widget = dock_instance.widget()
             if not content_widget:
                 return
-            
+
             # Check if content is already a QScrollArea or has one as direct child
             if isinstance(content_widget, QtWidgets.QScrollArea):
                 return  # Already has scroll area
-            
+
             # Check if first child is a scroll area
             if content_widget.layout():
                 for i in range(content_widget.layout().count()):
                     item = content_widget.layout().itemAt(i)
                     if item and item.widget() and isinstance(item.widget(), QtWidgets.QScrollArea):
                         return  # Has scroll area in layout
-            
+
             # No scroll area found - wrap the content
             # Create new scroll area
             scroll_area = QtWidgets.QScrollArea()
@@ -897,14 +896,14 @@ class Qpansopy:
             scroll_area.setFrameShape(QFrame_NoFrame)  # Seamless appearance
             scroll_area.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
             scroll_area.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
-            
+
             # Reparent the existing content widget into the scroll area
             scroll_area.setWidget(content_widget)
-            
+
             # Set the scroll area as the dock's widget
             dock_instance.setWidget(scroll_area)
-            
-        except Exception as e:
+
+        except Exception:
             # If wrapping fails, continue without scroll area
             # Better to have the dock work (even with resize issue) than to crash
             pass
@@ -912,18 +911,18 @@ class Qpansopy:
     def _force_initial_small_size(self, dock_instance):
         """
         Force dock to start with a small conservative size before Qt calculations.
-        
+
         On first opening, Qt doesn't have cached size information and asks the
         content widget for its sizeHint(). For complex docks with many fields,
         this sizeHint can be enormous (sometimes taller than the screen), causing
         Qt to attempt resizing the QGIS main window.
-        
+
         This method forces an explicit small size BEFORE Qt does any calculations,
         so Qt caches this conservative size instead of the huge sizeHint.
-        
+
         Args:
             dock_instance: The QDockWidget instance to resize
-            
+
         Issue #39: First-time opening of large docks (LNAV, GNSS, SID Initial,
         OMNI, Holding) causes window resize because their content sizeHint is
         larger than available space. This "pre-seeds" Qt's cache with a safe size.
@@ -934,7 +933,7 @@ class Qpansopy:
             if screen:
                 screen_geometry = screen.availableGeometry()
                 screen_height = screen_geometry.height()
-                
+
                 # Force a conservative initial size (50% of available height)
                 # This is much smaller than what large docks would request
                 initial_height = min(int((screen_height - 400) * 0.5), 400)
@@ -943,15 +942,15 @@ class Qpansopy:
                 # Fallback to very conservative size
                 initial_height = 350
                 initial_width = 300
-            
+
             # CRITICAL: Force this size on both dock and content widget
             # This makes Qt cache this size instead of calculating from sizeHint
             dock_instance.resize(initial_width, initial_height)
-            
+
             content_widget = dock_instance.widget()
             if content_widget:
                 content_widget.resize(initial_width, initial_height - 30)  # Account for title bar
-            
+
         except Exception:
             # Fallback to hardcoded safe size
             try:
@@ -962,15 +961,15 @@ class Qpansopy:
     def _wait_for_geometry_update(self):
         """
         Wait for Qt to complete geometry recalculation after dock hide/show operations.
-        
+
         Introduces a delay to allow Qt's layout system to fully process
         dock area geometry changes before showing a new dock. This prevents the
         QGIS main window from being resized when switching between tools.
-        
+
         The delay (200ms) accounts for rapid toolbar button toggles which are
         faster than closing with the X button, ensuring Qt layout engine completes
         all geometry calculations.
-        
+
         Issue #39: Without sufficient delay, Qt attempts to show the new dock before
         the previous dock's space is fully reclaimed, causing main window resize
         and incorrect dock positioning on subsequent openings. This is especially
@@ -989,19 +988,19 @@ class Qpansopy:
     def _force_initial_geometry_calculation(self, dock_instance):
         """
         Force Qt to calculate initial geometry for new dock instances.
-        
+
         On first opening, Qt doesn't have cached size information and must calculate
         the dock's geometry on-the-fly, which can cause QGIS main window to resize.
         This method forces Qt to calculate and cache the geometry while the dock
         is in the dock area but hidden, giving Qt proper context for calculations.
-        
+
         The technique: with dock already added to dock area (but hidden), force
         complete layout and geometry calculations. Qt will cache this information
         for when the dock is actually shown.
-        
+
         Args:
             dock_instance: The QDockWidget instance already added to dock area (hidden)
-            
+
         Issue #39: First-time opening of docks causes window resize because Qt
         doesn't know the size until it calculates it. Subsequent openings work
         fine because Qt has cached the geometry information.
@@ -1011,49 +1010,49 @@ class Qpansopy:
             content_widget = dock_instance.widget()
             if not content_widget:
                 return
-            
+
             # Force complete style and layout calculation
             content_widget.ensurePolished()  # Force style calculation
             content_widget.updateGeometry()   # Notify layout system of size changes
-            
+
             # Process events to let layouts calculate
             QgsApplication.processEvents()
-            
+
             # Calculate optimal size for content
             content_widget.adjustSize()
-            
+
             # Force the dock itself to calculate and cache its geometry
             # This is critical - dock needs to know its size in the context of the dock area
             dock_instance.updateGeometry()
             dock_instance.adjustSize()
-            
+
             # Process all pending events to complete geometry calculations
             QgsApplication.processEvents()
-            
+
             # Additional delay to ensure all calculations complete and are cached
             import time
             time.sleep(0.08)  # 80ms - longer than before since this is more critical
-            
+
             # Final event processing to ensure cache is updated
             QgsApplication.processEvents()
-            
+
         except Exception:
             pass
 
     def _apply_maximum_size_constraint(self, dock_instance):
         """
         Apply constraints to prevent dock from forcing QGIS main window resize.
-        
+
         Implements multiple strategies to prevent dockwidgets from expanding beyond
         available space and triggering main window geometry changes:
-        
+
         1. Disables features that allow dock to resize main window
         2. Sets maximum size based on available screen space
         3. Configures size policy to prefer shrinking over expanding
-        
+
         Args:
             dock_instance: The QDockWidget instance to constrain
-            
+
         Issue #39: Dockwidgets can force QGIS window resize when their content
         requests more space than available, causing "Unable to set geometry" error.
         """
@@ -1063,31 +1062,31 @@ class Qpansopy:
             dock_instance.setFeatures(
                 dock_instance.features() & ~QtWidgets.QDockWidget.DockWidgetVerticalTitleBar
             )
-            
+
             # Get the primary screen geometry for size calculations
             screen = QGuiApplication.primaryScreen()
             if screen:
                 screen_geometry = screen.availableGeometry()
                 screen_height = screen_geometry.height()
                 screen_width = screen_geometry.width()
-                
+
                 # Reserve space for QGIS UI elements
                 # Top: toolbars, menus, navigation (~120px)
-                # Bottom: statusbar (~30px)  
+                # Bottom: statusbar (~30px)
                 # Safety margin: ~250px for various UI elements and borders
                 # Very conservative for large docks (LNAV, GNSS, SID Initial, OMNI, Holding)
                 reserved_height = 400
-                
+
                 # Calculate maximum available dimensions
                 # Use very aggressive constraint to prevent any overflow
                 max_dock_height = max(screen_height - reserved_height, 350)
                 max_dock_width = int(screen_width * 0.8)
-                
+
                 # CRITICAL: Apply constraint to BOTH dock AND its content widget
                 # Content widget's sizeHint can request more space than available
                 # causing main window resize on first opening
                 dock_instance.setMaximumSize(max_dock_width, max_dock_height)
-                
+
                 # Also constrain the content widget itself - this is CRITICAL
                 content_widget = dock_instance.widget()
                 if content_widget:
@@ -1107,7 +1106,7 @@ class Qpansopy:
                     content_policy.setVerticalPolicy(QSizePolicy_Preferred)
                     content_policy.setHorizontalPolicy(QSizePolicy_Preferred)
                     content_widget.setSizePolicy(content_policy)
-            
+
             # Configure size policy to prefer staying within bounds
             # Preferred = can grow/shrink, but prefers its size hint
             # This makes the dock adapt to available space rather than force resize
@@ -1116,8 +1115,8 @@ class Qpansopy:
             size_policy.setHorizontalPolicy(QSizePolicy_Preferred)
             size_policy.setRetainSizeWhenHidden(False)  # Don't force size when re-showing
             dock_instance.setSizePolicy(size_policy)
-            
-        except Exception as e:
+
+        except Exception:
             # If anything fails, try basic fallback
             try:
                 dock_instance.setMaximumSize(800, 600)
@@ -1129,15 +1128,15 @@ class Qpansopy:
     def _ensure_dock_anchor(self, name, instance):
         """
         Maintain a stable anchor dock for consistent tabification.
-        
+
         Ensures all tool docks are tabified with a reference anchor dock,
         preventing geometry issues when switching between tools. The anchor
         dock provides a stable reference point for Qt's dock management.
-        
+
         Args:
             name (str): Module key of the dock to potentially become anchor.
             instance: Dock widget instance to tabify.
-        
+
         Behavior:
             - If no anchor exists, makes this dock the anchor
             - If anchor exists, tabifies new dock with anchor
@@ -1160,14 +1159,13 @@ class Qpansopy:
         self.dock_anchor = instance
         self.dock_anchor_name = name
 
-
     def _promote_anchor(self):
         """
         Find and promote a new anchor dock when current anchor is closed.
-        
+
         Searches through all open tool docks to find a suitable replacement
         anchor. If no valid candidates exist, clears the anchor reference.
-        
+
         This ensures the tabification system continues to work correctly
         even after the user closes the current anchor dock.
         """
@@ -1180,19 +1178,18 @@ class Qpansopy:
         self.dock_anchor = None
         self.dock_anchor_name = None
 
-
     @staticmethod
     def _is_deleted(widget):
         """
         Check if a Qt widget has been deleted.
-        
+
         Uses SIP's isdeleted() to safely check widget validity before
         attempting operations. Prevents crashes from accessing deleted
         widget references.
-        
+
         Args:
             widget: Qt widget instance to check.
-        
+
         Returns:
             bool: True if widget is None or has been deleted, False otherwise.
         """
@@ -1202,7 +1199,6 @@ class Qpansopy:
             return sip.isdeleted(widget)
         except Exception:
             return False
-
 
     def show_about_dialog(self):
         """
@@ -1230,7 +1226,9 @@ class Qpansopy:
             hbox.addWidget(logo)
         hbox.addWidget(QLabel("<b>QPANSOPY by FLYGHT7</b>"))
         layout.addLayout(hbox)
-        github_label = QLabel("Aviation surfaces plugin for QGIS.<br>Developed by FLYGHT7.<br><a href='https://github.com/FLYGHT7/qpansopy'>https://github.com/FLYGHT7/qpansopy</a>")
+        github_label = QLabel(
+            "Aviation surfaces plugin for QGIS.<br>Developed by FLYGHT7."
+            "<br><a href='https://github.com/FLYGHT7/qpansopy'>https://github.com/FLYGHT7/qpansopy</a>")
         github_label.setOpenExternalLinks(True)
         layout.addWidget(github_label)
         dlg.exec_()
@@ -1238,14 +1236,14 @@ class Qpansopy:
     def show_settings_dialog(self):
         """
         Display the Settings dialog for plugin configuration.
-        
+
         Opens a modal dialog allowing users to configure:
         - KML export default state
         - Log panel visibility
-        
+
         Settings are persisted to QSettings and applied immediately
         to all open tool docks without requiring QGIS restart.
-        
+
         Side effects:
             - Updates self.settings_values with new configuration
             - Applies log visibility changes to all active dock widgets
@@ -1274,27 +1272,29 @@ class Qpansopy:
         Select 2+ vector layers with same geometry and CRS, merge into memory layer.
         """
         try:
-            layers = [lyr for lyr in QgsProject.instance().mapLayers().values() if isinstance(lyr, QgsVectorLayer)]
-        except Exception:
-            layers = []
-        try:
             selected_layers = self.iface.layerTreeView().selectedLayers()
         except Exception:
             selected_layers = []
         # Keep only vector layers
         selected_layers = [lyr for lyr in selected_layers if isinstance(lyr, QgsVectorLayer)]
         if len(selected_layers) < 2:
-            QMessageBox.information(self.iface.mainWindow(), "Feature Merge", "Select at least two vector layers in the Layers panel.")
+            QMessageBox.information(
+                self.iface.mainWindow(), "Feature Merge",
+                "Select at least two vector layers in the Layers panel.")
             return
         # Validate geometry type and CRS
         geom_type = selected_layers[0].wkbType()
         crs = selected_layers[0].crs()
         for lyr in selected_layers[1:]:
             if lyr.wkbType() != geom_type:
-                QMessageBox.warning(self.iface.mainWindow(), "Feature Merge", "Selected layers must have the same geometry type.")
+                QMessageBox.warning(
+                    self.iface.mainWindow(), "Feature Merge",
+                    "Selected layers must have the same geometry type.")
                 return
             if lyr.crs() != crs:
-                QMessageBox.warning(self.iface.mainWindow(), "Feature Merge", "Selected layers must share the same CRS.")
+                QMessageBox.warning(
+                    self.iface.mainWindow(), "Feature Merge",
+                    "Selected layers must share the same CRS.")
                 return
         # Default merged layer name; user can rename in layer tree later
         base_name = "Merged_Layer"
@@ -1309,9 +1309,11 @@ class Qpansopy:
             result = merge_selected_layers(self.iface, selected_layers, name, None)
             if result and result.get('merged_layer'):
                 count = result.get('total_features', 0)
-                self.iface.messageBar().pushMessage("QPANSOPY", f"Feature Merge completed: {count} features", level=Qgis.Success)
+                self.iface.messageBar().pushMessage(
+                    "QPANSOPY", f"Feature Merge completed: {count} features", level=Qgis.Success)
             else:
-                self.iface.messageBar().pushMessage("QPANSOPY", "Feature Merge finished with no result", level=Qgis.Warning)
+                self.iface.messageBar().pushMessage(
+                    "QPANSOPY", "Feature Merge finished with no result", level=Qgis.Warning)
         except Exception as e:
             QMessageBox.critical(self.iface.mainWindow(), "Feature Merge", f"Merge failed: {e}")
             try:
