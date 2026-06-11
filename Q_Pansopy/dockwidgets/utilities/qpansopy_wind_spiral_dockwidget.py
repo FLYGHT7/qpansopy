@@ -26,7 +26,7 @@ from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.PyQt.QtWidgets import QMessageBox
-from qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
+from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
 from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
 from qgis.core import Qgis
