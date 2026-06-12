@@ -21,6 +21,7 @@ from .qt_compat import (
     QFormLayout_AllNonFixedFieldsGrow,
     QTextEdit_WidgetWidth,
     QLayout_SetDefaultConstraint,
+    Qt_Vertical,
 )
 
 
@@ -526,6 +527,8 @@ class Qpansopy:
             self._wait_for_geometry_update()
             instance.show()
             instance.raise_()
+            # Expand dock to fill available area (issue #156)
+            self._expand_dock_to_fill(instance)
         else:
             # Toggle visibility of existing instance; hide siblings when showing
             if instance.isVisible():
@@ -540,6 +543,8 @@ class Qpansopy:
                 self._ensure_dock_anchor(name, instance)
                 instance.show()
                 instance.raise_()
+                # Expand dock to fill available area (issue #156)
+                self._expand_dock_to_fill(instance)
 
     def _ensure_resizable_log(self, dock_instance):
         """
@@ -957,6 +962,27 @@ class Qpansopy:
                 dock_instance.resize(300, 350)
             except Exception:
                 pass
+
+    def _expand_dock_to_fill(self, dock_instance):
+        """
+        Expand dock to fill available dock area height after show.
+
+        resizeDocks() redistributes existing dock area space without touching
+        the main window geometry, solving the "opens tiny" symptom while
+        keeping the issue #39 fix (no QGIS window resize) intact.
+        """
+        try:
+            screen = QGuiApplication.primaryScreen()
+            available_height = (
+                screen.availableGeometry().height() - 400
+                if screen else 600
+            )
+            available_height = max(available_height, 350)
+            self.iface.mainWindow().resizeDocks(
+                [dock_instance], [available_height], Qt_Vertical
+            )
+        except Exception:
+            pass
 
     def _wait_for_geometry_update(self):
         """
