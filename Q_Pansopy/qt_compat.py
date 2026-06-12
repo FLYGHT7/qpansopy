@@ -435,6 +435,21 @@ except AttributeError:
 
 
 # ---------------------------------------------------------------------------
+# Qt5/Qt6 compatible Qt.Orientation enum values
+#
+# Qt5: Qt.Vertical / Qt.Horizontal  (unscoped)
+# Qt6: Qt.Orientation.Vertical  (scoped)
+# ---------------------------------------------------------------------------
+try:
+    _orient = Qt.Orientation
+    Qt_Vertical = _orient.Vertical
+    Qt_Horizontal = _orient.Horizontal
+except AttributeError:
+    Qt_Vertical = Qt.Vertical      # type: ignore[attr-defined]
+    Qt_Horizontal = Qt.Horizontal  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
 # Active-layer pre-selection helper
 # ---------------------------------------------------------------------------
 
