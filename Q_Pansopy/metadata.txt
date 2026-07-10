@@ -18,24 +18,24 @@ repository=https://github.com/FLYGHT7/qpansopy
 # Recommended items:
 
 changelog=
-Version 0.4.0:
-- Fixes to initial realease to code logic including QGIS Plugin Store Compliance
-- PBN 15 NM and 30 NM targets included
-- Active layer pre-selection for routing combo boxes
-- QGIS 4 / Qt6 compatibility: all imports migrated to qgis.PyQt shim
-- QRegExp replaced with QRegularExpression (Qt6 requirement)
-- Added BasePansopyDockWidget base class centralising log/error/feedback
-- Added _run_with_feedback() to disable Calculate button during execution
-- Added QSS stylesheet for consistent dark-mode dockwidget styling
-- Added field tooltips on ILS and VSS dockwidgets (threshold elevation, runway width)
-- Removed unused imports and dead code across all dockwidgets
-- Phase 3–5 module refactoring: constants.py, LNAV shared helpers, desktop-path centralised
-Version 0.2.0:
-- Fixed inputs to accept decimal values
-- Improved panel management (only one panel shown at a time)
-- All feedback messages in English
-- Fixed Basic ILS surface styling (green with 50% opacity)
-- Prevented KML overwriting by using timestamps in filenames
+ Version 0.4.0:
+ - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
+ - PBN 15 NM and 30 NM targets included
+ - Active layer pre-selection for routing combo boxes
+ - QGIS 4 / Qt6 compatibility: all imports migrated to qgis.PyQt shim
+ - QRegExp replaced with QRegularExpression (Qt6 requirement)
+ - Added BasePansopyDockWidget base class centralising log/error/feedback
+ - Added _run_with_feedback() to disable Calculate button during execution
+ - Added QSS stylesheet for consistent dark-mode dockwidget styling
+ - Added field tooltips on ILS and VSS dockwidgets (threshold elevation, runway width)
+ - Removed unused imports and dead code across all dockwidgets
+ - Phase 3–5 module refactoring: constants.py, LNAV shared helpers, desktop-path centralised
+ Version 0.2.0:
+ - Fixed inputs to accept decimal values
+ - Improved panel management (only one panel shown at a time)
+ - All feedback messages in English
+ - Fixed Basic ILS surface styling (green with 50% opacity)
+ - Prevented KML overwriting by using timestamps in filenames
 
 hasProcessingProvider=no
 tags=python, aviation, aeronautical, navigation, surfaces, VSS, OCS, ILS, ICAO, PANS-OPS, instrument approach
