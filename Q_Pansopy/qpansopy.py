@@ -44,6 +44,7 @@ try:
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
+    from .dockwidgets.conv.qpansopy_vor_dme_tolerance_dockwidget import QPANSOPYVORDMEToleranceDockWidget
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
@@ -237,6 +238,14 @@ class Qpansopy:
                     "TOOLTIP": "CONV Initial Approach Straight Areas Tool",
                     "ICON": os.path.join(self.icons_dir, 'conv_corridor.svg'),
                     "DOCK_WIDGET": QPANSOPYConvInitialDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "VOR_DME_TOL": {
+                    "TITLE": "VOR/DME Tol",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "VOR/DME Tolerance Tool — sector × DME ring intersection",
+                    "ICON": os.path.join(self.icons_dir, 'vor_dme_tolerance.svg'),
+                    "DOCK_WIDGET": QPANSOPYVORDMEToleranceDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "ObjectSelection": {
