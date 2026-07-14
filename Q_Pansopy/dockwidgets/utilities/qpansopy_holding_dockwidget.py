@@ -71,6 +71,7 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'bank_angle': float(self.bankAngleLineEdit.text()),
                 'leg_time_min': float(self.legTimeLineEdit.text()),
                 'turn': 'L' if self.leftTurnRadio.isChecked() else 'R',
+                'show_circles': self.showCirclesCheckBox.isChecked(),
                 'output_dir': self.outputFolderLineEdit.text(),
             }
 
