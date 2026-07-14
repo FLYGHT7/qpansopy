@@ -1,6 +1,6 @@
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsWkbTypes,
-    QgsCircularString, QgsPoint, QgsField, Qgis
+    QgsCircularString, QgsPoint, QgsPointXY, QgsField, Qgis
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
@@ -66,8 +66,8 @@ def run_holding_pattern(iface, routing_layer, params: dict):
         bank_angle = float(params.get('bank_angle', 25))
         leg_time_min = float(params.get('leg_time_min', 1.0))
         turn = params.get('turn', 'R').upper()
-        # side = 90 LEFT, -90 RIGHT
-        side = 90 if turn == 'L' else -90
+        # side = -90 LEFT, +90 RIGHT  (angle_side = 90 - azimuth - side)
+        side = -90 if turn == 'L' else 90
 
         # Compute TAS, rate and radius via shared helper
         k, tas, rate_of_turn, radius_of_turn, wind = tas_calculation(IAS, altitude_ft, isa_var, bank_angle)
@@ -187,6 +187,59 @@ def run_holding_pattern(iface, routing_layer, params: dict):
         except Exception:
             pass
 
+        # Basic holding area — isolated so failures do not affect the nominal return value
+        try:
+            show_circles = bool(params.get('show_circles', True))
+            side_sign = 1 if turn == 'R' else -1
+            p = _wind_params(altitude_ft, leg_time_min, tas, rate_of_turn)
+            raw_circles = _build_wind_circles(start_pt, azimuth, side_sign, radius_of_turn, p)
+            valid_circles = [c for c in raw_circles if c and not c.isNull() and not c.isEmpty()]
+
+            if show_circles and valid_circles:
+                wc_layer = QgsVectorLayer(f"Polygon?crs={crs.authid()}", "HoldingWindCircles", "memory")
+                wc_pr = wc_layer.dataProvider()
+                for geom in valid_circles:
+                    wc_f = QgsFeature()
+                    wc_f.setGeometry(geom)
+                    wc_pr.addFeatures([wc_f])
+                wc_layer.updateExtents()
+                QgsProject.instance().addMapLayer(wc_layer)
+                try:
+                    wc_layer.renderer().symbol().setColor(QColor(255, 0, 0, 128))
+                    wc_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor("red"))
+                    wc_layer.triggerRepaint()
+                except Exception:
+                    pass
+
+            if valid_circles:
+                union = valid_circles[0]
+                for c in valid_circles[1:]:
+                    union = union.combine(c)
+                hull = union.convexHull()
+                if hull and not hull.isNull():
+                    ba_layer = QgsVectorLayer(
+                        f"Polygon?crs={crs.authid()}", "HoldingBasicArea", "memory")
+                    ba_pr = ba_layer.dataProvider()
+                    ba_f = QgsFeature()
+                    ba_f.setGeometry(hull)
+                    ba_pr.addFeatures([ba_f])
+                    ba_layer.updateExtents()
+                    QgsProject.instance().addMapLayer(ba_layer)
+                    try:
+                        ba_layer.renderer().symbol().setColor(QColor(255, 0, 0, 76))
+                        ba_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor("red"))
+                        ba_layer.renderer().symbol().symbolLayer(0).setStrokeWidth(0.5)
+                        ba_layer.triggerRepaint()
+                    except Exception:
+                        pass
+                else:
+                    iface.messageBar().pushMessage(
+                        "QPANSOPY", "Basic area hull is null — verify CRS and coordinates",
+                        level=Qgis.Warning)
+        except Exception as e:
+            iface.messageBar().pushMessage(
+                "QPANSOPY", f"Basic area failed: {e}", level=Qgis.Warning)
+
         return {
             "layer": v_layer,
             "tas": tas,
@@ -198,6 +251,124 @@ def run_holding_pattern(iface, routing_layer, params: dict):
     except Exception as e:
         iface.messageBar().pushMessage("QPANSOPY", f"Holding failed: {e}", level=Qgis.Critical)
         return False
+
+
+def _proj(pt: QgsPoint, dist_nm: float, bearing_deg: float) -> QgsPoint:
+    """Project point at compass bearing and NM distance (assumes map CRS in metres)."""
+    angle = math.radians(90 - bearing_deg)
+    d = dist_nm * 1852
+    return QgsPoint(pt.x() + d * math.cos(angle), pt.y() + d * math.sin(angle))
+
+
+def _circle(pt: QgsPoint, r_nm: float) -> QgsGeometry:
+    return QgsGeometry.fromPointXY(QgsPointXY(pt.x(), pt.y())).buffer(r_nm * 1852, 36)
+
+
+def _wind_params(altitude_ft: float, leg_time_min: float, tas: float, rate_of_turn: float) -> dict:
+    """ICAO Doc 8168 wind-effect distances (NM) for the Basic Holding Area."""
+    tas60 = tas / 3600
+    w = (2 * altitude_ft / 1000) + 47
+    wp = w / 3600
+    e45 = (45 * wp) / rate_of_turn if rate_of_turn > 0 else 0.0
+    t = leg_time_min * 60
+    ab = 5 * tas60
+    ac = 11 * tas60
+    g1 = (t - 5) * tas60
+    g2 = (t + 21) * tas60
+    wb = 5 * wp
+    wc = 11 * wp
+    wd = wc + e45
+    we = wc + 2 * e45
+    wf = wc + 3 * e45
+    wg = wc + 4 * e45
+    wh = wb + 4 * e45
+    w1 = (t + 6) * wp + 4 * e45
+    w2 = w1 + 14 * wp
+    wj = w2 + e45
+    wk = w2 + 2 * e45
+    wm = w2 + 3 * e45
+    wn3 = w1 + 4 * e45
+    wn4 = w2 + 4 * e45
+    return dict(
+        tas60=tas60, wp=wp, e45=e45, t=t,
+        ab=ab, ac=ac, g1=g1, g2=g2,
+        wb=wb, wc=wc, wd=wd, we=we, wf=wf, wg=wg, wh=wh,
+        w1=w1, w2=w2, wj=wj, wk=wk, wm=wm, wn3=wn3, wn4=wn4,
+    )
+
+
+def _build_wind_circles(
+    start_pt: QgsPoint, azimuth: float, side_sign: int, radius_nm: float, p: dict
+) -> list:
+    """Return list of QgsGeometry circles for all wind-tolerance points (basic holding area).
+
+    side_sign: +1 for Right holding, -1 for Left holding.
+    """
+    back_az = azimuth + 180
+
+    pta = start_pt
+    ptb = _proj(pta, p['ab'], azimuth)
+    ptc = _proj(pta, p['ac'], azimuth)
+
+    cp1 = _proj(ptc, radius_nm, azimuth + 90 * side_sign)
+    bsp1 = cp1.azimuth(ptc)
+    ptd = _proj(cp1, radius_nm, bsp1 + 45 * side_sign)
+    pte = _proj(cp1, radius_nm, bsp1 + 90 * side_sign)
+    ptf = _proj(cp1, radius_nm, bsp1 + 135 * side_sign)
+    ptg = _proj(cp1, radius_nm, bsp1 + 180)
+
+    cp2 = _proj(ptb, radius_nm, azimuth + 90 * side_sign)
+    pth = _proj(cp2, radius_nm, bsp1 + 180)
+
+    pti1 = _proj(ptg, p['g1'], back_az - 5)
+    pti3 = _proj(ptg, p['g1'], back_az + 5)
+    pti2 = _proj(ptg, p['g2'], back_az - 5)
+    pti4 = _proj(ptg, p['g2'], back_az + 5)
+
+    cpi = _proj(pti2, radius_nm, back_az + 90 * side_sign)
+    bspi = cpi.azimuth(pti2)
+    ptj = _proj(cpi, radius_nm, bspi + 45 * side_sign)
+    ptk = _proj(cpi, radius_nm, bspi + 90 * side_sign)
+
+    cp3 = _proj(pti3, radius_nm, back_az + 90 * side_sign)
+    bsp3 = cp3.azimuth(pti3)
+
+    cp4 = _proj(pti4, radius_nm, back_az + 90 * side_sign)
+    bsp4 = cp4.azimuth(pti4)
+    ptl = _proj(cp4, radius_nm, bsp4 + 90 * side_sign)
+    ptm = _proj(cp4, radius_nm, bsp4 + 135 * side_sign)
+
+    ptn3 = _proj(cp3, radius_nm, bsp3 + 180)
+    ptn4 = _proj(cp4, radius_nm, bsp4 + 180)
+
+    circles = [
+        _circle(ptb, p['wb']), _circle(ptc, p['wc']),
+        _circle(ptd, p['wd']), _circle(pte, p['we']),
+        _circle(ptf, p['wf']), _circle(ptg, p['wg']),
+        _circle(pth, p['wh']),
+        _circle(pti1, p['w1']), _circle(pti3, p['w1']),
+        _circle(pti2, p['w2']), _circle(pti4, p['w2']),
+        _circle(ptj, p['wj']), _circle(ptk, p['wk']),
+        _circle(ptl, p['wk']), _circle(ptm, p['wm']),
+        _circle(ptn3, p['wn3']), _circle(ptn4, p['wn4']),
+    ]
+
+    # Arc-interpolated circles: grow radius with e45 rate
+    e45_per_deg = p['e45'] / 45
+
+    for i in range(10, 180, 10):
+        aux = _proj(cp1, radius_nm, bsp1 + i * side_sign)
+        circles.append(_circle(aux, p['wc'] + i * e45_per_deg))
+
+    for i in range(10, 90, 10):
+        aux = _proj(cpi, radius_nm, bspi + i * side_sign)
+        circles.append(_circle(aux, p['w2'] + i * e45_per_deg))
+
+    for i in range(90, 180, 10):
+        aux = _proj(cp4, radius_nm, bsp4 + i * side_sign)
+        circles.append(_circle(aux, p['w2'] + i * e45_per_deg))
+
+    return circles
 
 
 def _offset_point(origin: QgsPoint, course_deg: float, dist_nm: float) -> QgsPoint:
