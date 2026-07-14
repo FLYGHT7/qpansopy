@@ -66,8 +66,8 @@ def run_holding_pattern(iface, routing_layer, params: dict):
         bank_angle = float(params.get('bank_angle', 25))
         leg_time_min = float(params.get('leg_time_min', 1.0))
         turn = params.get('turn', 'R').upper()
-        # side = 90 LEFT, -90 RIGHT
-        side = 90 if turn == 'L' else -90
+        # side = -90 LEFT, +90 RIGHT  (angle_side = 90 - azimuth - side)
+        side = -90 if turn == 'L' else 90
 
         # Compute TAS, rate and radius via shared helper
         k, tas, rate_of_turn, radius_of_turn, wind = tas_calculation(IAS, altitude_ft, isa_var, bank_angle)
