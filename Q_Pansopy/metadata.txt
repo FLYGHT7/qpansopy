@@ -18,6 +18,11 @@ repository=https://github.com/FLYGHT7/qpansopy
 # Recommended items:
 
 changelog=
+ Version 0.4.1:
+ - Fix widget allocation 
+ - Fix Holding Pattern Direcion
+ - Inclusion of VOR/DME Tolerance creation
+ - Inclusion of NDB/DME Tolerance creation
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included
