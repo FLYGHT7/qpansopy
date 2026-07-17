@@ -45,6 +45,7 @@ try:
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
     from .dockwidgets.conv.qpansopy_vor_dme_tolerance_dockwidget import QPANSOPYVORDMEToleranceDockWidget
+    from .dockwidgets.conv.qpansopy_ndb_dme_tolerance_dockwidget import QPANSOPYNDBDMEToleranceDockWidget
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
@@ -246,6 +247,14 @@ class Qpansopy:
                     "TOOLTIP": "VOR/DME Tolerance Tool — sector × DME ring intersection",
                     "ICON": os.path.join(self.icons_dir, 'vor_dme_tolerance.svg'),
                     "DOCK_WIDGET": QPANSOPYVORDMEToleranceDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "NDB_DME_TOL": {
+                    "TITLE": "NDB/DME Tol",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "NDB/DME Tolerance Tool — sector × DME ring intersection",
+                    "ICON": os.path.join(self.icons_dir, 'ndb_dme_tolerance.svg'),
+                    "DOCK_WIDGET": QPANSOPYNDBDMEToleranceDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "ObjectSelection": {
