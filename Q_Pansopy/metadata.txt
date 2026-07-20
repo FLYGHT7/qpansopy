@@ -23,7 +23,8 @@ changelog=
  - Fix Holding Pattern Direcion
  - Inclusion of VOR/DME Tolerance creation
  - Inclusion of NDB/DME Tolerance creation
- - Add meters/feet unit selector for DER Elevation and CWY Distance in the OMNI SID tool
+ - Fix NDB/DME Tolerance tool not appearing in the CONV toolbar
+ - Require exactly one selected feature per layer in VOR/DME and NDB/DME Tolerance tools
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included
