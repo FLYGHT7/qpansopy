@@ -63,10 +63,12 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Set default values
         self.derElevationSpinBox.setValue(0.0)
+        self.derElevationUnitCombo.setCurrentText('m')
         self.pdgSpinBox.setValue(3.3)
         self.tnaSpinBox.setValue(2000)
         self.msaSpinBox.setValue(6300)
         self.cwyDistanceSpinBox.setValue(0)
+        self.cwyDistanceUnitCombo.setCurrentText('m')
 
         # Ensure checkboxes exist
         if not hasattr(self, "exportKmlCheckBox") or self.exportKmlCheckBox is None:
@@ -149,10 +151,12 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Prepare parameters
         params = {
             'der_elevation_m': self.derElevationSpinBox.value(),
+            'der_elevation_unit': self.derElevationUnitCombo.currentText(),
             'pdg': self.pdgSpinBox.value(),
             'TNA_ft': self.tnaSpinBox.value(),
             'msa_ft': self.msaSpinBox.value(),
             'cwy_distance_m': self.cwyDistanceSpinBox.value(),
+            'cwy_distance_unit': self.cwyDistanceUnitCombo.currentText(),
             'allow_turns_before_der': 'YES' if self.turnsBeforeDerCheckBox.isChecked() else 'NO',
             'include_construction_points': 'YES' if self.constructionPointsCheckBox.isChecked() else 'NO',
             'reverse_direction': 'YES' if self.is_reversed else 'NO'
