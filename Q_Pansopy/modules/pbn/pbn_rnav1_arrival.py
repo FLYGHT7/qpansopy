@@ -72,6 +72,14 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
             )
             return None
 
+        if routing_layer.fields().indexFromName('segment') == -1:
+            iface.messageBar().pushMessage(
+                "QPANSOPY",
+                "Routing layer is missing the required 'segment' field",
+                level=Qgis.Critical
+            )
+            return None
+
         arrival_features = [
             feat for feat in selected_features
             if feat.attribute('segment') == 'arrival'

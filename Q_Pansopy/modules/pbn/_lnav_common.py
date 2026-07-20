@@ -42,6 +42,12 @@ def _select_segment_features(iface, routing_layer, segment_type):
             level=Qgis.Critical,
         )
         return None
+    if routing_layer.fields().indexFromName('segment') == -1:
+        iface.messageBar().pushMessage(
+            "Routing layer is missing the required 'segment' field",
+            level=Qgis.Critical,
+        )
+        return None
     filtered = [f for f in selected if f.attribute("segment") == segment_type]
     if not filtered:
         iface.messageBar().pushMessage(
