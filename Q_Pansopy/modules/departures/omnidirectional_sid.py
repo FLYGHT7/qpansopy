@@ -243,11 +243,15 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
             Must have a selected feature representing the runway centerline.
             The line should be oriented from threshold to DER (Departure End of Runway).
         params (dict): Dictionary containing calculation parameters:
-            - der_elevation_m (float): DER elevation above MSL in meters.
+            - der_elevation_m (float): DER elevation above MSL, in the unit given by
+                der_elevation_unit.
+            - der_elevation_unit (str, optional): 'm' or 'ft'. Defaults to 'm'.
             - pdg (float): Procedure Design Gradient in percent (e.g., 3.3).
             - TNA_ft (float): Turn Altitude in feet.
             - msa_ft (float): Minimum Sector Altitude in feet.
-            - cwy_distance_m (float): Clearway distance beyond DER in meters.
+            - cwy_distance_m (float): Clearway distance beyond DER, in the unit given
+                by cwy_distance_unit.
+            - cwy_distance_unit (str, optional): 'm' or 'ft'. Defaults to 'm'.
             - allow_turns_before_der (str): 'YES' or 'NO' - whether to include
                 the area before DER for turns.
             - include_construction_points (str): 'YES' or 'NO' - whether to
@@ -298,11 +302,17 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     # -------------------------------------------------------------------------
     # Extract and validate parameters
     # -------------------------------------------------------------------------
-    der_elevation_m = float(params.get('der_elevation_m', 0))
+    der_elevation_raw = float(params.get('der_elevation_m', 0))
+    der_elevation_unit = params.get('der_elevation_unit', 'm')
+    der_elevation_m = (der_elevation_raw if der_elevation_unit == 'm'
+                       else feet_to_meters(der_elevation_raw))
     pdg_percent = float(params.get('pdg', 3.3))
     tna_ft = float(params.get('TNA_ft', 2000))
     msa_ft = float(params.get('msa_ft', 6300))
-    cwy_distance_m = float(params.get('cwy_distance_m', 0))
+    cwy_distance_raw = float(params.get('cwy_distance_m', 0))
+    cwy_distance_unit = params.get('cwy_distance_unit', 'm')
+    cwy_distance_m = (cwy_distance_raw if cwy_distance_unit == 'm'
+                      else feet_to_meters(cwy_distance_raw))
     allow_turns_before_der = params.get('allow_turns_before_der', 'NO')
     include_construction_points = params.get('include_construction_points', 'NO')
     reverse_direction = params.get('reverse_direction', 'NO')
