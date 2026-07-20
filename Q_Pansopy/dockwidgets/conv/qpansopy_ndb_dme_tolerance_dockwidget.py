@@ -6,7 +6,7 @@ from qgis.PyQt.QtGui import QColor
 from qgis.gui import QgsRubberBand
 from qgis.core import (
     QgsGeometry, QgsPoint, QgsLineString, QgsPolygon, QgsCircle,
-    QgsProject, QgsDistanceArea, QgsCoordinateTransform,
+    QgsProject, QgsDistanceArea, QgsCoordinateTransform, Qgis,
 )
 from ...qt_compat import (
     MLPM_PointLayer,
@@ -80,6 +80,9 @@ class QPANSOPYNDBDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not navid_layer or not fix_layer:
             return
 
+        if navid_layer.selectedFeatureCount() > 1 or fix_layer.selectedFeatureCount() > 1:
+            return
+
         navid_sel = navid_layer.selectedFeatures()
         fix_sel = fix_layer.selectedFeatures()
         if not navid_sel or not fix_sel:
@@ -139,6 +142,17 @@ class QPANSOPYNDBDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         if not fix_layer:
             self.log("Error: Please select a Fix point layer")
+            return
+
+        if navid_layer.selectedFeatureCount() > 1:
+            msg = 'Select exactly one feature in the NAVID layer before calculating'
+            self.log(f'Error: {msg}')
+            self.iface.messageBar().pushMessage('QPANSOPY', msg, level=Qgis.Warning)
+            return
+        if fix_layer.selectedFeatureCount() > 1:
+            msg = 'Select exactly one feature in the Fix layer before calculating'
+            self.log(f'Error: {msg}')
+            self.iface.messageBar().pushMessage('QPANSOPY', msg, level=Qgis.Warning)
             return
 
         params = {'rotate': self.rotateDoubleSpinBox.value()}
