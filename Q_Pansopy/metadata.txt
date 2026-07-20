@@ -26,6 +26,7 @@ changelog=
  - Fix NDB/DME Tolerance tool not appearing in the CONV toolbar
  - Require exactly one selected feature per layer in VOR/DME and NDB/DME Tolerance tools
  - Add optional live DER marker (direction + CWY offset) preview to the OMNI SID tool
+ - Show a clear error when the LNAV Routing layer is missing the required 'segment' field
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included
