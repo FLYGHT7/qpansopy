@@ -54,3 +54,76 @@ def test_lnav_common_select_segment_features():
     mod = importlib.import_module('Q_Pansopy.modules.pbn._lnav_common')
     assert hasattr(mod, '_select_segment_features')
     assert callable(mod._select_segment_features)
+
+
+class _FakeMessageBar:
+    def __init__(self):
+        self.messages = []
+
+    def pushMessage(self, *args, **kwargs):
+        self.messages.append((args, kwargs))
+
+
+class _FakeIface:
+    def __init__(self):
+        self._bar = _FakeMessageBar()
+
+    def messageBar(self):
+        return self._bar
+
+
+class _FakeFields:
+    def __init__(self, names):
+        self._names = names
+
+    def indexFromName(self, name):
+        return self._names.index(name) if name in self._names else -1
+
+
+class _FakeFeature:
+    def __init__(self, segment_value):
+        self._segment_value = segment_value
+
+    def attribute(self, name):
+        if name != 'segment':
+            raise KeyError(name)
+        return self._segment_value
+
+
+class _FakeRoutingLayer:
+    def __init__(self, field_names, features):
+        self._fields = _FakeFields(field_names)
+        self._features = features
+
+    def fields(self):
+        return self._fields
+
+    def selectedFeatures(self):
+        return self._features
+
+
+def test_select_segment_features_missing_field_reports_clear_error():
+    mod = importlib.import_module('Q_Pansopy.modules.pbn._lnav_common')
+    iface = _FakeIface()
+    layer = _FakeRoutingLayer(field_names=['id', 'geom'], features=[_FakeFeature('initial')])
+
+    result = mod._select_segment_features(iface, layer, 'initial')
+
+    assert result is None
+    assert iface.messageBar().messages, 'expected a message bar error to be pushed'
+    last_message_text = str(iface.messageBar().messages[-1])
+    assert 'segment' in last_message_text.lower()
+
+
+def test_select_segment_features_filters_by_departure_keyword():
+    mod = importlib.import_module('Q_Pansopy.modules.pbn._lnav_common')
+    iface = _FakeIface()
+    departure_feature = _FakeFeature('departure')
+    layer = _FakeRoutingLayer(
+        field_names=['id', 'segment'],
+        features=[_FakeFeature('initial'), departure_feature, _FakeFeature('final')],
+    )
+
+    result = mod._select_segment_features(iface, layer, 'departure')
+
+    assert result == [departure_feature]

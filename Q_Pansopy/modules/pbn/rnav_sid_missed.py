@@ -9,6 +9,8 @@ from qgis.PyQt.QtCore import QVariant
 import math
 import os
 
+from ._lnav_common import _select_segment_features
+
 # Compat for QGIS 3/4: QgsWkbTypes.LineGeometry → Qgis.GeometryType.Line
 try:
     _LINE_GEOMETRY = Qgis.GeometryType.Line  # QGIS 4+
@@ -21,11 +23,14 @@ except AttributeError:
 
 def run_rnav_sid_missed(iface, routing_layer, rnav_mode: str, op_mode: str,
                         export_kml: bool = False, output_dir: str | None = None):
-    """Generate RNAV1/2 SID (o Missed) usando la geometría legacy <15NM."""
+    """Generate RNAV1/2 SID (o Missed) usando la geometría legacy <15NM.
+
+    Requires the routing layer to have a ``segment`` field, with the selected
+    feature(s) tagged ``'departure'`` for the SID case.
+    """
     try:
-        selection = routing_layer.selectedFeatures()
-        if not selection:
-            iface.messageBar().pushMessage("QPANSOPY", "No features selected", level=Qgis.Critical)
+        selection = _select_segment_features(iface, routing_layer, 'departure')
+        if selection is None:
             return False
 
         geom = selection[0].geometry()
@@ -85,7 +90,7 @@ def run_rnav_sid_missed(iface, routing_layer, rnav_mode: str, op_mode: str,
             pts[f"m{a}"] = QgsPoint(end_point.x() + dist_x, end_point.y() + dist_y)
             a += 1
 
-        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "PBN RNAV 1/2", "memory")
+        v_layer = QgsVectorLayer(f"PolygonZ?crs={map_srid}", "PBN RNAV 1/2 Departure", "memory")
         myField = QgsField('Symbol', QVariant.String)
         v_layer.dataProvider().addAttributes([myField])
         v_layer.updateFields()
