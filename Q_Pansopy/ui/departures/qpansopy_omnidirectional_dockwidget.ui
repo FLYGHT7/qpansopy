@@ -241,6 +241,13 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QCheckBox" name="showDerMarkerCheckBox">
+         <property name="text">
+          <string>Show DER marker</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
