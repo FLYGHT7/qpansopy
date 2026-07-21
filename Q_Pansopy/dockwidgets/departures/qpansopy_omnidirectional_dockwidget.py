@@ -290,6 +290,8 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.log("RESULTS SUMMARY:")
                 self.log(f"Layer created: {result.get('layer_name', 'N/A')}")
                 self.log(f"Areas: {', '.join(result.get('areas', []))}")
+                if 'reference_line_layer' in result:
+                    self.log(f"Reference line layer: {result['reference_line_layer']}")
                 distances = result.get('distances', [])
                 if distances:
                     total_dist = sum(distances)

@@ -67,6 +67,10 @@ OCS_MARGIN = 0.8
 # Number of segments for circular buffer
 BUFFER_SEGMENTS = 360
 
+# Extra half-width margin for the reference_line, beyond the width at the last
+# TNA/H boundary (0.5 NM per side)
+REFERENCE_LINE_BUFFER_M = 0.5 * 1852
+
 
 # =============================================================================
 # UNIT CONVERSION FUNCTIONS
@@ -268,6 +272,12 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
             - distance_area_3 (float): Total distance for Area 3 in meters.
             - width_area_1 (float): Semi-width at Area 1 limit in meters.
             - width_area_2 (float): Semi-width at Area 2 limit in meters.
+            - reference_line_layer (str): Name of the created reference-line layer,
+                a single feature at the DER perpendicular to the runway azimuth,
+                with a half-width of width_area_2 + 0.5 NM on each side. Used for
+                downstream calculations.
+            - reference_line_half_width (float): Half-width of the reference line
+                in meters.
         Returns None if no runway feature is selected.
     
     Raises:
@@ -440,6 +450,19 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         runway_azimuth + 90, elevation_area_2, construction_points
     )
 
+    # Reference line at the DER, 0.5 NM wider on each side than the last TNA/H
+    # (Area 2/Area 3 boundary) width — used later for downstream calculations.
+    reference_half_width = width_area_2 + REFERENCE_LINE_BUFFER_M
+    reference_line_left = construction_points['point_0_center'].project(
+        reference_half_width, runway_azimuth - 90
+    )
+    reference_line_right = construction_points['point_0_center'].project(
+        reference_half_width, runway_azimuth + 90
+    )
+
+    log(f"Reference line half-width: {reference_half_width:.2f}m "
+        f"({meters_to_nautical_miles(reference_half_width):.2f}NM)")
+
     # Takeoff point (600m from threshold) for turns-before-DER option
     create_projected_point(
         'point_takeoff_center', threshold_point, TAKEOFF_POINT_DISTANCE,
@@ -475,6 +498,34 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     if include_construction_points == 'YES':
         QgsProject.instance().addMapLayers([construction_layer])
         log("Construction points layer added")
+
+    # -------------------------------------------------------------------------
+    # Create reference line layer
+    # -------------------------------------------------------------------------
+    reference_line_layer_name = f"OmniSID_Reference_Line_PDG_{pdg_percent}%"
+    reference_line_layer = QgsVectorLayer(
+        f"LineString?crs={map_crs}",
+        reference_line_layer_name,
+        "memory"
+    )
+    reference_line_layer.dataProvider().addAttributes([QgsField('id', QVariant.String)])
+    reference_line_layer.updateFields()
+
+    reference_line_geometry = QgsGeometry.fromPolyline([
+        reference_line_left, construction_points['point_0_center'], reference_line_right
+    ])
+    reference_line_feature = QgsFeature()
+    reference_line_feature.setGeometry(reference_line_geometry)
+    reference_line_feature.setAttributes(['reference_line'])
+    reference_line_layer.dataProvider().addFeatures([reference_line_feature])
+
+    reference_line_layer.updateExtents()
+    reference_line_layer.renderer().symbol().setColor(QColor("purple"))
+    reference_line_layer.renderer().symbol().setWidth(0.5)
+    reference_line_layer.triggerRepaint()
+
+    QgsProject.instance().addMapLayers([reference_line_layer])
+    log(f"Reference line layer added: {reference_line_layer_name}")
 
     # -------------------------------------------------------------------------
     # Create polygon surfaces layer
@@ -584,6 +635,8 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         f"({meters_to_nautical_miles(distance_area_2):.2f}NM)")
     log(f"Area 3 distance: {distance_area_3:.2f}m "
         f"({meters_to_nautical_miles(distance_area_3):.2f}NM)")
+    log(f"Reference line layer: {reference_line_layer_name} "
+        f"(half-width {reference_half_width:.2f}m)")
     log("=" * 50)
     log("Omnidirectional SID calculation completed successfully!")
 
@@ -594,5 +647,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         'distance_area_2': distance_area_2,
         'distance_area_3': distance_area_3,
         'width_area_1': width_area_1,
-        'width_area_2': width_area_2
+        'width_area_2': width_area_2,
+        'reference_line_layer': reference_line_layer_name,
+        'reference_line_half_width': reference_half_width
     }
