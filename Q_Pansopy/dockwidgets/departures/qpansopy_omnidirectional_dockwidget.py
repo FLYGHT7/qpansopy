@@ -33,12 +33,10 @@ from ...qt_compat import (
     preseed_active_layer, Qgis_GeomType_Line, Qgis_GeomType_Polygon,
 )
 
-# DER marker arrow dimensions in screen pixels (converted to map units via
+# DER marker triangle dimensions in screen pixels (converted to map units via
 # mapUnitsPerPixel so the marker stays a constant, visible size at any zoom level)
-_DER_MARKER_SHAFT_LENGTH_PX = 40
-_DER_MARKER_SHAFT_HALF_WIDTH_PX = 4
-_DER_MARKER_HEAD_LENGTH_PX = 16
-_DER_MARKER_HEAD_HALF_WIDTH_PX = 12
+_DER_MARKER_LENGTH_PX = 24
+_DER_MARKER_HALF_WIDTH_PX = 12
 
 
 # Use __file__ to get the current script path
@@ -85,11 +83,15 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.cwyDistanceSpinBox.setValue(0)
         self.cwyDistanceUnitCombo.setCurrentText('m')
 
-        # Live DER marker preview (off by default)
+        # Live DER marker preview (off by default): a triangle at the used DER (DER+CWY)
+        # point, plus a connector line back to the actual runway edge when CWY > 0.
         self._der_marker_band = QgsRubberBand(iface.mapCanvas(), Qgis_GeomType_Polygon)
         self._der_marker_band.setColor(QColor(0, 170, 0, 120))
         self._der_marker_band.setStrokeColor(QColor(0, 120, 0, 220))
         self._der_marker_band.setWidth(1)
+        self._der_line_band = QgsRubberBand(iface.mapCanvas(), Qgis_GeomType_Line)
+        self._der_line_band.setColor(QColor(0, 120, 0, 220))
+        self._der_line_band.setWidth(2)
         self._connected_runway_layer = None
 
         self.runwayLayerComboBox.layerChanged.connect(self._on_runway_layer_changed)
@@ -148,6 +150,8 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def _clear_der_marker(self):
         if self._der_marker_band:
             self._der_marker_band.reset(Qgis_GeomType_Polygon)
+        if self._der_line_band:
+            self._der_line_band.reset(Qgis_GeomType_Line)
 
     def _update_der_marker(self, *args):
         self._clear_der_marker()
@@ -178,32 +182,28 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 der_point = QgsPoint(runway_geometry[1])
 
             runway_azimuth = threshold_point.azimuth(der_point)
-            der_cwy_point = der_point.project(self.cwyDistanceSpinBox.value(), runway_azimuth)
+            cwy_distance = self.cwyDistanceSpinBox.value()
+            der_cwy_point = der_point.project(cwy_distance, runway_azimuth)
 
-            # Size the marker in screen pixels so it stays visible at any zoom level
+            # Connector line from the runway edge used as DER to the used DER (DER+CWY).
+            # Only meaningful when there's an actual CWY offset to show.
+            if cwy_distance > 0:
+                line = QgsGeometry(QgsLineString([der_point, der_cwy_point]))
+                self._der_line_band.setToGeometry(line, None)
+
+            # Triangle marker, always shown: tip at the used DER, base trailing back
+            # toward the runway. Size in screen pixels so it stays visible at any zoom.
             mupp = self.iface.mapCanvas().mapUnitsPerPixel()
-            shaft_length = _DER_MARKER_SHAFT_LENGTH_PX * mupp
-            shaft_half_width = _DER_MARKER_SHAFT_HALF_WIDTH_PX * mupp
-            head_length = _DER_MARKER_HEAD_LENGTH_PX * mupp
-            head_half_width = _DER_MARKER_HEAD_HALF_WIDTH_PX * mupp
+            marker_length = _DER_MARKER_LENGTH_PX * mupp
+            marker_half_width = _DER_MARKER_HALF_WIDTH_PX * mupp
 
-            # Arrow tip sits at the DER+CWY point, shaft trails back toward the threshold
             back_azimuth = runway_azimuth + 180
-            back_point = der_cwy_point.project(shaft_length + head_length, back_azimuth)
-            head_base_point = der_cwy_point.project(head_length, back_azimuth)
+            base_center = der_cwy_point.project(marker_length, back_azimuth)
+            base_left = base_center.project(marker_half_width, runway_azimuth - 90)
+            base_right = base_center.project(marker_half_width, runway_azimuth + 90)
 
-            back_left = back_point.project(shaft_half_width, runway_azimuth - 90)
-            back_right = back_point.project(shaft_half_width, runway_azimuth + 90)
-            shaft_head_left = head_base_point.project(shaft_half_width, runway_azimuth - 90)
-            shaft_head_right = head_base_point.project(shaft_half_width, runway_azimuth + 90)
-            head_left = head_base_point.project(head_half_width, runway_azimuth - 90)
-            head_right = head_base_point.project(head_half_width, runway_azimuth + 90)
-
-            arrow = QgsGeometry(QgsPolygon(QgsLineString([
-                back_left, shaft_head_left, head_left, der_cwy_point,
-                head_right, shaft_head_right, back_right,
-            ])))
-            self._der_marker_band.setToGeometry(arrow, None)
+            triangle = QgsGeometry(QgsPolygon(QgsLineString([der_cwy_point, base_left, base_right])))
+            self._der_marker_band.setToGeometry(triangle, None)
         except Exception:
             pass
 
