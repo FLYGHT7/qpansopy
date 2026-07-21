@@ -202,25 +202,28 @@ def create_projected_point(point_name, origin_point, distance, azimuth, elevatio
     points_dict[point_name] = projected_point
 
 
-def create_polygon_surface(surface_name, vertices, layer, surfaces_dict):
+def create_polygon_surface(surface_name, vertices, layer, surfaces_dict, distance_m=None):
     """
     Create a 3D polygon surface and add it to a layer.
-    
+
     Creates a PolygonZ feature from a list of vertices and adds it
     to the specified layer. Also stores the geometry in a dictionary
     for later geometric operations (e.g., difference).
-    
+
     Args:
         surface_name (str): Name/identifier for the surface area.
         vertices (list): List of QgsPoint vertices forming the polygon.
         layer (QgsVectorLayer): Layer to add the feature to.
         surfaces_dict (dict): Dictionary to store the geometry for later use.
+        distance_m (float, optional): Area distance in meters, stored rounded
+            to 4 decimal places in the 'distance_m' field. None (NULL) when
+            not applicable to this surface.
     """
     provider = layer.dataProvider()
     feature = QgsFeature()
     polygon = QgsPolygon(QgsLineString(vertices), rings=[])
     feature.setGeometry(polygon)
-    feature.setAttributes([surface_name])
+    feature.setAttributes([surface_name, round(distance_m, 4) if distance_m is not None else None])
     provider.addFeatures([feature])
     surfaces_dict[surface_name] = feature.geometry()
 
@@ -536,7 +539,10 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         layer_name,
         "memory"
     )
-    surfaces_layer.dataProvider().addAttributes([QgsField('omni_area', QVariant.String)])
+    surfaces_layer.dataProvider().addAttributes([
+        QgsField('omni_area', QVariant.String),
+        QgsField('distance_m', QVariant.Double, 'double', 10, 4)
+    ])
     surfaces_layer.updateFields()
 
     surfaces_geometries = {}
@@ -553,7 +559,8 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
             construction_points['point_1_center']
         ],
         surfaces_layer,
-        surfaces_geometries
+        surfaces_geometries,
+        distance_area_1
     )
 
     # Create Area 2 polygon
@@ -568,7 +575,8 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
             construction_points['point_2_center']
         ],
         surfaces_layer,
-        surfaces_geometries
+        surfaces_geometries,
+        distance_area_2
     )
 
     # Create Before DER area if enabled
@@ -607,7 +615,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     provider = surfaces_layer.dataProvider()
     area_3_feature = QgsFeature()
     area_3_feature.setGeometry(area_3_geometry)
-    area_3_feature.setAttributes(['Area 3'])
+    area_3_feature.setAttributes(['Area 3', round(distance_area_3, 4)])
     provider.addFeatures([area_3_feature])
 
     surfaces_layer.updateExtents()

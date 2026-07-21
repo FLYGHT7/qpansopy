@@ -29,6 +29,7 @@ changelog=
  - Show a clear error when the LNAV Routing layer is missing the required 'segment' field
  - Require 'segment' == 'departure' for LNAV SID and rename its output layer to 'PBN RNAV 1/2 Departure'
  - OMNI SID DER marker: plain green triangle plus a connector line to the runway edge when CWY > 0
+ - Store Area 1/2/3 distances (meters, 4 decimals) in the OMNI SID output attribute table
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included
