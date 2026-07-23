@@ -463,7 +463,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         """Show ISA Calculator dialog and apply the result to isaVarLineEdit"""
         from ...isa_calculator_dialog import ISACalculatorDialog
         dlg = ISACalculatorDialog(self)
-        if dlg.exec_():
+        if dlg.exec():
             isa_variation = dlg.get_isa_variation()
             if isa_variation is not None:
                 self.isaVarLineEdit.setText(f"{isa_variation:.5f}")

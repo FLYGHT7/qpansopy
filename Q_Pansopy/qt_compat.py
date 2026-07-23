@@ -33,7 +33,7 @@ try:
         QPushButton, QGroupBox, QFileDialog, QMessageBox,
         QHBoxLayout, QVBoxLayout, QFormLayout,
         QCheckBox, QProgressBar, QTextEdit, QScrollArea,
-        QFrame, QSizePolicy, QLayout,
+        QFrame, QSizePolicy, QLayout, QDialogButtonBox,
     )
     from qgis.PyQt.QtCore import (  # noqa: F401
         Qt, QEvent, QVariant, pyqtSignal, QRegularExpression,
@@ -54,7 +54,7 @@ except ImportError:
             QPushButton, QGroupBox, QFileDialog, QMessageBox,
             QHBoxLayout, QVBoxLayout, QFormLayout,
             QCheckBox, QProgressBar, QTextEdit, QScrollArea,
-            QFrame, QSizePolicy, QLayout,
+            QFrame, QSizePolicy, QLayout, QDialogButtonBox,
         )
         from PyQt6.QtCore import (  # noqa: F401
             Qt, QEvent, pyqtSignal, QRegularExpression,
@@ -87,7 +87,7 @@ except ImportError:
             QPushButton, QGroupBox, QFileDialog, QMessageBox,
             QHBoxLayout, QVBoxLayout, QFormLayout,
             QCheckBox, QProgressBar, QTextEdit, QScrollArea,
-            QFrame, QSizePolicy, QLayout,
+            QFrame, QSizePolicy, QLayout, QDialogButtonBox,
         )
         from PyQt5.QtCore import (  # noqa: F401
             Qt, QEvent, QVariant, pyqtSignal, QRegularExpression,
@@ -416,6 +416,14 @@ except AttributeError:
     QToolButton_InstantPopup = _QToolButton.InstantPopup            # type: ignore[attr-defined]
     QToolButton_MenuButtonPopup = _QToolButton.MenuButtonPopup      # type: ignore[attr-defined]
     QToolButton_DelayedPopup = _QToolButton.DelayedPopup            # type: ignore[attr-defined]
+
+try:
+    _dbb = QDialogButtonBox.StandardButton  # Qt6 scoped enum namespace
+    QDialogButtonBox_Ok = _dbb.Ok
+    QDialogButtonBox_Cancel = _dbb.Cancel
+except AttributeError:
+    QDialogButtonBox_Ok = QDialogButtonBox.Ok          # type: ignore[attr-defined]
+    QDialogButtonBox_Cancel = QDialogButtonBox.Cancel  # type: ignore[attr-defined]
 
 try:
     _lwm = QTextEdit.LineWrapMode  # Qt6 scoped enum namespace
