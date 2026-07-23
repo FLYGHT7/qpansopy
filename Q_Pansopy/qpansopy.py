@@ -7,7 +7,7 @@ Copyright (C) 2020-2025 FLYGHT7
 import os
 from qgis.PyQt.QtCore import QSettings
 from qgis.PyQt.QtGui import QIcon, QGuiApplication
-from qgis.PyQt.QtWidgets import QAction, QMenu, QMessageBox, QSizePolicy
+from qgis.PyQt.QtWidgets import QAction, QMenu, QMessageBox, QSizePolicy, QToolButton
 from qgis.PyQt import sip
 from qgis.PyQt import QtWidgets, QtCore
 from qgis.core import QgsProject, QgsVectorLayer, QgsApplication, Qgis
@@ -22,6 +22,7 @@ from .qt_compat import (
     QTextEdit_WidgetWidth,
     QLayout_SetDefaultConstraint,
     Qt_Vertical,
+    QToolButton_InstantPopup,
 )
 
 
@@ -46,6 +47,7 @@ try:
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
     from .dockwidgets.conv.qpansopy_vor_dme_tolerance_dockwidget import QPANSOPYVORDMEToleranceDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dme_tolerance_dockwidget import QPANSOPYNDBDMEToleranceDockWidget
+    from .dockwidgets.conv.qpansopy_loc_dme_tolerance_dockwidget import QPANSOPYLOCDMEToleranceDockWidget
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
@@ -151,7 +153,6 @@ class Qpansopy:
             Exception: Displays critical error dialog if initialization fails
         """
         if _IMPORT_ERRORS:
-            from qgis.PyQt.QtWidgets import QMessageBox
             QMessageBox.critical(
                 None, "QPANSOPY — Import Error",
                 "One or more plugin modules failed to load:\n\n" + "\n".join(_IMPORT_ERRORS)
@@ -247,6 +248,7 @@ class Qpansopy:
                     "TOOLTIP": "VOR/DME Tolerance Tool — sector × DME ring intersection",
                     "ICON": os.path.join(self.icons_dir, 'vor_dme_tolerance.svg'),
                     "DOCK_WIDGET": QPANSOPYVORDMEToleranceDockWidget,
+                    "GROUP": "DME_TOL",
                     "GUI_INSTANCE": None
                 },
                 "NDB_DME_TOL": {
@@ -255,6 +257,16 @@ class Qpansopy:
                     "TOOLTIP": "NDB/DME Tolerance Tool — sector × DME ring intersection",
                     "ICON": os.path.join(self.icons_dir, 'ndb_dme_tolerance.svg'),
                     "DOCK_WIDGET": QPANSOPYNDBDMEToleranceDockWidget,
+                    "GROUP": "DME_TOL",
+                    "GUI_INSTANCE": None
+                },
+                "LOC_DME_TOL": {
+                    "TITLE": "LOC/DME Tol",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "LOC/DME Tolerance Tool — sector × DME ring intersection",
+                    "ICON": os.path.join(self.icons_dir, 'loc_dme_tolerance.svg'),
+                    "DOCK_WIDGET": QPANSOPYLOCDMEToleranceDockWidget,
+                    "GROUP": "DME_TOL",
                     "GUI_INSTANCE": None
                 },
                 "ObjectSelection": {
@@ -311,6 +323,16 @@ class Qpansopy:
             # If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
             self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None, "DEPARTURES": None}
 
+            # Toolbar button groups: modules sharing a "GROUP" key are shown under a single
+            # dropdown QToolButton instead of one flat icon each (reduces toolbar clutter).
+            self.action_groups: dict = {
+                "DME_TOL": {
+                    "ICON": os.path.join(self.icons_dir, 'dme_tolerance_group.svg'),
+                    "TOOLTIP": "DME Tolerance (VOR/DME, NDB/DME, LOC/DME)",
+                },
+            }
+            self.group_buttons: dict = {}
+
             # Crear el menú QPANSOPY
             menuBar = self.iface.mainWindow().menuBar()
             self.menu = QMenu("QPANSOPY", self.iface.mainWindow())
@@ -359,7 +381,23 @@ class Qpansopy:
                     except Exception:
                         pass
                     self.toolbars[toolbar_name] = tb
-                self.toolbars[toolbar_name].addAction(action)
+                group_id = properties.get("GROUP")
+                if group_id:
+                    if group_id not in self.group_buttons:
+                        group_info = self.action_groups.get(group_id, {})
+                        group_icon_path = group_info.get("ICON")
+                        if not group_icon_path or not os.path.exists(group_icon_path):
+                            group_icon_path = QgsApplication.iconPath(":missing_image.svg")
+                        btn = QToolButton(self.toolbars[toolbar_name])
+                        btn.setPopupMode(QToolButton_InstantPopup)
+                        btn.setIcon(QIcon(group_icon_path))
+                        btn.setToolTip(group_info.get("TOOLTIP", group_id))
+                        btn.setMenu(QMenu(btn))
+                        self.toolbars[toolbar_name].addWidget(btn)
+                        self.group_buttons[group_id] = btn
+                    self.group_buttons[group_id].menu().addAction(action)
+                else:
+                    self.toolbars[toolbar_name].addAction(action)
                 self.actions.append(action)
                 if self.submenus.get(toolbar_name) is None:
                     self.submenus[toolbar_name] = QMenu(toolbar_name, self.menu)
