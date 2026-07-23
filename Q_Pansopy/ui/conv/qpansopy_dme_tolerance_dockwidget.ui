@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>QPANSOPYVORDMEToleranceDockWidget</class>
- <widget class="QDockWidget" name="QPANSOPYVORDMEToleranceDockWidget">
+ <class>QPANSOPYDMEToleranceDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYDMEToleranceDockWidget">
   <property name="minimumSize">
    <size>
     <width>250</width>
@@ -43,7 +43,7 @@
        <item>
         <widget class="QLabel" name="pointLayerLabel">
          <property name="text">
-          <string>DME Point Layer</string>
+          <string>Navaid Point Layer</string>
          </property>
         </widget>
        </item>
@@ -158,7 +158,7 @@
        <item>
         <widget class="QPushButton" name="calculateButton">
          <property name="text">
-          <string>Calculate VOR/DME Tolerance</string>
+          <string>Create Tolerance</string>
          </property>
         </widget>
        </item>
