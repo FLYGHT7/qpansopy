@@ -1,5 +1,5 @@
 from qgis.PyQt import QtWidgets, QtGui
-from .qt_compat import Qt_AlignVCenter
+from .qt_compat import Qt_AlignVCenter, QDialogButtonBox_Ok, QDialogButtonBox_Cancel
 import os
 
 
@@ -38,7 +38,7 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.addWidget(self.log_checkbox)
 
         # Buttons
-        btn_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        btn_box = QtWidgets.QDialogButtonBox(QDialogButtonBox_Ok | QDialogButtonBox_Cancel)
         btn_box.accepted.connect(self.accept)
         btn_box.rejected.connect(self.reject)
         layout.addWidget(btn_box)

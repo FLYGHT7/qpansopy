@@ -26,6 +26,7 @@ from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
                                  QDialogButtonBox, QMessageBox, QGroupBox, QWidget)
 from qgis.PyQt.QtCore import QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
+from .qt_compat import QDialogButtonBox_Ok, QDialogButtonBox_Cancel
 
 
 class ISACalculatorDialog(QDialog):
@@ -101,12 +102,12 @@ class ISACalculatorDialog(QDialog):
         layout.addWidget(calc_group)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(QDialogButtonBox_Ok | QDialogButtonBox_Cancel)
         button_box.accepted.connect(self.accept_calculation)
         button_box.rejected.connect(self.reject)
 
         # Initially disable OK button
-        self.ok_button = button_box.button(QDialogButtonBox.Ok)
+        self.ok_button = button_box.button(QDialogButtonBox_Ok)
         self.ok_button.setEnabled(False)
 
         layout.addWidget(button_box)

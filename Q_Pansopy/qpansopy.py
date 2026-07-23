@@ -1313,7 +1313,7 @@ class Qpansopy:
             "<br><a href='https://github.com/FLYGHT7/qpansopy'>https://github.com/FLYGHT7/qpansopy</a>")
         github_label.setOpenExternalLinks(True)
         layout.addWidget(github_label)
-        dlg.exec_()
+        dlg.exec()
 
     def show_settings_dialog(self):
         """
@@ -1332,7 +1332,7 @@ class Qpansopy:
         """
         # Use None as parent to avoid QWidget errors
         dlg = SettingsDialog(None, self.settings)
-        if dlg.exec_():
+        if dlg.exec():
             vals = dlg.get_values()
             self.settings.setValue("qpansopy/enable_kml", vals["enable_kml"])
             self.settings.setValue("qpansopy/show_log", vals["show_log"])
