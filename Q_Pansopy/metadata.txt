@@ -33,6 +33,7 @@ changelog=
  - Combine VOR/DME and NDB/DME tolerance tools under one CONV toolbar dropdown icon and add LOC/DME Tolerance (2.4° default)
  - Fix Wind Spiral ISA calculator and Settings dialog crashing on QGIS 4 / Qt6 (QDialogButtonBox scoped enum, dlg.exec_() removed in PyQt6)
  - Fix ISA Calculator dialog: invisible unit combo text on Windows, field alignment, default ISA Variation now 15, Calculate now closes the dialog immediately
+ - Allow more than 2 decimal places in the OMNI SID DER Elevation and PDG fields
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included
