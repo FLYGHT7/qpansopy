@@ -33,6 +33,8 @@ changelog=
  - Combine VOR/DME and NDB/DME tolerance tools under one CONV toolbar dropdown icon and add LOC/DME Tolerance (2.4° default)
  - Fix Wind Spiral ISA calculator and Settings dialog crashing on QGIS 4 / Qt6 (QDialogButtonBox scoped enum, dlg.exec_() removed in PyQt6)
  - Fix ISA Calculator dialog: invisible unit combo text on Windows, field alignment, default ISA Variation now 15, Calculate now closes the dialog immediately
+ - Add live green rubber-band preview of the wind spiral curve, updated as parameters/layers change
+ - Fix Wind Spiral ISA Variation field being silently ignored by the actual calculation
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included
