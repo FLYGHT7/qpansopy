@@ -2,7 +2,7 @@ import pathlib
 from qgis.PyQt import QtWidgets
 
 
-def _load_base_qss() -> str:
+def load_base_qss() -> str:
     """Return the content of dockwidget_base.qss, empty string on error."""
     qss_path = pathlib.Path(__file__).parent.parent / "styles" / "dockwidget_base.qss"
     try:
@@ -20,7 +20,7 @@ class BasePansopyDockWidget(QtWidgets.QDockWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setStyleSheet(_load_base_qss())
+        self.setStyleSheet(load_base_qss())
 
     # ------------------------------------------------------------------ #
     # Log                                                                 #

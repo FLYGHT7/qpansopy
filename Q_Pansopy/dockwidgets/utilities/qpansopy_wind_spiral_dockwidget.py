@@ -130,7 +130,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         # ISA Variation LineEdit - same size as other fields
         self.isaVarLineEdit = QtWidgets.QLineEdit(self)
         self.isaVarLineEdit.setValidator(isa_validator)
-        self.isaVarLineEdit.setText("0.00000")
+        self.isaVarLineEdit.setText("15.00000")
         self.isaVarLineEdit.textChanged.connect(
             lambda text: self.handle_isa_manual_change(text))
         self.isaVarLineEdit.setMinimumHeight(28)
