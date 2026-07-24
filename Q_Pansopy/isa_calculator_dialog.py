@@ -23,10 +23,11 @@ Procedure Analysis and Obstacle Protection Surfaces - ISA Calculator
 
 from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
                                  QLineEdit, QComboBox, QPushButton, QLabel,
-                                 QDialogButtonBox, QMessageBox, QGroupBox, QWidget)
+                                 QMessageBox, QGroupBox, QWidget)
 from qgis.PyQt.QtCore import QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
-from .qt_compat import QDialogButtonBox_Ok, QDialogButtonBox_Cancel
+from .qt_compat import Qt_AlignRight, Qt_AlignVCenter
+from .dockwidgets.base_dockwidget import load_base_qss
 
 
 class ISACalculatorDialog(QDialog):
@@ -36,6 +37,7 @@ class ISACalculatorDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("ISA Calculator")
         self.setFixedSize(400, 300)
+        self.setStyleSheet(load_base_qss())
 
         # Result values
         self.isa_variation = None
@@ -50,6 +52,9 @@ class ISACalculatorDialog(QDialog):
         # Input Group
         input_group = QGroupBox("Input Parameters")
         input_layout = QFormLayout(input_group)
+        input_layout.setVerticalSpacing(12)
+        input_layout.setHorizontalSpacing(10)
+        input_layout.setLabelAlignment(Qt_AlignRight | Qt_AlignVCenter)
 
         # Create validator for numeric inputs
         regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")
@@ -57,6 +62,8 @@ class ISACalculatorDialog(QDialog):
 
         # Aerodrome Elevation
         elev_container = QHBoxLayout()
+        elev_container.setContentsMargins(0, 0, 0, 0)
+        elev_container.setSpacing(8)
         self.elevation_edit = QLineEdit()
         self.elevation_edit.setValidator(validator)
         self.elevation_edit.setText("0")
@@ -87,30 +94,28 @@ class ISACalculatorDialog(QDialog):
         calc_group = QGroupBox("Calculation")
         calc_layout = QVBoxLayout(calc_group)
 
-        # Calculate button
+        # Calculate button — calculating also accepts and closes the dialog,
+        # applying the result to the caller immediately (no separate OK step)
         self.calculate_btn = QPushButton("🧮 Calculate ISA Variation")
         self.calculate_btn.setMinimumHeight(35)
         self.calculate_btn.clicked.connect(self.calculate_isa)
         calc_layout.addWidget(self.calculate_btn)
 
-        # Results display
-        self.result_label = QLabel("Click 'Calculate ISA Variation' to see results")
-        self.result_label.setStyleSheet("color: #666; font-style: italic; padding: 10px;")
-        self.result_label.setWordWrap(True)
-        calc_layout.addWidget(self.result_label)
+        # Hint label
+        self.hint_label = QLabel("Enter the values above, then click 'Calculate ISA Variation'.")
+        self.hint_label.setStyleSheet("color: #999; font-style: italic; padding: 10px;")
+        self.hint_label.setWordWrap(True)
+        calc_layout.addWidget(self.hint_label)
 
         layout.addWidget(calc_group)
 
-        # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox_Ok | QDialogButtonBox_Cancel)
-        button_box.accepted.connect(self.accept_calculation)
-        button_box.rejected.connect(self.reject)
-
-        # Initially disable OK button
-        self.ok_button = button_box.button(QDialogButtonBox_Ok)
-        self.ok_button.setEnabled(False)
-
-        layout.addWidget(button_box)
+        # Cancel button (Calculate is the accept action, so no separate OK button)
+        cancel_row = QHBoxLayout()
+        cancel_row.addStretch()
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.clicked.connect(self.reject)
+        cancel_row.addWidget(self.cancel_btn)
+        layout.addLayout(cancel_row)
 
     def calculate_isa(self):
         """Calculate ISA variation"""
@@ -158,29 +163,13 @@ class ISACalculatorDialog(QDialog):
                 'isa_variation_calculated': isa_variation
             }
 
-            # Update result display
-            result_text = "✅ Calculation Complete\n\n"
-            result_text += f"ISA Temperature: {isa_temp:.5f}°C (at {elevation_ft:.0f} ft)\n"
-            result_text += f"ISA Variation: {isa_variation:.5f}°C\n"
-            result_text += "(Temperature Reference - ISA Temperature)"
-
-            self.result_label.setText(result_text)
-            self.result_label.setStyleSheet(
-                "color: #2e7d32; padding: 10px; background-color: #e8f5e8; border-radius: 5px;")
-
-            # Enable OK button
-            self.ok_button.setEnabled(True)
+            # Calculation succeeded — accept and close immediately, no extra
+            # confirmation step. The caller reads the result via
+            # get_isa_variation()/get_calculation_metadata() after exec().
+            self.accept()
 
         except Exception as e:
             QMessageBox.critical(self, "Calculation Error", f"Error calculating ISA Variation: {str(e)}")
-
-    def accept_calculation(self):
-        """Accept the calculation if valid"""
-        if self.isa_variation is not None:
-            self.accept()
-        else:
-            QMessageBox.warning(self, "No Calculation",
-                                "Please calculate ISA Variation before accepting")
 
     def get_isa_variation(self):
         """Get the calculated ISA variation"""
