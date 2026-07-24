@@ -24,11 +24,14 @@ Procedure Analysis and Obstacle Protection Surfaces - Wind Spiral Module
 import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
-from qgis.PyQt.QtGui import QRegularExpressionValidator
+from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
 from qgis.PyQt.QtWidgets import QMessageBox
 from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
-from qgis.core import QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsMapLayerProxyModel
-from qgis.gui import QgsMapLayerComboBox  # Importar QgsMapLayerComboBox
+from qgis.core import (
+    QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem,
+    QgsMapLayerProxyModel, QgsCoordinateTransform, QgsPoint,
+)
+from qgis.gui import QgsMapLayerComboBox, QgsRubberBand  # Importar QgsMapLayerComboBox
 from qgis.core import Qgis
 import json
 import datetime
@@ -76,7 +79,18 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         if hasattr(self, 'referenceLayerComboBox'):
             self.referenceLayerComboBox.setFilters(MLPM_LineLayer)
             preseed_active_layer(iface, self.referenceLayerComboBox, Qgis_GeomType_Line)
-        
+
+        # Live preview rubber band — updated as layers/parameters change
+        self._preview_band = QgsRubberBand(iface.mapCanvas(), Qgis_GeomType_Line)
+        self._preview_band.setColor(QColor("green"))
+        self._preview_band.setWidth(2)
+        self._connected_layers = []
+
+        if hasattr(self, 'pointLayerComboBox'):
+            self.pointLayerComboBox.layerChanged.connect(self._on_layer_changed)
+        if hasattr(self, 'referenceLayerComboBox'):
+            self.referenceLayerComboBox.layerChanged.connect(self._on_layer_changed)
+
         # Set default output folder
         if hasattr(self, 'outputFolderLineEdit'):
             self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -91,6 +105,10 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Setup parameter input fields dynamically
         self.setup_dynamic_parameters()
+
+        # Populate the preview now that both layer combos and parameter
+        # widgets exist
+        self._on_layer_changed()
 
         # Log initial message
         self.log("Wind Spiral generator loaded. Set parameters and click Calculate.")
@@ -133,6 +151,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.isaVarLineEdit.setText("15.00000")
         self.isaVarLineEdit.textChanged.connect(
             lambda text: self.handle_isa_manual_change(text))
+        self.isaVarLineEdit.textChanged.connect(self._update_preview)
         self.isaVarLineEdit.setMinimumHeight(28)
         self.isaVarLineEdit.setMaximumHeight(28)
         self.isaVarLineEdit.setStyleSheet(line_edit_style)
@@ -163,6 +182,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.IASLineEdit.setText("205")
         self.IASLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('IAS', text))
+        self.IASLineEdit.textChanged.connect(self._update_preview)
         self.IASLineEdit.setMinimumHeight(28)
         self.IASLineEdit.setMaximumHeight(28)
         self.IASLineEdit.setStyleSheet(line_edit_style)
@@ -174,6 +194,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.altitudeLineEdit.setText("800")
         self.altitudeLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('altitude', text))
+        self.altitudeLineEdit.textChanged.connect(self._update_preview)
         self.altitudeLineEdit.setMinimumHeight(28)
         self.altitudeLineEdit.setMaximumHeight(28)
         self.altitudeLineEdit.setStyleSheet(line_edit_style)
@@ -182,6 +203,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.altitudeUnitCombo.addItems(['ft', 'm'])
         self.altitudeUnitCombo.currentTextChanged.connect(
             lambda text: self.update_unit('altitude', text))
+        self.altitudeUnitCombo.currentTextChanged.connect(self._update_preview)
         self.altitudeUnitCombo.setMinimumHeight(28)
         self.altitudeUnitCombo.setMaximumHeight(28)
         self.altitudeUnitCombo.setMinimumWidth(50)
@@ -203,6 +225,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.bankAngleLineEdit.setText("15")
         self.bankAngleLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('bankAngle', text))
+        self.bankAngleLineEdit.textChanged.connect(self._update_preview)
         self.bankAngleLineEdit.setMinimumHeight(28)
         self.bankAngleLineEdit.setMaximumHeight(28)
         self.bankAngleLineEdit.setStyleSheet(line_edit_style)
@@ -214,6 +237,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.windSpeedLineEdit.setText("30")
         self.windSpeedLineEdit.textChanged.connect(
             lambda text: self.store_exact_value('w', text))
+        self.windSpeedLineEdit.textChanged.connect(self._update_preview)
         self.windSpeedLineEdit.setMinimumHeight(28)
         self.windSpeedLineEdit.setMaximumHeight(28)
         self.windSpeedLineEdit.setStyleSheet(line_edit_style)
@@ -225,6 +249,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.turnDirectionCombo.setMinimumHeight(28)
         self.turnDirectionCombo.setMaximumHeight(28)
         self.turnDirectionCombo.setStyleSheet(combo_box_style)
+        self.turnDirectionCombo.currentTextChanged.connect(self._update_preview)
         self.formLayout.addRow("Turn Direction:", self.turnDirectionCombo)
 
         # Show Points checkbox
@@ -421,8 +446,85 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             "QPANSOPY", "Wind Spiral parameters copied to clipboard as JSON", level=Qgis.Success)
 
     def closeEvent(self, event):
+        self._clear_preview()
         self.closingPlugin.emit()
         event.accept()
+
+    def _on_layer_changed(self, *args):
+        """Re-hook selectionChanged on whichever layers are currently chosen."""
+        for lyr in self._connected_layers:
+            try:
+                lyr.selectionChanged.disconnect(self._update_preview)
+            except Exception:
+                pass
+        self._connected_layers = []
+
+        seen = set()
+        for combo in [self.pointLayerComboBox, self.referenceLayerComboBox]:
+            lyr = combo.currentLayer()
+            if lyr and id(lyr) not in seen:
+                lyr.selectionChanged.connect(self._update_preview)
+                self._connected_layers.append(lyr)
+                seen.add(id(lyr))
+
+        self._update_preview()
+
+    def _clear_preview(self):
+        if getattr(self, '_preview_band', None):
+            self._preview_band.reset(Qgis_GeomType_Line)
+
+    def _update_preview(self, *args):
+        """Recompute the live rubber-band preview of the wind spiral curve."""
+        self._clear_preview()
+
+        point_layer = self.pointLayerComboBox.currentLayer()
+        reference_layer = self.referenceLayerComboBox.currentLayer()
+        if not point_layer or not reference_layer:
+            return
+
+        try:
+            from ...utils import get_selected_feature
+            point_feature = get_selected_feature(point_layer, lambda msg: None)
+            reference_feature = get_selected_feature(reference_layer, lambda msg: None)
+            if not point_feature or not reference_feature:
+                return
+
+            map_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
+            project = QgsProject.instance()
+
+            def to_map(feat, lyr):
+                g = feat.geometry()
+                g.transform(QgsCoordinateTransform(lyr.crs(), map_crs, project))
+                return g
+
+            point_geom = to_map(point_feature, point_layer).asPoint()
+            ref_polyline = to_map(reference_feature, reference_layer).asPolyline()
+            if len(ref_polyline) < 2:
+                return
+
+            start_point = QgsPoint(ref_polyline[-1])
+            end_point = QgsPoint(ref_polyline[0])
+            azimuth = start_point.azimuth(end_point) + 180
+
+            isa_var = float(self.isaVarLineEdit.text() or 0)
+            IAS = float(self.IASLineEdit.text() or 0)
+            altitude = float(self.altitudeLineEdit.text() or 0)
+            if self.units.get('altitude', 'ft') == 'm':
+                altitude = altitude * 3.28084
+            bank_angle = float(self.bankAngleLineEdit.text() or 0)
+            wind_speed = float(self.windSpeedLineEdit.text() or 0)
+            turn_direction = self.turnDirectionCombo.currentText()
+
+            if IAS <= 0 or altitude <= 0 or bank_angle <= 0:
+                return
+
+            from ...modules.wind_spiral import build_wind_spiral_geometry
+            geom = build_wind_spiral_geometry(
+                point_geom, azimuth, IAS, altitude, isa_var, bank_angle, wind_speed, turn_direction)
+            if geom and not geom.isEmpty():
+                self._preview_band.setToGeometry(geom, None)
+        except Exception:
+            pass
 
     def validate_inputs(self):
         """Validate user inputs"""
@@ -536,6 +638,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             result = calculate_wind_spiral(self.iface, point_layer, reference_layer, params)
 
             if result:
+                self._clear_preview()
                 if export_kml:
                     self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
                 self.log("Calculation completed successfully!")
