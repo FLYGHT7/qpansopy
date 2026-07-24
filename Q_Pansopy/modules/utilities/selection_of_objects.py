@@ -36,6 +36,7 @@ def extract_objects(iface, point_layer, surface_layer,
     :param export_kml: Whether to export the result to a KML file
     :param output_dir: Directory for the KML file (required when export_kml=True)
     :param use_selection_only: Only process currently-selected features of point_layer
+        and surface_layer
     :return: dict with 'count' and optionally 'kml_path', or None on failure
     """
     map_crs = QgsProject.instance().crs()
@@ -73,7 +74,13 @@ def extract_objects(iface, point_layer, surface_layer,
         work_layer = point_layer
 
     # ----- Spatial index & intersection test -----
-    surface_index = QgsSpatialIndex(surface_layer.getFeatures())
+    surface_source_features = (
+        surface_layer.selectedFeatures() if use_selection_only
+        else surface_layer.getFeatures()
+    )
+    surface_index = QgsSpatialIndex()
+    for f in surface_source_features:
+        surface_index.addFeature(f)
     intersecting_features = []
 
     source_features = (
