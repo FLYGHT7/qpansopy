@@ -315,6 +315,8 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.log(f"TAS: {result['tas_kt']:.2f}kt")
                 self.log(f"Rate of Turn: {result['rate_of_turn']:.2f}°/s")
                 self.log(f"Radius of Turn: {result['radius_of_turn_nm']:.2f}NM")
+                if 'reference_line_layer' in result:
+                    self.log(f"Reference line layer: {result['reference_line_layer']}")
                 self.log("Results copied to clipboard.")
             else:
                 self.log("Calculation completed but no results returned.")
