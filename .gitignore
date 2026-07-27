@@ -32,3 +32,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.zip
+
+.venv/
+.idea/
