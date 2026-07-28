@@ -23,7 +23,7 @@ Procedure Analysis and Obstacle Protection Surfaces - VSS Module
 
 import os
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import Qgis
 from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
@@ -81,7 +81,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Conectar botones de copia si existen en el UI
         if hasattr(self, 'copyWordButton'):
-            self.copyWordButton.clicked.connect(self.copy_parameters_for_word)
+            self.copyWordButton.setText("Show Table")
+            self.copyWordButton.clicked.connect(self.show_parameters_table)
         if hasattr(self, 'copyJsonButton'):
             self.copyJsonButton.clicked.connect(self.copy_parameters_as_json)
 
@@ -128,8 +129,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         """DEPRECATED: Buttons are now defined in the UI XML."""
         pass
 
-    def copy_parameters_for_word(self):
-        """Copiar los parámetros VSS como tabla para Word"""
+    def show_parameters_table(self):
+        """Mostrar los parámetros VSS como una tabla HTML, con opción de copiar a Word"""
         params = {
             'runway_details': {
                 'rwy_width': {'value': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()), 'unit': 'm'},
@@ -171,14 +172,11 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             as_html=False
         )
 
-        mime = QMimeData()
-        mime.setHtml(html_table)
-        mime.setText(text_table)
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setMimeData(mime)
-        self.log("VSS parameters copied to clipboard as a Word table.")
-        self.iface.messageBar().pushMessage(
-            "QPANSOPY", "VSS parameters copied to clipboard in Word format", level=Qgis.Success)
+        from ...parameters_inspector_dialog import ParametersInspectorDialog
+        dialog = ParametersInspectorDialog(
+            "VSS — Feature Parameters", html_table, text_table, parent=self)
+        dialog.show()
+        self.log("VSS parameters shown in Parameters Inspector.")
 
     def copy_parameters_as_json(self):
         """Copiar los parámetros actuales al portapapeles en formato JSON"""

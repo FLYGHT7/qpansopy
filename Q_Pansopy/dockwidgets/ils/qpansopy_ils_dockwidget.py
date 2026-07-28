@@ -116,9 +116,9 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        # Crear un layout horizontal para los botones
        buttons_layout = QtWidgets.QHBoxLayout()
 
-       # Botón para copiar como texto formateado (Word)
-       self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
-       self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+       # Botón para mostrar los parámetros como tabla (con opción de copiar a Word)
+       self.copyParamsWordButton = QtWidgets.QPushButton("Show Table", self)
+       self.copyParamsWordButton.clicked.connect(self.show_parameters_table)
        self.copyParamsWordButton.setMinimumHeight(30)
 
        # Botón para copiar como JSON
@@ -196,8 +196,8 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.log("Parameters copied to clipboard. You can now paste them into Word or another application.")
        self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard", level=Qgis.Success)
 
-   def copy_parameters_for_word(self):
-       """Copiar los parámetros en formato tabla para Word"""
+   def show_parameters_table(self):
+       """Mostrar los parámetros como una tabla HTML, con opción de copiar a Word"""
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
        params_text = ""
@@ -269,13 +269,12 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            params_text += "No Basic ILS parameters found in any layer. Please run a calculation first.\n"
            html_blocks.append("<p>No Basic ILS parameters found in any layer. Please run a calculation first.</p>")
 
-       mime = QMimeData()
-       mime.setHtml("<div>" + "<br>".join(html_blocks) + "</div>")
-       mime.setText(params_text)
-       clipboard = QtWidgets.QApplication.clipboard()
-       clipboard.setMimeData(mime)
-       self.log("Parameters copied to clipboard as a table for Word.")
-       self.iface.messageBar().pushMessage("QPANSOPY", "Parameters copied to clipboard in Word format", level=Qgis.Success)
+       from ...parameters_inspector_dialog import ParametersInspectorDialog
+       html_table = "<div>" + "<br>".join(html_blocks) + "</div>"
+       dialog = ParametersInspectorDialog(
+           "Basic ILS — Feature Parameters", html_table, params_text, parent=self)
+       dialog.show()
+       self.log("Basic ILS parameters shown in Parameters Inspector.")
 
    def copy_parameters_as_json(self):
        """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""

@@ -27,7 +27,7 @@ import json
 import datetime
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt, QMimeData
+from qgis.PyQt.QtCore import pyqtSignal, Qt
 from qgis.core import QgsMapLayerProxyModel, Qgis
 from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 
@@ -106,8 +106,8 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         """Configure buttons to copy parameters to clipboard."""
         buttons_layout = QtWidgets.QHBoxLayout()
 
-        self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
-        self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+        self.copyParamsWordButton = QtWidgets.QPushButton("Show Table", self)
+        self.copyParamsWordButton.clicked.connect(self.show_parameters_table)
         self.copyParamsWordButton.setMinimumHeight(30)
 
         self.copyParamsJsonButton = QtWidgets.QPushButton("Copy as JSON", self)
@@ -136,8 +136,9 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         else:
             self.directionButton.setText("Start → End")
 
-    def copy_parameters_for_word(self):
-        """Copy SID Initial parameters as HTML table for Word."""
+    def show_parameters_table(self):
+        """Show SID Initial parameters as a rendered HTML table.
+        The popup itself offers a 'Copy to Word' button (issue #193)."""
         params = self.get_parameters()
 
         param_list = [
@@ -173,26 +174,16 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         html += '</table>'
 
-        # Set both HTML and plain text to clipboard
-        mime_data = QMimeData()
-        mime_data.setHtml(html)
-
-        # Also set plain text as fallback
         plain_text = "SID INITIAL CLIMB CALCULATION PARAMETERS\n"
         plain_text += "=" * 50 + "\n\n"
         for name, value, unit in param_list:
             plain_text += f"{name}\t{value}\t{unit}\n"
-        mime_data.setText(plain_text)
 
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setMimeData(mime_data)
-
-        self.log("Parameters copied as table for Word.")
-        self.iface.messageBar().pushMessage(
-            "QPANSOPY",
-            "SID Initial parameters copied as table - paste in Word",
-            level=Qgis.Success
-        )
+        from ...parameters_inspector_dialog import ParametersInspectorDialog
+        dialog = ParametersInspectorDialog(
+            "SID Initial Climb — Feature Parameters", html, plain_text, parent=self)
+        dialog.show()
+        self.log("SID Initial parameters shown in Parameters Inspector.")
 
     def copy_parameters_as_json(self):
         """Copy SID Initial parameters in JSON format."""

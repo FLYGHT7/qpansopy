@@ -26,7 +26,7 @@ import json
 import datetime
 import traceback
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer
 from qgis.core import Qgis
@@ -147,9 +147,9 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        # Crear un layout horizontal para los botones
        buttons_layout = QtWidgets.QHBoxLayout()
 
-       # Botón para copiar como texto formateado (Word)
-       self.copyParamsWordButton = QtWidgets.QPushButton("Copy for Word", self)
-       self.copyParamsWordButton.clicked.connect(self.copy_parameters_for_word)
+       # Botón para mostrar los parámetros como tabla (con opción de copiar a Word)
+       self.copyParamsWordButton = QtWidgets.QPushButton("Show Table", self)
+       self.copyParamsWordButton.clicked.connect(self.show_parameters_table)
        self.copyParamsWordButton.setMinimumHeight(30)
 
        # Botón para copiar como JSON
@@ -167,8 +167,8 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        # Añadir el widget al layout existente
        self.verticalLayout.addWidget(buttons_widget)
 
-   def copy_parameters_for_word(self):
-       """Copiar los parámetros OAS ILS en formato tabla para Word"""
+   def show_parameters_table(self):
+       """Mostrar los parámetros OAS ILS como una tabla HTML, con opción de copiar a Word"""
        from ...utils import format_parameters_table
 
        layers = QgsProject.instance().mapLayers().values()
@@ -240,14 +240,12 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
        html_content = "<div>" + "<br>".join(html_chunks) + "</div>"
        plain_content = "\n\n".join(text_chunks)
-       mime = QMimeData()
-       mime.setHtml(html_content)
-       mime.setText(plain_content)
-       clipboard = QtWidgets.QApplication.clipboard()
-       clipboard.setMimeData(mime)
 
-       self.log("OAS ILS parameters copied to clipboard in Word format (HTML table).")
-       self.iface.messageBar().pushMessage("QPANSOPY", "OAS ILS parameters copied to clipboard in Word format", level=Qgis.Success)
+       from ...parameters_inspector_dialog import ParametersInspectorDialog
+       dialog = ParametersInspectorDialog(
+           "OAS ILS — Feature Parameters", html_content, plain_content, parent=self)
+       dialog.show()
+       self.log("OAS ILS parameters shown in Parameters Inspector.")
 
    def copy_parameters_as_json(self):
        """Copiar los parámetros de las capas seleccionadas al portapapeles en formato JSON"""
