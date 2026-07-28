@@ -123,6 +123,43 @@ def build_wind_spiral_geometry(p_geom, azimuth, IAS, altitude, isa_var, bank_ang
     return QgsGeometry(cString)
 
 
+def _build_wind_spiral_parameters_json(IAS, altitude_ft, bankAngle, w, isa_var,
+                                        turn_direction, isa_calculation_metadata):
+    """
+    Build the JSON string stored in the 'parameters' field of the Wind Spiral
+    output feature, so it always matches the values actually used (issue #192).
+
+    altitude_ft must already be normalised to feet -- the calculation always
+    uses feet internally, so storing the original input unit here would
+    silently disagree with the value actually used.
+
+    isa_calculation_metadata carries whether the ISA Variation was typed in
+    manually or produced by the ISA Calculator dialog, which was previously
+    tracked in the dockwidget but never persisted.
+    """
+    isa_calculation_metadata = isa_calculation_metadata or {}
+    isa_source = isa_calculation_metadata.get('method', 'manual')
+
+    parameters_dict = {
+        'IAS': str(IAS),
+        'altitude': str(altitude_ft),
+        'altitude_unit': 'ft',
+        'bankAngle': str(bankAngle),
+        'w': str(w),
+        'isa_var': str(round(isa_var, 2)),
+        'isa_source': isa_source,
+        'turn_direction': turn_direction,
+        'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'calculation_type': 'Wind Spiral'
+    }
+    if isa_source == 'calculated':
+        parameters_dict['isa_source_elevation'] = isa_calculation_metadata.get('elevation_original')
+        parameters_dict['isa_source_elevation_unit'] = isa_calculation_metadata.get('elevation_unit')
+        parameters_dict['isa_source_temp_ref'] = isa_calculation_metadata.get('temperature_reference')
+
+    return json.dumps(parameters_dict)
+
+
 def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     """
     Create Wind Spiral
@@ -151,20 +188,11 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     # by the Wind Spiral UI; they're only used by the standalone ISA Calculator
     # dialog, whose result is what populates isaVar.
     isa_var = float(params.get('isaVar', 0))
+    isa_calculation_metadata = params.get('isa_calculation_metadata', {})
 
-    # Create a parameters dictionary for JSON storage
-    parameters_dict = {
-        'IAS': str(IAS),
-        'altitude': str(altitude),
-        'altitude_unit': altitude_unit,
-        'bankAngle': str(bankAngle),
-        'w': str(w),
-        'isa_var': str(round(isa_var, 2)),
-        'turn_direction': turn_direction,
-        'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        'calculation_type': 'Wind Spiral'
-    }
-    parameters_json = json.dumps(parameters_dict)
+    parameters_json = _build_wind_spiral_parameters_json(
+        IAS, altitude, bankAngle, w, isa_var, turn_direction, isa_calculation_metadata
+    )
 
     # Log ISA deviation used in the calculation
     iface.messageBar().pushMessage(
@@ -311,17 +339,18 @@ def copy_parameters_table(params, as_html=False):
     """Generate formatted table for Wind Spiral parameters"""
     from ..utils import format_parameters_table
 
-    # Calculate ISA values if adElev and tempRef are provided
-    adElev = float(params.get('adElev', 0))
-    tempRef = float(params.get('tempRef', 15))
-    valueISA = ISA_temperature(adElev, tempRef)
+    # ISA Variation is read directly from the value actually used for the
+    # calculation (params['isaVar']/['isa_var']) — previously this table
+    # recomputed ISA from 'adElev'/'tempRef', fields the current form never
+    # collects, so it always showed a stale 0.00/15.00 regardless of what was
+    # really used (issue #192).
+    isa_var = float(params.get('isaVar', params.get('isa_var', 0)) or 0)
+    isa_source = params.get('isa_source', 'manual')
 
     params_dict = {
-        'airport_data': {
-            'aerodrome_elevation': {'value': params.get('adElev', 0), 'unit': params.get('adElev_unit', 'ft')},
-            'temperature_reference': {'value': params.get('tempRef', 15), 'unit': '°C'},
-            'isa_calculated': {'value': round(valueISA[2], 2), 'unit': '°C'},
-            'isa_variation': {'value': round(valueISA[3], 2), 'unit': '°C'}
+        'isa_data': {
+            'isa_variation': {'value': round(isa_var, 2), 'unit': '°C'},
+            'isa_source': {'value': 'Calculated' if isa_source == 'calculated' else 'Manual input', 'unit': ''}
         },
         'flight_params': {
             'IAS': {'value': params.get('IAS', 205), 'unit': 'kt'},
@@ -335,10 +364,8 @@ def copy_parameters_table(params, as_html=False):
     }
 
     sections = {
-        'aerodrome_elevation': 'Airport Data',
-        'temperature_reference': 'Airport Data',
-        'isa_calculated': 'Airport Data',
-        'isa_variation': 'Airport Data',
+        'isa_variation': 'ISA Data',
+        'isa_source': 'ISA Data',
         'IAS': 'Flight Parameters',
         'altitude': 'Flight Parameters',
         'bank_angle': 'Flight Parameters',

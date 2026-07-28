@@ -37,7 +37,7 @@ changelog=
  - Fix Wind Spiral ISA Variation field being silently ignored by the actual calculation
  - Update PBN Target layer style: thinner outline (0.25mm) and add ARP-distance labels
  - Fix Basic ILS missed approach surface lateral half-width formula (was incorrectly using a flat 15% splay instead of the 14.3% transition-slope-derived offset), restoring parity with the reference script
- - Add a Parameters Inspector: render the stored 'parameters' JSON as an HTML table via a QGIS layer action (Basic ILS, OAS ILS, VSS, Wind Spiral) or the dockwidget's 'Show Table' button (also on Holding and SID Initial Climb), with a Copy to Word option
+ - Store all input parameters (DER elevation, PDG, TNA, MSA, CWY distance, options) as a JSON 'parameters' field on every OMNI SID output feature (areas, reference line, construction points)
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included

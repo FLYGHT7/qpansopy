@@ -39,6 +39,8 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 from math import tan, radians
+import datetime
+import json
 
 
 # =============================================================================
@@ -202,7 +204,33 @@ def create_projected_point(point_name, origin_point, distance, azimuth, elevatio
     points_dict[point_name] = projected_point
 
 
-def create_polygon_surface(surface_name, vertices, layer, surfaces_dict, distance_m=None):
+def _build_omni_parameters_json(params, der_elevation_m, pdg_percent, tna_ft, msa_ft,
+                                 cwy_distance_m, allow_turns_before_der,
+                                 include_construction_points, reverse_direction):
+    """
+    Build the JSON string stored in the 'parameters' field of every OMNI SID
+    output feature, so the inputs used to generate a layer are recoverable
+    from the data itself (issue #177) instead of only from the layer name.
+    """
+    parameters_dict = {
+        'der_elevation_m': der_elevation_m,
+        'der_elevation_unit': params.get('der_elevation_unit', 'm'),
+        'pdg': pdg_percent,
+        'TNA_ft': tna_ft,
+        'msa_ft': msa_ft,
+        'cwy_distance_m': cwy_distance_m,
+        'cwy_distance_unit': params.get('cwy_distance_unit', 'm'),
+        'allow_turns_before_der': allow_turns_before_der,
+        'include_construction_points': include_construction_points,
+        'reverse_direction': reverse_direction,
+        'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'calculation_type': 'Omnidirectional SID',
+    }
+    return json.dumps(parameters_dict)
+
+
+def create_polygon_surface(surface_name, vertices, layer, surfaces_dict, parameters_json,
+                            distance_m=None):
     """
     Create a 3D polygon surface and add it to a layer.
 
@@ -215,6 +243,8 @@ def create_polygon_surface(surface_name, vertices, layer, surfaces_dict, distanc
         vertices (list): List of QgsPoint vertices forming the polygon.
         layer (QgsVectorLayer): Layer to add the feature to.
         surfaces_dict (dict): Dictionary to store the geometry for later use.
+        parameters_json (str): JSON string of the input parameters used for this
+            calculation run, stored in the 'parameters' field.
         distance_m (float, optional): Area distance in meters, stored rounded
             to 4 decimal places in the 'distance_m' field. None (NULL) when
             not applicable to this surface.
@@ -223,7 +253,11 @@ def create_polygon_surface(surface_name, vertices, layer, surfaces_dict, distanc
     feature = QgsFeature()
     polygon = QgsPolygon(QgsLineString(vertices), rings=[])
     feature.setGeometry(polygon)
-    feature.setAttributes([surface_name, round(distance_m, 4) if distance_m is not None else None])
+    feature.setAttributes([
+        surface_name,
+        round(distance_m, 4) if distance_m is not None else None,
+        parameters_json,
+    ])
     provider.addFeatures([feature])
     surfaces_dict[surface_name] = feature.geometry()
 
@@ -329,6 +363,11 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     allow_turns_before_der = params.get('allow_turns_before_der', 'NO')
     include_construction_points = params.get('include_construction_points', 'NO')
     reverse_direction = params.get('reverse_direction', 'NO')
+
+    parameters_json = _build_omni_parameters_json(
+        params, der_elevation_m, pdg_percent, tna_ft, msa_ft, cwy_distance_m,
+        allow_turns_before_der, include_construction_points, reverse_direction
+    )
 
     log(f"Parameters: DER Elev={der_elevation_m}m, PDG={pdg_percent}%, "
         f"TNA={tna_ft}ft, MSA={msa_ft}ft")
@@ -488,14 +527,17 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         f"OmniSID_Construction_Points_PDG_{pdg_percent}",
         "memory"
     )
-    construction_layer.dataProvider().addAttributes([QgsField('id', QVariant.String)])
+    construction_layer.dataProvider().addAttributes([
+        QgsField('id', QVariant.String),
+        QgsField('parameters', QVariant.String),
+    ])
     construction_layer.updateFields()
 
     for point_name, point_geometry in construction_points.items():
         provider = construction_layer.dataProvider()
         feature = QgsFeature()
         feature.setGeometry(point_geometry)
-        feature.setAttributes([point_name])
+        feature.setAttributes([point_name, parameters_json])
         provider.addFeatures([feature])
 
     if include_construction_points == 'YES':
@@ -511,7 +553,10 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         reference_line_layer_name,
         "memory"
     )
-    reference_line_layer.dataProvider().addAttributes([QgsField('id', QVariant.String)])
+    reference_line_layer.dataProvider().addAttributes([
+        QgsField('id', QVariant.String),
+        QgsField('parameters', QVariant.String),
+    ])
     reference_line_layer.updateFields()
 
     reference_line_geometry = QgsGeometry.fromPolyline([
@@ -519,7 +564,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     ])
     reference_line_feature = QgsFeature()
     reference_line_feature.setGeometry(reference_line_geometry)
-    reference_line_feature.setAttributes(['reference_line'])
+    reference_line_feature.setAttributes(['reference_line', parameters_json])
     reference_line_layer.dataProvider().addFeatures([reference_line_feature])
 
     reference_line_layer.updateExtents()
@@ -541,7 +586,8 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     )
     surfaces_layer.dataProvider().addAttributes([
         QgsField('omni_area', QVariant.String),
-        QgsField('distance_m', QVariant.Double, 'double', 10, 4)
+        QgsField('distance_m', QVariant.Double, 'double', 10, 4),
+        QgsField('parameters', QVariant.String),
     ])
     surfaces_layer.updateFields()
 
@@ -560,7 +606,8 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         ],
         surfaces_layer,
         surfaces_geometries,
-        distance_area_1
+        parameters_json,
+        distance_m=distance_area_1
     )
 
     # Create Area 2 polygon
@@ -576,7 +623,8 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
         ],
         surfaces_layer,
         surfaces_geometries,
-        distance_area_2
+        parameters_json,
+        distance_m=distance_area_2
     )
 
     # Create Before DER area if enabled
@@ -592,7 +640,8 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
                 construction_points['point_0_center']
             ],
             surfaces_layer,
-            surfaces_geometries
+            surfaces_geometries,
+            parameters_json
         )
 
     # -------------------------------------------------------------------------
@@ -615,7 +664,7 @@ def run_omnidirectional_sid(iface, runway_layer, params, log_callback=None):
     provider = surfaces_layer.dataProvider()
     area_3_feature = QgsFeature()
     area_3_feature.setGeometry(area_3_geometry)
-    area_3_feature.setAttributes(['Area 3', round(distance_area_3, 4)])
+    area_3_feature.setAttributes(['Area 3', round(distance_area_3, 4), parameters_json])
     provider.addFeatures([area_3_feature])
 
     surfaces_layer.updateExtents()

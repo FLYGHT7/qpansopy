@@ -337,11 +337,11 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                         continue
                     if str(data.get('calculation_type', '')).lower().find('wind spiral') == -1:
                         continue
-                    # Map JSON to expected params
+                    # Map JSON to expected params. isa_var/isa_source may be
+                    # absent on layers created before issue #192's fix.
                     mapped = {
-                        'adElev': float(data.get('adElev', 0) or 0),
-                        'adElev_unit': data.get('adElev_unit', 'ft'),
-                        'tempRef': float(data.get('tempRef', 15) or 15),
+                        'isaVar': float(data.get('isa_var', 0) or 0),
+                        'isa_source': data.get('isa_source', 'manual'),
                         'IAS': float(data.get('IAS', 205) or 205),
                         'altitude': float(data.get('altitude', 800) or 800),
                         'altitude_unit': data.get('altitude_unit', 'ft'),
@@ -364,9 +364,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Fallback to current UI values
         params = {
-            'adElev': self.exact_values.get('adElev', ''),
-            'adElev_unit': self.units.get('adElev', 'ft'),
-            'tempRef': self.exact_values.get('tempRef', ''),
+            'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
+            'isa_source': self.isa_calculation_metadata['method'],
             'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
             'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
             'altitude_unit': self.units.get('altitude', 'ft'),
@@ -383,8 +382,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             text_table = "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n" + "=" * 50 + "\n\n"
             text_table += "PARAMETER\t\t\tVALUE\t\tUNIT\n" + "-" * 50 + "\n"
             rows = [
-                ("Aerodrome Elevation", params['adElev'], params['adElev_unit']),
-                ("Temperature Reference", params['tempRef'], "°C"),
+                ("ISA Variation", params['isaVar'], "°C"),
+                ("ISA Source", "Calculated" if params['isa_source'] == 'calculated' else "Manual input", ""),
                 ("IAS", params['IAS'], "kt"),
                 ("Altitude", params['altitude'], params['altitude_unit']),
                 ("Bank Angle", params['bankAngle'], "°"),
@@ -605,6 +604,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         # Prepare parameters
         params = {
             'isaVar': isa_var,
+            'isa_calculation_metadata': dict(self.isa_calculation_metadata),
             'IAS': IAS,
             'altitude': altitude,
             'altitude_unit': altitude_unit,
@@ -640,7 +640,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                     self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
                 self.log("Calculation completed successfully!")
                 self.log(
-                    "You can now use the 'Show Table' button to view and copy the parameters for documentation.")
+                    "You can now use the 'Copy Parameters' button to copy the parameters for documentation.")
             else:
                 self.log("Calculation completed but no results were returned.")
         except Exception as e:
