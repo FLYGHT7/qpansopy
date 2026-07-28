@@ -112,7 +112,7 @@
             <double>1.000000000000000</double>
            </property>
            <property name="decimals">
-            <number>2</number>
+            <number>4</number>
            </property>
           </widget>
          </item>
@@ -160,7 +160,7 @@
           <double>3.300000000000000</double>
          </property>
          <property name="decimals">
-          <number>2</number>
+          <number>4</number>
          </property>
         </widget>
        </item>

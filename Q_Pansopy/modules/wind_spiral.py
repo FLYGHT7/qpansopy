@@ -43,6 +43,85 @@ def tas_calculation(ias, altitude, var, bank_angle, wind_speed=30):
     return k, tas, rate_of_turn, radius_of_turn, w
 
 
+def build_wind_spiral_points(p_geom, azimuth, IAS, altitude, isa_var, bank_angle,
+                              wind_speed, turn_direction='R'):
+    """
+    Pure geometry builder for the wind spiral curve (no QGIS layers/project
+    side effects) — shared by the real calculation and the live preview.
+
+    :param p_geom: Reference point geometry (QgsPoint/QgsPointXY, map CRS)
+    :param azimuth: True azimuth of the reference track, in degrees
+    :param IAS: Indicated Air Speed in knots
+    :param altitude: Altitude in feet
+    :param isa_var: ISA temperature deviation in degrees C
+    :param bank_angle: Bank angle in degrees
+    :param wind_speed: Wind speed in knots
+    :param turn_direction: 'R' or 'L'
+    :return: (u_points, center_point) where u_points is a list of QgsPoint
+        starting at p_geom followed by one drift point per 30 deg step
+        (used both for the circular-string curve and the optional
+        'show points' marker layer), and center_point is a QgsPoint for the
+        turn's center.
+    """
+    if turn_direction == "L":
+        side = 90
+        d = (30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330)  # NM
+    else:  # Default to right turn
+        side = -90
+        d = (-30, -60, -90, -120, -150, -180, -210, -240, -270, -300, -330)  # NM
+
+    values = tas_calculation(IAS, altitude, isa_var, bank_angle, wind_speed=wind_speed)
+    r_turn = values[3]
+
+    # Calculate drift angle - Original Formula
+    drift_angle = math.asin(values[4] / values[1])
+
+    # Calculate wind spiral radii - Original Formula
+    wind_spiral_radius = {}
+    for i in range(30, 390, 30):
+        windspiral = (i / values[2]) * (values[4] / 3600)
+        wind_spiral_radius["radius_" + str(i)] = windspiral
+
+    u = [QgsPoint(p_geom)]
+
+    # Calculate center point
+    angle = 90 - azimuth + side  # left/right
+    angle = math.radians(angle)
+    dist_x, dist_y = (r_turn * 1852 * math.cos(angle), r_turn * 1852 * math.sin(angle))
+    xc, yc = (p_geom.x() + dist_x, p_geom.y() + dist_y)
+    center_point = QgsPoint(xc, yc)
+
+    # Calculate points for wind spiral
+    for i in d:
+        e = list(wind_spiral_radius.values())[int(abs(i) / 30) - 1]
+
+        angle = 90 - azimuth + i - side
+        angle = math.radians(angle)
+
+        # Calculate point on circle
+        dist_x, dist_y = (r_turn * 1852 * math.cos(angle), r_turn * 1852 * math.sin(angle))
+        cx1, cy2 = (center_point.x() + dist_x, center_point.y() + dist_y)
+
+        # Calculate drift point
+        dist_xd, dist_yd = (e * 1852 * math.cos(angle - drift_angle * (side / 90)),
+                          e * 1852 * math.sin(angle - drift_angle * (side / 90)))
+        dx1, dy2 = (cx1 + dist_xd, cy2 + dist_yd)
+
+        u.append(QgsPoint(dx1, dy2))
+
+    return u, center_point
+
+
+def build_wind_spiral_geometry(p_geom, azimuth, IAS, altitude, isa_var, bank_angle,
+                                wind_speed, turn_direction='R'):
+    """QgsGeometry (circular string) for live preview / rubber band use."""
+    u, _ = build_wind_spiral_points(p_geom, azimuth, IAS, altitude, isa_var,
+                                     bank_angle, wind_speed, turn_direction)
+    cString = QgsCircularString()
+    cString.setPoints(u)
+    return QgsGeometry(cString)
+
+
 def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     """
     Create Wind Spiral
@@ -66,28 +145,19 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
 
-    # Get aerodrome elevation and temperature reference from params
-    adElev = float(params.get('adElev', 0))
-    adElev_unit = params.get('adElev_unit', 'ft')
-    if adElev_unit == 'm':
-        adElev = adElev * 3.28084
-    tempRef = float(params.get('tempRef', 15))
-
-    # Calculate ISA temperature and deviation
-    valueISA = ISA_temperature(adElev, tempRef)
-    isa_var = valueISA[3]  # Use the calculated ISA deviation
+    # ISA deviation comes directly from the dockwidget's ISA Variation field
+    # (params['isaVar']) — adElev/tempRef are legacy inputs no longer collected
+    # by the Wind Spiral UI; they're only used by the standalone ISA Calculator
+    # dialog, whose result is what populates isaVar.
+    isa_var = float(params.get('isaVar', 0))
 
     # Create a parameters dictionary for JSON storage
     parameters_dict = {
-        'adElev': str(adElev),
-        'adElev_unit': adElev_unit,
-        'tempRef': str(tempRef),
         'IAS': str(IAS),
         'altitude': str(altitude),
         'altitude_unit': altitude_unit,
         'bankAngle': str(bankAngle),
         'w': str(w),
-        'isa_calculated': str(round(valueISA[2], 2)),
         'isa_var': str(round(isa_var, 2)),
         'turn_direction': turn_direction,
         'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -95,33 +165,12 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     }
     parameters_json = json.dumps(parameters_dict)
 
-    # Log ISA calculation results
+    # Log ISA deviation used in the calculation
     iface.messageBar().pushMessage(
         "Info",
-        f"ISA Temperature: {round(valueISA[2], 2)}°C, ISA Deviation: {round(isa_var, 2)}°C",
+        f"ISA Deviation used: {round(isa_var, 2)}°C",
         level=Qgis.Info
     )
-
-    # Set turn direction
-    if turn_direction == "L":
-        side = 90
-        d = (30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330)  # NM
-    else:  # Default to right turn
-        side = -90
-        d = (-30, -60, -90, -120, -150, -180, -210, -240, -270, -300, -330)  # NM
-
-    # Calculate TAS and turn parameters using original formula
-    values = tas_calculation(IAS, altitude, isa_var, bankAngle, wind_speed=w)
-    r_turn = values[3]
-
-    # Calculate drift angle - Original Formula
-    drift_angle = math.asin(values[4]/values[1])
-
-    # Calculate wind spiral radii - Original Formula
-    wind_spiral_radius = {}
-    for i in range(30, 390, 30):
-        windspiral = (i/values[2])*(values[4]/3600)
-        wind_spiral_radius["radius_" + str(i)] = windspiral
 
     # Get map CRS
     map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
@@ -155,9 +204,10 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     # Get point geometry
     p_geom = point_feature.geometry().asPoint()
 
-    # Initialize points list for circular string
-    u = []
-    u.append(QgsPoint(p_geom))
+    # Build the spiral curve points (shared pure geometry builder, also used
+    # by the dockwidget's live rubber-band preview)
+    u, center_point = build_wind_spiral_points(
+        p_geom, azimuth, IAS, altitude, isa_var, bankAngle, w, turn_direction)
 
     # Create point layer if requested
     if show_points:
@@ -167,59 +217,16 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
         v_layer.updateFields()
         pr = v_layer.dataProvider()
 
-        # Calculate center point
-        angle = 90 - azimuth + side  # left/right
-        bearing = math.radians(azimuth)
-        angle = math.radians(angle)
-        dist_x, dist_y = (r_turn * 1852 * math.cos(angle), r_turn * 1852 * math.sin(angle))
-        xc, yc = (p_geom.x() + dist_x, p_geom.y() + dist_y)
-        line_start = QgsPointXY(xc, yc)
-
         # Add center point
         seg = QgsFeature()
-        seg.setGeometry(QgsGeometry.fromPointXY(line_start))
+        seg.setGeometry(QgsGeometry.fromPoint(center_point))
         seg.setAttributes(['Wind Spiral Center'])
         pr.addFeatures([seg])
 
-        # Get angle from Center to P
-        connect_line = QgsGeometry.fromPolyline([QgsPoint(line_start), QgsPoint(p_geom)])
-        start_point_C = QgsPoint(connect_line.asPolyline()[0])
-    else:
-        # Calculate center point without creating layer
-        angle = 90 - azimuth + side
-        bearing = math.radians(azimuth)
-        angle = math.radians(angle)
-        dist_x, dist_y = (r_turn * 1852 * math.cos(angle), r_turn * 1852 * math.sin(angle))
-        xc, yc = (p_geom.x() + dist_x, p_geom.y() + dist_y)
-        line_start = QgsPointXY(xc, yc)
-        start_point_C = QgsPoint(line_start)
-
-    # Calculate points for wind spiral
-    for i in d:
-        e = list(wind_spiral_radius.values())[int(abs(i) / 30) - 1]
-
-        bearing = azimuth
-        angle = 90 - bearing + i - side
-        bearing = math.radians(bearing)
-        angle = math.radians(angle)
-
-        # Calculate point on circle
-        dist_x, dist_y = (r_turn * 1852 * math.cos(angle), r_turn * 1852 * math.sin(angle))
-        cx1, cy2 = (start_point_C.x() + dist_x, start_point_C.y() + dist_y)
-
-        # Calculate drift point
-        dist_xd, dist_yd = (e * 1852 * math.cos(angle - drift_angle * (side / 90)),
-                          e * 1852 * math.sin(angle - drift_angle * (side / 90)))
-        dx1, dy2 = (cx1 + dist_xd, cy2 + dist_yd)
-        line_startd = QgsPointXY(dx1, dy2)
-
-        # Add point to circular string
-        u.append(QgsPoint(line_startd))
-
-        # Add drift point to point layer if requested
-        if show_points:
+        # Add each drift point
+        for drift_point in u[1:]:
             seg = QgsFeature()
-            seg.setGeometry(QgsGeometry.fromPointXY(line_startd))
+            seg.setGeometry(QgsGeometry.fromPoint(drift_point))
             seg.setAttributes(['drift_angle'])
             pr.addFeatures([seg])
 

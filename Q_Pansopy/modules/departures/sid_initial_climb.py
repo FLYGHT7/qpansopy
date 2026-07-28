@@ -54,6 +54,9 @@ SPLAY_ANGLE = 15
 # Maximum rate of turn per ICAO (degrees/second)
 MAX_RATE_OF_TURN = 3
 
+# Reference line buffer beyond the widest downstream area boundary (0.5 NM, in meters)
+REFERENCE_LINE_BUFFER_M = 0.5 * 1852
+
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -324,6 +327,16 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     c_point_left = point_with_z(c_point_center.project(width_at_c, azimuth - 90), 0.0)
     c_point_right = point_with_z(c_point_center.project(width_at_c, azimuth + 90), 0.0)
 
+    # Reference line at the DER, 0.5 NM wider on each side than the c Area's
+    # outer boundary (the widest downstream section) — used later for
+    # downstream calculations.
+    reference_half_width = width_at_c + REFERENCE_LINE_BUFFER_M
+    reference_line_left = point_with_z(end_point.project(reference_half_width, azimuth - 90), 0.0)
+    reference_line_right = point_with_z(end_point.project(reference_half_width, azimuth + 90), 0.0)
+
+    log(f"Reference line half-width: {reference_half_width:.2f}m "
+        f"({reference_half_width / 1852:.2f}NM)")
+
     # -------------------------------------------------------------------------
     # Create protection areas layer
     # -------------------------------------------------------------------------
@@ -359,6 +372,34 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     areas_layer.triggerRepaint()
 
     QgsProject.instance().addMapLayers([areas_layer])
+
+    # -------------------------------------------------------------------------
+    # Create reference line layer
+    # -------------------------------------------------------------------------
+    reference_line_layer_name = "SID Initial Reference Line"
+    reference_line_layer = QgsVectorLayer(
+        f"LineString?crs={map_crs}",
+        reference_line_layer_name,
+        "memory"
+    )
+    reference_line_layer.dataProvider().addAttributes([QgsField('id', QVariant.String)])
+    reference_line_layer.updateFields()
+
+    reference_line_geometry = QgsGeometry.fromPolyline([
+        reference_line_left, end_point, reference_line_right
+    ])
+    reference_line_feature = QgsFeature()
+    reference_line_feature.setGeometry(reference_line_geometry)
+    reference_line_feature.setAttributes(['reference_line'])
+    reference_line_layer.dataProvider().addFeatures([reference_line_feature])
+
+    reference_line_layer.updateExtents()
+    reference_line_layer.renderer().symbol().setColor(QColor("purple"))
+    reference_line_layer.renderer().symbol().setWidth(0.5)
+    reference_line_layer.triggerRepaint()
+
+    QgsProject.instance().addMapLayers([reference_line_layer])
+    log(f"Reference line layer added: {reference_line_layer_name}")
 
     # -------------------------------------------------------------------------
     # Create construction lines layer
@@ -425,6 +466,8 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     log("Turn Initiation Area created")
     log("c Area created")
     log("Construction lines created")
+    log(f"Reference line layer: {reference_line_layer_name} "
+        f"(half-width {reference_half_width:.2f}m)")
     log(f"Distance to TNA/H: {tna_distance_nm:.4f}NM")
     log(f"TAS: {tas_values['tas_kt']:.2f}kt")
     log(f"Rate of Turn: {tas_values['rate_of_turn']:.2f}°/s")
@@ -435,6 +478,8 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     return {
         'areas_layer': 'SID Protection Areas',
         'lines_layer': 'SID Construction Lines',
+        'reference_line_layer': reference_line_layer_name,
+        'reference_line_half_width': reference_half_width,
         'tna_distance_nm': tna_distance_nm,
         'tas_kt': tas_values['tas_kt'],
         'rate_of_turn': tas_values['rate_of_turn'],
