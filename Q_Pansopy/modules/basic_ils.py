@@ -168,22 +168,22 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     missed_a = missed_center.project(150, back_azimuth-90)
     missed_m_center = missed_center.project(1800, azimuth)
 
-    # Simplified missed approach divergence calculation:
-    # For the lateral divergence at 1800m from start:
-    # Standard 15% slope gives lateral spread of 15% of distance = 1800 * 0.15 = 270m
-    # Add initial half-width of 150m: total = 150 + 270 = 420m
-    missed_half_width_1800m = 150 + (1800 * ILS_SPLAY_RATIO)
+    # Lateral half-width at 1800m from missed_center: NOT a 15% splay of the missed
+    # approach surface itself. It's a 150m base plus the horizontal run of the 14.3%
+    # transition-surface slope over 45m of rise (same slope as transition_distance_1/2/3
+    # below) -- the /1800 and *1800 cancel, so this is a near-fixed offset (~464.7m),
+    # independent of the 1800m distance. A prior "simplification" mistook this for
+    # 1800 * 0.15 (issue #188) and silently shrank the missed approach surface.
+    missed_half_width_1800m = 150 + 1800 * ((45 / (ILS_TRANSITION_SLOPE / 100)) / 1800)
 
     missed_b = missed_m_center.project(missed_half_width_1800m, back_azimuth-90)
     missed_e = missed_m_center.project(missed_half_width_1800m, back_azimuth+90)
     missed_f = missed_center.project(150, back_azimuth+90)
     missed_f_center = missed_center.project(12000, azimuth)
 
-    # For the final points at 12000m from start:
-    # Total distance from threshold = 900 + 12000 = 12900m
-    # Lateral spread = 15% of 12900m = 1935m
-    # Add initial half-width: total = 150 + 1935 = 2085m
-    missed_half_width_12000m = 150 + (12900 * ILS_SPLAY_RATIO)
+    # Half-width at 12000m from missed_center: the 1800m offset above plus a 25%
+    # splay over the remaining 10200m segment.
+    missed_half_width_12000m = 150 + 1800 * ((45 / (ILS_TRANSITION_SLOPE / 100)) / 1800) + (10200 * 0.25)
 
     missed_c = missed_f_center.project(missed_half_width_12000m, back_azimuth-90)
     missed_d = missed_f_center.project(missed_half_width_12000m, back_azimuth+90)
