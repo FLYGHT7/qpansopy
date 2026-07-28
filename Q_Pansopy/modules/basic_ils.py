@@ -17,6 +17,7 @@ import os
 import datetime
 import json
 from ..utils import get_selected_feature, fix_kml_altitude_mode
+from ..parameters_inspector_dialog import register_parameters_action
 from .constants import FT_TO_M, ILS_GROUND_LENGTH_M, ILS_APPROACH_1_M, ILS_SPLAY_RATIO, ILS_TRANSITION_SLOPE
 
 
@@ -321,6 +322,9 @@ def calculate_basic_ils(iface, point_layer, runway_layer, params):
     transition_rule.setFilterExpression("\"ILS_surface\" LIKE 'transition surface%'")
     root_rule.appendChild(transition_rule)
     v_layer.setRenderer(QgsRuleBasedRenderer(root_rule))
+
+    # Let users inspect the stored 'parameters' JSON as a rendered table
+    register_parameters_action(v_layer)
 
     # Add layer to the project
     QgsProject.instance().addMapLayer(v_layer)

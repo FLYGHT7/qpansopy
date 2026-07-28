@@ -16,6 +16,7 @@ import os
 import datetime
 import json
 from ..utils import get_selected_feature, fix_kml_altitude_mode
+from ..parameters_inspector_dialog import register_parameters_action
 
 
 def ISA_temperature(adElev, tempRef):
@@ -256,6 +257,9 @@ def calculate_wind_spiral(iface, point_layer, reference_layer, params):
     pv_layer.renderer().symbol().setColor(QColor("green"))
     pv_layer.renderer().symbol().setWidth(0.5)
     pv_layer.triggerRepaint()
+
+    # Let users inspect the stored 'parameters' JSON as a rendered table
+    register_parameters_action(pv_layer)
 
     # Add layers to the project
     QgsProject.instance().addMapLayer(pv_layer)

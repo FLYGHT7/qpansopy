@@ -1,6 +1,6 @@
 import os
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, QMimeData
+from qgis.PyQt.QtCore import pyqtSignal
 from qgis.core import QgsMapLayerProxyModel, Qgis
 from ...qt_compat import MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 
@@ -29,7 +29,8 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Signals
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self._browse)
-        self.copyWordButton.clicked.connect(self.copy_to_word)
+        self.copyWordButton.setText("Show Table")
+        self.copyWordButton.clicked.connect(self.show_parameters_table)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
@@ -100,10 +101,12 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log(f"Error during calculation: {e}")
             self.log(traceback.format_exc())
 
-    def copy_to_word(self):
+    def show_parameters_table(self):
+        """Show the last calculation's parameters as a rendered HTML table.
+        The popup itself offers a 'Copy to Word' button (issue #193)."""
         summary = self.last_summary
         if not summary:
-            self.log('Error: No calculation available to copy')
+            self.log('Error: No calculation available to show')
             return
 
         rows = [
@@ -132,8 +135,8 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         html_rows.append("</table>")
         html_table = "".join(html_rows)
 
-        mime = QMimeData()
-        mime.setHtml(html_table)
-        mime.setText(table_text)
-        QtWidgets.QApplication.clipboard().setMimeData(mime)
-        self.log('Summary copied to clipboard as Word-friendly table')
+        from ...parameters_inspector_dialog import ParametersInspectorDialog
+        dialog = ParametersInspectorDialog(
+            "Holding Pattern — Feature Parameters", html_table, table_text, parent=self)
+        dialog.show()
+        self.log('Holding pattern parameters shown in Parameters Inspector.')

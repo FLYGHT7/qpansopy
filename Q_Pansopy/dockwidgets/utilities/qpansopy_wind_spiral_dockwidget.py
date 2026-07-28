@@ -23,7 +23,7 @@ Procedure Analysis and Obstacle Protection Surfaces - Wind Spiral Module
 
 import os
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
+from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
 from qgis.PyQt.QtWidgets import QMessageBox
 from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
@@ -101,7 +101,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         if hasattr(self, 'browseButton'):
             self.browseButton.clicked.connect(self.browse_output_folder)
         if hasattr(self, 'copyParamsButton'):
-            self.copyParamsButton.clicked.connect(self.copy_parameters_for_word)
+            self.copyParamsButton.setText("Show Table")
+            self.copyParamsButton.clicked.connect(self.show_parameters_table)
 
         # Setup parameter input fields dynamically
         self.setup_dynamic_parameters()
@@ -313,9 +314,10 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         else:
             print(f"Wind Spiral: {message}")
 
-    def copy_parameters_for_word(self):
-        """Copy parameters in a Word-friendly table format.
+    def show_parameters_table(self):
+        """Show the last calculation's parameters as a rendered HTML table.
         Prefers reading from output layer 'parameters' JSON; falls back to current UI values.
+        The popup itself offers a 'Copy to Word' button (issue #193).
         """
         # Try reading from output layers first
         try:
@@ -348,16 +350,13 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                         'turn_direction': data.get('turn_direction', 'R')
                     }
                     from ...modules.wind_spiral import copy_parameters_table
+                    from ...parameters_inspector_dialog import ParametersInspectorDialog
                     html_table = copy_parameters_table(mapped, as_html=True)
                     text_table = copy_parameters_table(mapped, as_html=False)
-                    mime = QMimeData()
-                    mime.setHtml(html_table)
-                    mime.setText(text_table)
-                    clipboard = QtWidgets.QApplication.clipboard()
-                    clipboard.setMimeData(mime)
-                    self.log("Wind Spiral parameters (from layer) copied to clipboard as a Word table.")
-                    self.iface.messageBar().pushMessage(
-                        "QPANSOPY", "Wind Spiral parameters copied (from layer)", level=Qgis.Success)
+                    dialog = ParametersInspectorDialog(
+                        "Wind Spiral — Feature Parameters", html_table, text_table, parent=self)
+                    dialog.show()
+                    self.log("Wind Spiral parameters (from layer) shown in Parameters Inspector.")
                     return
         except Exception as e:
             # Non-fatal; fall back to UI values
@@ -396,13 +395,11 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                 text_table += f"{name:<25}\t{value}\t\t{unit}\n"
             html_table = text_table.replace("\n", "<br>")
 
-        mime = QMimeData()
-        mime.setHtml(html_table)
-        mime.setText(text_table)
-        clipboard = QtWidgets.QApplication.clipboard()
-        clipboard.setMimeData(mime)
-        self.log("Wind Spiral parameters (from UI) copied to clipboard as a Word table.")
-        self.iface.messageBar().pushMessage("QPANSOPY", "Wind Spiral parameters copied (from UI)", level=Qgis.Success)
+        from ...parameters_inspector_dialog import ParametersInspectorDialog
+        dialog = ParametersInspectorDialog(
+            "Wind Spiral — Feature Parameters", html_table, text_table, parent=self)
+        dialog.show()
+        self.log("Wind Spiral parameters (from UI) shown in Parameters Inspector.")
 
     def copy_parameters_as_json(self):
         """Copiar los parámetros actuales al portapapeles en formato JSON"""
@@ -643,7 +640,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                     self.log(f"Wind Spiral KML exported to: {result.get('spiral_path', 'N/A')}")
                 self.log("Calculation completed successfully!")
                 self.log(
-                    "You can now use the 'Copy Parameters as JSON' button to copy the parameters for documentation.")
+                    "You can now use the 'Show Table' button to view and copy the parameters for documentation.")
             else:
                 self.log("Calculation completed but no results were returned.")
         except Exception as e:

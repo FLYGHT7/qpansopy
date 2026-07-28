@@ -35,7 +35,7 @@ def _install_qgis_stubs():
         'QgsCategorizedSymbolRenderer', 'QgsRendererCategory',
         'QgsSimpleFillSymbolLayer',
         # Map layer
-        'QgsMapLayerProxyModel', 'QgsMapLayerComboBox',
+        'QgsMapLayerProxyModel', 'QgsMapLayerComboBox', 'QgsAction',
         # Additional geometry/query classes
         'QgsRectangle', 'QgsFeatureRequest', 'QgsSpatialIndex',
         'QgsLayerTreeGroup', 'QgsLayerTreeLayer',
@@ -68,6 +68,7 @@ def _install_qgis_stubs():
         'Double': 6, 'QString': 10, 'Int': 2,
     })
     qtcore.pyqtSignal = lambda *a, **kw: None
+    qtcore.QMimeData = _Dummy
     qtgui.QColor = _Dummy
 
     # uic stub — needed by dockwidget modules that call uic.loadUiType()
@@ -80,6 +81,7 @@ def _install_qgis_stubs():
         'QFileDialog', 'QDialog', 'QFormLayout', 'QLineEdit', 'QComboBox',
         'QDialogButtonBox', 'QMessageBox', 'QWidget', 'QApplication',
         'QDockWidget', 'QPushButton', 'QTextEdit', 'QGroupBox', 'QVBoxLayout',
+        'QHBoxLayout', 'QTextBrowser',
     ]:
         setattr(qtwidgets, widget_name, _Dummy)
 

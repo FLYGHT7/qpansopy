@@ -19,6 +19,7 @@ import json
 import numpy as np
 import re
 from ..utils import get_selected_feature, fix_kml_altitude_mode, fix_kml_polygon_fill_color
+from ..parameters_inspector_dialog import register_parameters_action
 
 # Global variables to store computed values
 OAS_template = None
@@ -344,6 +345,9 @@ def calculate_oas_ils(iface, point_layer, runway_layer, params):
 
         # Update layer extents
         v_layer.updateExtents()
+
+        # Let users inspect the stored 'parameters' JSON as a rendered table
+        register_parameters_action(v_layer)
 
         # Add layer to the project
         QgsProject.instance().addMapLayer(v_layer)

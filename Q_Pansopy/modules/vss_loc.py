@@ -16,6 +16,7 @@ import os
 import datetime
 import json
 from ..utils import get_selected_feature, fix_kml_altitude_mode
+from ..parameters_inspector_dialog import register_parameters_action
 from .constants import FT_TO_M
 
 
@@ -205,6 +206,10 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     ocs_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor(255, 146, 0))
     ocs_layer.renderer().symbol().symbolLayer(0).setStrokeWidth(0.7)
     ocs_layer.triggerRepaint()
+
+    # Let users inspect the stored 'parameters' JSON as a rendered table
+    register_parameters_action(vss_layer)
+    register_parameters_action(ocs_layer)
 
     # Add layers to the project
     QgsProject.instance().addMapLayers([vss_layer, ocs_layer])
