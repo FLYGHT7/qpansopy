@@ -8,6 +8,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.zip
 
 # pytest / coverage
 .pytest_cache/
@@ -18,6 +19,7 @@ tests/results/
 #agents skills
 .agents/
 .claude/
+.augment/
 CLAUDE.md
 skills-lock.json
 .idea/
@@ -27,8 +29,5 @@ doc/
 docs/
 DEVELOPMENT_PLAN.md
 
-#python cache
-__pycache__/
-*.pyc
-*.pyo
-*.zip
+.venv/
+.idea/
