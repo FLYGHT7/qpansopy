@@ -39,6 +39,7 @@ changelog=
  - Fix Basic ILS missed approach surface lateral half-width formula (was incorrectly using a flat 15% splay instead of the 14.3% transition-slope-derived offset), restoring parity with the reference script
  - Store all input parameters (DER elevation, PDG, TNA, MSA, CWY distance, options) as a JSON 'parameters' field on every OMNI SID output feature (areas, reference line, construction points)
  - Replace Wind Spiral's IAS and Altitude text fields with spin boxes so arrow keys can nudge values and immediately see the impact on the live preview
+ - SID Initial Climb: use 4 decimal places on AD/DER elevation, PDG, Temp and Altitude fields, and add an ISA Variation field with a Calculate button (manual input or calculated from AD elevation + Temp, like Wind Spiral)
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included
