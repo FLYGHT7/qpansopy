@@ -177,28 +177,27 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.formLayout.addRow("ISA Variation (°C):", isa_container)
 
-        # IAS
-        self.IASLineEdit = QtWidgets.QLineEdit(self)
-        self.IASLineEdit.setValidator(validator)
-        self.IASLineEdit.setText("205")
-        self.IASLineEdit.textChanged.connect(
-            lambda text: self.store_exact_value('IAS', text))
-        self.IASLineEdit.textChanged.connect(self._update_preview)
-        self.IASLineEdit.setMinimumHeight(28)
-        self.IASLineEdit.setMaximumHeight(28)
-        self.IASLineEdit.setStyleSheet(line_edit_style)
-        self.formLayout.addRow("IAS (kt):", self.IASLineEdit)
+        # IAS - spin box (integers) so arrow keys can nudge the live preview (issue #199)
+        self.IASSpinBox = QtWidgets.QSpinBox(self)
+        self.IASSpinBox.setRange(50, 400)
+        self.IASSpinBox.setSingleStep(1)
+        self.IASSpinBox.setValue(205)
+        self.IASSpinBox.valueChanged.connect(self._update_preview)
+        self.IASSpinBox.setMinimumHeight(28)
+        self.IASSpinBox.setMaximumHeight(28)
+        self.IASSpinBox.setStyleSheet(line_edit_style)
+        self.formLayout.addRow("IAS (kt):", self.IASSpinBox)
 
-        # Altitude with unit selector
-        self.altitudeLineEdit = QtWidgets.QLineEdit(self)
-        self.altitudeLineEdit.setValidator(validator)
-        self.altitudeLineEdit.setText("800")
-        self.altitudeLineEdit.textChanged.connect(
-            lambda text: self.store_exact_value('altitude', text))
-        self.altitudeLineEdit.textChanged.connect(self._update_preview)
-        self.altitudeLineEdit.setMinimumHeight(28)
-        self.altitudeLineEdit.setMaximumHeight(28)
-        self.altitudeLineEdit.setStyleSheet(line_edit_style)
+        # Altitude with unit selector - spin box (integers) so arrow keys can
+        # nudge the live preview (issue #199)
+        self.altitudeSpinBox = QtWidgets.QSpinBox(self)
+        self.altitudeSpinBox.setRange(0, 50000)
+        self.altitudeSpinBox.setSingleStep(100)
+        self.altitudeSpinBox.setValue(800)
+        self.altitudeSpinBox.valueChanged.connect(self._update_preview)
+        self.altitudeSpinBox.setMinimumHeight(28)
+        self.altitudeSpinBox.setMaximumHeight(28)
+        self.altitudeSpinBox.setStyleSheet(line_edit_style)
 
         self.altitudeUnitCombo = QtWidgets.QComboBox(self)
         self.altitudeUnitCombo.addItems(['ft', 'm'])
@@ -215,7 +214,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         altitudeLayout = QtWidgets.QHBoxLayout(altitudeContainer)
         altitudeLayout.setContentsMargins(0, 0, 0, 0)
         altitudeLayout.setSpacing(8)
-        altitudeLayout.addWidget(self.altitudeLineEdit)
+        altitudeLayout.addWidget(self.altitudeSpinBox)
         altitudeLayout.addWidget(self.altitudeUnitCombo)
 
         self.formLayout.addRow("Altitude:", altitudeContainer)
@@ -362,8 +361,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         params = {
             'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
             'isa_source': self.isa_calculation_metadata['method'],
-            'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
-            'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
+            'IAS': self.IASSpinBox.value(),
+            'altitude': self.altitudeSpinBox.value(),
             'altitude_unit': self.units.get('altitude', 'ft'),
             'bankAngle': self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()),
             'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
@@ -385,8 +384,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                 'adElev_unit': self.units.get('adElev', 'ft'),
                 'tempRef': self.exact_values.get('tempRef', ''),
                 'isaVar': self.exact_values.get('isaVar', self.isaVarLineEdit.text()),
-                'IAS': self.exact_values.get('IAS', self.IASLineEdit.text()),
-                'altitude': self.exact_values.get('altitude', self.altitudeLineEdit.text()),
+                'IAS': self.IASSpinBox.value(),
+                'altitude': self.altitudeSpinBox.value(),
                 'altitude_unit': self.units.get('altitude', 'ft'),
                 'bankAngle': self.exact_values.get('bankAngle', self.bankAngleLineEdit.text()),
                 'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
@@ -475,8 +474,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             azimuth = start_point.azimuth(end_point) + 180
 
             isa_var = float(self.isaVarLineEdit.text() or 0)
-            IAS = float(self.IASLineEdit.text() or 0)
-            altitude = float(self.altitudeLineEdit.text() or 0)
+            IAS = self.IASSpinBox.value()
+            altitude = self.altitudeSpinBox.value()
             if self.units.get('altitude', 'ft') == 'm':
                 altitude = altitude * 3.28084
             bank_angle = float(self.bankAngleLineEdit.text() or 0)
@@ -561,8 +560,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         except Exception:
             isa_var = 0.0
 
-        IAS = self.exact_values.get('IAS', self.IASLineEdit.text())
-        altitude = self.exact_values.get('altitude', self.altitudeLineEdit.text())
+        IAS = self.IASSpinBox.value()
+        altitude = self.altitudeSpinBox.value()
         bankAngle = self.exact_values.get('bankAngle', self.bankAngleLineEdit.text())
         w = self.exact_values.get('w', self.windSpeedLineEdit.text())
         turn_direction = self.turnDirectionCombo.currentText()
