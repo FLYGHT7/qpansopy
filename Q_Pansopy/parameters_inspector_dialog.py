@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 /***************************************************************************
-Parameters Inspector Dialog
+Parameters Inspector
                             A QGIS plugin
-Renders a feature's 'parameters' JSON attribute as a readable HTML table,
+Renders a feature's 'parameters' JSON attribute as a readable, themeable
+HTML table (QWebEngineView when available, with a QTextBrowser fallback),
 with a button to copy it to the clipboard as a Word-pasteable table.
                         -------------------
    begin                : 2026-07-28
@@ -18,16 +19,31 @@ with a button to copy it to the clipboard as a Word-pasteable table.
 *   (at your option) any later version.                                   *
 ***************************************************************************/
 """
+import html
 import json
 
 from qgis.core import QgsAction, QgsProject
-from qgis.PyQt.QtCore import QMimeData
+from qgis.PyQt.QtCore import QMimeData, QObject, pyqtSlot
 from qgis.PyQt.QtWidgets import (
-    QApplication, QDialog, QHBoxLayout, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout,
+    QApplication, QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout,
 )
 
-from .dockwidgets.base_dockwidget import load_base_qss
 from .utils import format_parameters_table
+
+# QtWebEngineWidgets/QtWebChannel are optional, heavy Qt components (bundled
+# separately from base PyQt -- e.g. `python-pyqt6-webengine` on Arch/CachyOS)
+# that aren't guaranteed to be installed alongside QGIS. Fall back to a
+# QTextBrowser-based popup (no live JS theme toggle, but still dark by
+# default) rather than crashing every "Show Table" action for users who
+# lack them.
+try:
+    from qgis.PyQt.QtWebChannel import QWebChannel
+    from qgis.PyQt.QtWebEngineWidgets import QWebEngineView
+    _WEBENGINE_AVAILABLE = True
+except ImportError:
+    QWebChannel = None
+    QWebEngineView = None
+    _WEBENGINE_AVAILABLE = False
 
 
 def _generic_python_action_type():
@@ -44,59 +60,381 @@ def _generic_python_action_type():
 
 
 # Reached from a QGIS layer action, which is triggered per-click rather than
-# tracked by any caller -- keep non-modal dialogs alive here, otherwise PyQt
-# garbage-collects the QDialog the moment show_parameters_inspector() returns.
-_open_dialogs = []
+# tracked by any caller -- keep open QWebEngineView popups alive here (keyed
+# by id(view)), otherwise PyQt garbage-collects them the moment
+# show_parameters_inspector()/show_web_popup() returns.
+_open_views = {}
+
+_PAGE_TEMPLATE = """<html>
+<head>
+<style>
+    html, body {
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        margin: 0; padding: 0; height: 100vh;
+        overflow-x: hidden; overflow-y: auto; box-sizing: border-box;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    ::-webkit-scrollbar { width: 14px; background-color: rgba(0, 0, 0, 0.05); }
+    ::-webkit-scrollbar-track { background-color: rgba(0, 0, 0, 0.1); border-radius: 4px; }
+    .light-theme ::-webkit-scrollbar-thumb { background-color: #64748b; border: 2px solid #f4f6f9; border-radius: 6px; }
+    .dark-theme ::-webkit-scrollbar-thumb { background-color: #38bdf8; border: 2px solid #0f172a; border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background-color: #0076a3 !important; }
+    .dark-theme ::-webkit-scrollbar-thumb:hover { background-color: #f8fafc !important; }
+
+    body.light-theme { background-color: #f4f6f9; color: #333333; }
+    .light-theme .layer-title { color: #1e293b; }
+    .light-theme h3 { color: #1e293b; border-bottom: 2px solid #e2e8f0; }
+    .light-theme .section-title { color: #475569; }
+    .light-theme .table-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .light-theme th { background-color: #0f172a; color: #ffffff; border-bottom: 2px solid #1e293b; }
+    .light-theme td { border-bottom: 1px solid #f1f5f9; color: #475569; }
+    .light-theme tr:nth-child(even) td { background-color: #f8fafc; }
+    .light-theme tr:hover td { background-color: #f1f5f9; color: #0f172a; }
+    .light-theme td b { color: #1e293b; }
+    .light-theme .word-btn { background-color: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; }
+    .light-theme .word-btn:hover { background-color: #f1f5f9; }
+
+    body.dark-theme { background-color: #0f172a; color: #cbd5e1; }
+    .dark-theme .layer-title { color: #f8fafc; }
+    .dark-theme h3 { color: #f8fafc; border-bottom: 2px solid #1e293b; }
+    .dark-theme .section-title { color: #94a3b8; }
+    .dark-theme .table-card { background: #1e293b; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+    .dark-theme th { background-color: #020617; color: #38bdf8; border-bottom: 2px solid #334155; }
+    .dark-theme td { border-bottom: 1px solid #334155; color: #94a3b8; }
+    .dark-theme tr:nth-child(even) td { background-color: #1e293b; }
+    .dark-theme tr:nth-child(odd) td { background-color: #111827; }
+    .dark-theme tr:hover td { background-color: #334155; color: #f8fafc; }
+    .dark-theme td b { color: #f1f5f9; }
+    .dark-theme .word-btn { background-color: #1e293b; border: 1px solid #475569; color: #f8fafc; }
+    .dark-theme .word-btn:hover { background-color: #334155; }
+
+    #main-container { padding: 24px; display: flex; flex-direction: column; position: relative; }
+    .layer-title { font-size: 20px; font-weight: 600; margin-bottom: 2px; padding-right: 180px; }
+    h3 { margin: 0 0 16px 0; font-size: 20px; font-weight: 600; padding-bottom: 8px; }
+    .section-title { margin: 20px 0 8px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .table-card { border-radius: 8px; overflow: hidden; transition: background 0.2s, border 0.2s; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 14px 18px; font-size: 14px; line-height: 1.5; word-break: break-all; }
+    th { font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em; width: 35%; }
+    td b { font-weight: 500; }
+    .controls-wrapper { position: absolute; top: 22px; right: 24px; display: flex; align-items: center; gap: 16px; }
+    .word-btn { padding: 4px 10px; font-size: 12px; font-weight: 500; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s; }
+    .theme-switch-wrapper { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; }
+    .theme-switch { display: inline-block; height: 20px; position: relative; width: 36px; }
+    .theme-switch input { display:none; }
+    .slider { background-color: #cbd5e1; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .2s; border-radius: 20px; }
+    .slider:before { background-color: white; bottom: 3px; content: ""; height: 14px; left: 3px; position: absolute; transition: .2s; width: 14px; border-radius: 50%; }
+    input:checked + .slider { background-color: #38bdf8; }
+    input:checked + .slider:before { transform: translateX(16px); }
+</style>
+<!-- Include the internal Qt WebChannel Script framework to link JS with Python Backend -->
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body class="dark-theme">
+    <div id="main-container">
+        <div class="layer-title">__QPANSOPY_TITLE__</div>
+        <h3>Feature Parameters</h3>
+
+        <div class="controls-wrapper">
+            <button class="word-btn" onclick="triggerNativeCopy()">Copy to Word</button>
+            <div class="theme-switch-wrapper">
+                <span id="theme-label">Dark Mode</span>
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" checked />
+                    <div class="slider"></div>
+                </label>
+            </div>
+        </div>
+
+__QPANSOPY_SECTIONS__
+    </div>
+
+    <script>
+        let backendBridge;
+        // Establish runtime links with the PyQt backend bridge container channels
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+            backendBridge = channel.objects.pyBridge;
+        });
+
+        const toggleSwitch = document.querySelector('#checkbox');
+        const themeLabel = document.querySelector('#theme-label');
+
+        toggleSwitch.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.className = 'dark-theme';
+                themeLabel.textContent = 'Dark Mode';
+            } else {
+                document.body.className = 'light-theme';
+                themeLabel.textContent = 'Light Mode';
+            }
+        }, false);
+
+        function triggerNativeCopy() {
+            if (backendBridge) {
+                backendBridge.copyToClipboard();
+                const btn = document.querySelector('.word-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✔ Copied!';
+                setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+            }
+        }
+    </script>
+</body>
+</html>
+"""
 
 
-class ParametersInspectorDialog(QDialog):
-    """Read-only popup rendering a feature's stored parameters as an HTML table."""
+def _format_value(value):
+    return json.dumps(value) if isinstance(value, (dict, list)) else str(value)
 
-    def __init__(self, title, html_table, text_table, parent=None):
+
+def _build_rows_html(flat_params):
+    rows = []
+    for key, value in flat_params.items():
+        rows.append(
+            f"<tr><td><b>{html.escape(str(key))}</b></td>"
+            f"<td>{html.escape(_format_value(value))}</td></tr>"
+        )
+    return "".join(rows)
+
+
+def _build_section_html(section_title, flat_params, show_heading):
+    heading = f'<h4 class="section-title">{html.escape(section_title)}</h4>' if show_heading else ''
+    rows = _build_rows_html(flat_params)
+    return (
+        f'{heading}<div class="table-card"><table>'
+        f'<tr><th>Parameter</th><th>Value</th></tr>{rows}</table></div>'
+    )
+
+
+def _build_page_html(title, sections):
+    """
+    sections: list of (section_title, flat_params_dict) pairs. A single
+    section renders exactly like the reference sample (no sub-heading);
+    multiple sections (e.g. Basic ILS/OAS ILS aggregating every matching
+    layer in the project) each get their own labelled table-card.
+    """
+    show_heading = len(sections) > 1
+    sections_html = "".join(
+        _build_section_html(section_title, flat_params, show_heading)
+        for section_title, flat_params in sections
+    )
+    page = _PAGE_TEMPLATE.replace("__QPANSOPY_TITLE__", html.escape(title))
+    page = page.replace("__QPANSOPY_SECTIONS__", sections_html)
+    return page
+
+
+class ClipboardBridge(QObject):
+    """JS-callable bridge (via QWebChannel) that copies a clean, Word-pasteable
+    HTML table to the native clipboard -- QWebEngineView content runs in a
+    separate process/sandbox, so JS can't touch the OS clipboard directly."""
+
+    def __init__(self, sections):
+        super().__init__()
+        self._sections = sections
+
+    @pyqtSlot()
+    def copyToClipboard(self):
+        multi = len(self._sections) > 1
+        html_parts = []
+        text_parts = []
+        for section_title, flat_params in self._sections:
+            html_parts.append(format_parameters_table(section_title, flat_params, as_html=True))
+            text_parts.append(format_parameters_table(section_title, flat_params, as_html=False))
+        mime = QMimeData()
+        mime.setHtml("<div>" + "<br>".join(html_parts) + "</div>" if multi else html_parts[0])
+        mime.setText("\n\n".join(text_parts))
+        QApplication.clipboard().setMimeData(mime)
+
+
+def show_web_popup(title, sections):
+    """
+    Show a Parameters Inspector popup for one or more (section_title,
+    flat_params_dict) pairs. Non-modal; kept alive in _open_views until
+    the window is closed. Uses QWebEngineView when available (matching
+    issue #193's requested look: dark-mode-by-default with a live toggle),
+    falling back to a QTextBrowser popup otherwise.
+    """
+    if _WEBENGINE_AVAILABLE:
+        return _show_webengine_popup(title, sections)
+    return _show_textbrowser_popup(title, sections)
+
+
+def _show_webengine_popup(title, sections):
+    page_html = _build_page_html(title, sections)
+
+    view = QWebEngineView()
+    bridge = ClipboardBridge(sections)
+    channel = QWebChannel(view.page())
+    view.page().setWebChannel(channel)
+    channel.registerObject("pyBridge", bridge)
+
+    view.setHtml(page_html)
+    view.setWindowTitle(title)
+
+    screen = view.screen().geometry()
+    max_width = int(screen.width() / 3)
+    max_height = int(screen.height() * 0.75)
+    view.resize(max_width, max_height)
+
+    def _fit_to_content(_ok=None):
+        view.page().runJavaScript(
+            "document.getElementById('main-container').offsetHeight",
+            lambda rendered_height: view.resize(max_width, min(int(rendered_height) + 12, max_height))
+        )
+
+    view.loadFinished.connect(_fit_to_content)
+
+    key = id(view)
+    _open_views[key] = (view, bridge, channel)
+    view.destroyed.connect(lambda: _open_views.pop(key, None))
+
+    view.show()
+    return view
+
+
+# ---------------------------------------------------------------------------
+# QTextBrowser fallback (no QtWebEngine available): a static render of the
+# same data, dark-by-default. QTextBrowser can't run JavaScript, so the
+# light/dark toggle and "Copy to Word" are plain QPushButtons instead of the
+# JS/QWebChannel-driven controls in the WebEngine version -- the toggle just
+# re-renders the HTML with a different colour palette and calls setHtml()
+# again; "Copy to Word" calls ClipboardBridge directly.
+# ---------------------------------------------------------------------------
+
+_FALLBACK_PALETTES = {
+    'dark': {
+        'bg': '#0f172a', 'title_fg': '#f8fafc', 'h3_fg': '#f8fafc', 'h3_border': '#1e293b',
+        'section_fg': '#94a3b8', 'card_border': '#334155',
+        'th_bg': '#020617', 'th_fg': '#38bdf8',
+        'row_even': '#1e293b', 'row_odd': '#111827', 'td_border': '#334155',
+        'key_fg': '#f1f5f9', 'value_fg': '#94a3b8',
+    },
+    'light': {
+        'bg': '#f4f6f9', 'title_fg': '#1e293b', 'h3_fg': '#1e293b', 'h3_border': '#e2e8f0',
+        'section_fg': '#475569', 'card_border': '#e2e8f0',
+        'th_bg': '#0f172a', 'th_fg': '#ffffff',
+        'row_even': '#ffffff', 'row_odd': '#f8fafc', 'td_border': '#f1f5f9',
+        'key_fg': '#1e293b', 'value_fg': '#475569',
+    },
+}
+
+
+def _build_fallback_rows_html(flat_params, palette):
+    rows = []
+    for idx, (key, value) in enumerate(flat_params.items()):
+        bg = palette['row_even'] if idx % 2 == 0 else palette['row_odd']
+        rows.append(
+            f'<tr>'
+            f'<td style="background-color:{bg}; color:{palette["key_fg"]}; padding:10px; '
+            f'border-bottom:1px solid {palette["td_border"]};"><b>{html.escape(str(key))}</b></td>'
+            f'<td style="background-color:{bg}; color:{palette["value_fg"]}; padding:10px; '
+            f'border-bottom:1px solid {palette["td_border"]};">{html.escape(_format_value(value))}</td></tr>'
+        )
+    return "".join(rows)
+
+
+def _build_fallback_section_html(section_title, flat_params, show_heading, palette):
+    heading = (
+        f'<h4 style="color:{palette["section_fg"]}; text-transform:uppercase; font-size:12px; '
+        f'letter-spacing:0.05em; margin:20px 0 8px 0;">{html.escape(section_title)}</h4>'
+    ) if show_heading else ''
+    rows = _build_fallback_rows_html(flat_params, palette)
+    header_style = (
+        f'background-color:{palette["th_bg"]}; color:{palette["th_fg"]}; padding:12px; text-align:left; '
+        'text-transform:uppercase; font-size:12px;'
+    )
+    return (
+        f'{heading}<table style="width:100%; border-collapse:collapse; '
+        f'border:1px solid {palette["card_border"]}; border-radius:8px;">'
+        f'<tr><th style="{header_style}">Parameter</th><th style="{header_style}">Value</th></tr>'
+        f'{rows}</table>'
+    )
+
+
+def _build_fallback_page_html(title, sections, theme='dark'):
+    palette = _FALLBACK_PALETTES[theme]
+    show_heading = len(sections) > 1
+    sections_html = "".join(
+        _build_fallback_section_html(section_title, flat_params, show_heading, palette)
+        for section_title, flat_params in sections
+    )
+    return (
+        f'<body style="background-color:{palette["bg"]}; color:{palette["value_fg"]}; '
+        'font-family:\'Segoe UI\',Arial,sans-serif; padding:4px;">'
+        f'<h3 style="color:{palette["h3_fg"]}; border-bottom:2px solid {palette["h3_border"]}; '
+        'padding-bottom:8px; margin-top:0;">Feature Parameters</h3>'
+        f'{sections_html}</body>'
+    )
+
+
+class _FallbackParametersDialog(QDialog):
+    """Static QTextBrowser popup used when QtWebEngine isn't installed.
+    Ships its own native (non-JS) light/dark toggle button."""
+
+    def __init__(self, title, sections, parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.setMinimumSize(480, 420)
-        self.setStyleSheet(load_base_qss())
-        self._html_table = html_table
-        self._text_table = text_table
-        self._setup_ui()
+        self.setMinimumSize(520, 360)
+        self._sections = sections
+        self._title = title
+        self._theme = 'dark'
 
-    def _setup_ui(self):
         layout = QVBoxLayout(self)
 
-        browser = QTextBrowser(self)
-        # The dialog's dark QSS (load_base_qss()) styles bare QTextEdit as a
-        # dark log panel (near-black background, light-gray text) -- correct
-        # for the log widgets it was written for, but it also matches
-        # QTextBrowser (a QTextEdit subclass), muddying the table's own
-        # white/light-gray cell backgrounds and leaving text low-contrast.
-        # Override locally so the rendered table stays crisp and readable.
-        browser.setStyleSheet(
-            "QTextBrowser { background-color: #ffffff; color: #202020; border: 1px solid #444; }"
-        )
-        browser.setHtml(self._html_table)
-        layout.addWidget(browser)
+        header_row = QHBoxLayout()
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f8fafc;")
+        header_row.addWidget(title_label)
+        header_row.addStretch()
+        copy_btn = QPushButton("Copy to Word")
+        copy_btn.clicked.connect(self._copy_to_word)
+        header_row.addWidget(copy_btn)
+        self._theme_btn = QPushButton()
+        self._theme_btn.clicked.connect(self._toggle_theme)
+        header_row.addWidget(self._theme_btn)
+        layout.addLayout(header_row)
+
+        self._browser = QTextBrowser(self)
+        layout.addWidget(self._browser)
 
         button_row = QHBoxLayout()
-        copy_btn = QPushButton("Copy to Word")
-        copy_btn.clicked.connect(self.copy_to_word)
-        button_row.addWidget(copy_btn)
         button_row.addStretch()
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
         button_row.addWidget(close_btn)
         layout.addLayout(button_row)
 
-    def copy_to_word(self):
-        mime = QMimeData()
-        mime.setHtml(self._html_table)
-        mime.setText(self._text_table)
-        QApplication.clipboard().setMimeData(mime)
+        self._render()
+
+    def _render(self):
+        palette = _FALLBACK_PALETTES[self._theme]
+        self._theme_btn.setText("🌙 Dark Mode" if self._theme == 'dark' else "☀ Light Mode")
+        self._browser.setStyleSheet(
+            f"QTextBrowser {{ background-color: {palette['bg']}; border: 1px solid {palette['card_border']}; }}"
+        )
+        self._browser.setHtml(_build_fallback_page_html(self._title, self._sections, self._theme))
+
+    def _toggle_theme(self):
+        self._theme = 'light' if self._theme == 'dark' else 'dark'
+        self._render()
+
+    def _copy_to_word(self):
+        ClipboardBridge(self._sections).copyToClipboard()
+
+
+def _show_textbrowser_popup(title, sections):
+    dialog = _FallbackParametersDialog(title, sections)
+    key = id(dialog)
+    _open_views[key] = dialog
+    dialog.finished.connect(lambda _result: _open_views.pop(key, None))
+    dialog.show()
+    return dialog
 
 
 def resolve_inspector_title(parameters_dict, fallback):
     """
-    Pick a readable dialog title: the stored 'calculation_type' if present,
+    Pick a readable popup title: the stored 'calculation_type' if present,
     else *fallback* (e.g. the layer name).
     """
     calculation_type = parameters_dict.get('calculation_type') if isinstance(parameters_dict, dict) else None
@@ -108,7 +446,7 @@ def show_parameters_inspector(layer_id, feature_id):
     """
     Entry point for the QGIS layer action registered by
     register_parameters_action(). Resolves the feature's stored 'parameters'
-    JSON and shows it in a ParametersInspectorDialog.
+    JSON and shows it in a Parameters Inspector popup.
     """
     layer = QgsProject.instance().mapLayer(layer_id)
     if layer is None:
@@ -132,24 +470,22 @@ def show_parameters_inspector(layer_id, feature_id):
         return
 
     title = resolve_inspector_title(parsed, layer.name())
-    html_table = format_parameters_table(title, parsed, as_html=True)
-    text_table = format_parameters_table(title, parsed, as_html=False)
-
-    dialog = ParametersInspectorDialog(title, html_table, text_table)
-    _open_dialogs.append(dialog)
-    dialog.finished.connect(lambda _result: _open_dialogs.remove(dialog) if dialog in _open_dialogs else None)
-    dialog.show()
+    show_web_popup(title, [(layer.name(), parsed)])
 
 
 def register_parameters_action(layer):
     """
-    Register a 'Show Parameters' QGIS layer action on *layer*, so any
-    feature with a 'parameters' attribute can be inspected as a rendered
-    HTML table from the Attribute Table / Identify results (issue #193).
+    Register the 'view parameters as HTML Table' QGIS layer action on
+    *layer*, so any feature with a 'parameters' attribute can be inspected
+    as a rendered HTML table from the Attribute Table / canvas Identify
+    results (issue #193). Action scopes are set explicitly to Feature and
+    Canvas -- without this the action is registered but invisible until a
+    user manually enables those scopes in Layer Properties > Actions.
     """
     action_code = (
         "from Q_Pansopy.parameters_inspector_dialog import show_parameters_inspector\n"
         "show_parameters_inspector('[% @layer_id %]', [% $id %])"
     )
-    action = QgsAction(_generic_python_action_type(), "Show Parameters (QPANSOPY)", action_code)
+    action = QgsAction(_generic_python_action_type(), "view parameters as HTML Table", action_code)
+    action.setActionScopes({'Feature', 'Canvas'})
     layer.actions().addAction(action)

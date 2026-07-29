@@ -29,7 +29,6 @@ from qgis.core import Qgis
 from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 import json
 import datetime
-from ...utils import format_parameters_table
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -131,51 +130,21 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def show_parameters_table(self):
         """Mostrar los parámetros VSS como una tabla HTML, con opción de copiar a Word"""
-        params = {
-            'runway_details': {
-                'rwy_width': {'value': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()), 'unit': 'm'},
-                'thr_elev': {
-                    'value': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()),
-                    'unit': self.units.get('thr_elev', 'm')},
-                'strip_width': {
-                    'value': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
-                    'unit': 'm'}
-            },
-            'approach_params': {
-                'OCH': {'value': self.exact_values.get('OCH', self.OCHLineEdit.text()),
-                        'unit': self.units.get('OCH', 'm')},
-                'RDH': {'value': self.exact_values.get('RDH', self.RDHLineEdit.text()),
-                        'unit': self.units.get('RDH', 'm')},
-                'VPA': {'value': self.exact_values.get('VPA', self.VPALineEdit.text()), 'unit': '°'}
-            }
+        from ...parameters_inspector_dialog import show_web_popup
+
+        flat_params = {
+            'rwy_width': self.exact_values.get('rwy_width', self.rwyWidthLineEdit.text()),
+            'thr_elev': self.exact_values.get('thr_elev', self.thrElevLineEdit.text()),
+            'thr_elev_unit': self.units.get('thr_elev', 'm'),
+            'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
+            'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
+            'OCH_unit': self.units.get('OCH', 'm'),
+            'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
+            'RDH_unit': self.units.get('RDH', 'm'),
+            'VPA': self.exact_values.get('VPA', self.VPALineEdit.text()),
         }
 
-        sections = {
-            'rwy_width': 'Runway Data',
-            'thr_elev': 'Runway Data',
-            'strip_width': 'Runway Data',
-            'OCH': 'Approach Parameters',
-            'RDH': 'Approach Parameters',
-            'VPA': 'Approach Parameters'
-        }
-
-        html_table = format_parameters_table(
-            "QPANSOPY VSS PARAMETERS",
-            params,
-            sections,
-            as_html=True
-        )
-        text_table = format_parameters_table(
-            "QPANSOPY VSS PARAMETERS",
-            params,
-            sections,
-            as_html=False
-        )
-
-        from ...parameters_inspector_dialog import ParametersInspectorDialog
-        dialog = ParametersInspectorDialog(
-            "VSS — Feature Parameters", html_table, text_table, parent=self)
-        dialog.show()
+        show_web_popup("VSS — Feature Parameters", [("VSS", flat_params)])
         self.log("VSS parameters shown in Parameters Inspector.")
 
     def copy_parameters_as_json(self):

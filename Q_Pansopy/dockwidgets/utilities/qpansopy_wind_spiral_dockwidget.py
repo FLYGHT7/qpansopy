@@ -318,6 +318,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         Prefers reading from output layer 'parameters' JSON; falls back to current UI values.
         The popup itself offers a 'Copy to Word' button (issue #193).
         """
+        from ...parameters_inspector_dialog import show_web_popup
+
         # Try reading from output layers first
         try:
             layers = QgsProject.instance().mapLayers().values()
@@ -348,13 +350,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                         'w': float(data.get('w', 30) or 30),
                         'turn_direction': data.get('turn_direction', 'R')
                     }
-                    from ...modules.wind_spiral import copy_parameters_table
-                    from ...parameters_inspector_dialog import ParametersInspectorDialog
-                    html_table = copy_parameters_table(mapped, as_html=True)
-                    text_table = copy_parameters_table(mapped, as_html=False)
-                    dialog = ParametersInspectorDialog(
-                        "Wind Spiral — Feature Parameters", html_table, text_table, parent=self)
-                    dialog.show()
+                    show_web_popup("Wind Spiral — Feature Parameters", [("Wind Spiral", mapped)])
                     self.log("Wind Spiral parameters (from layer) shown in Parameters Inspector.")
                     return
         except Exception as e:
@@ -372,31 +368,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
             'w': self.exact_values.get('w', self.windSpeedLineEdit.text()),
             'turn_direction': self.turnDirectionCombo.currentText()
         }
-        try:
-            from ...modules.wind_spiral import copy_parameters_table
-            html_table = copy_parameters_table(params, as_html=True)
-            text_table = copy_parameters_table(params, as_html=False)
-        except Exception:
-            # Minimal fallback formatting if utils-based table fails
-            text_table = "QPANSOPY WIND SPIRAL CALCULATION PARAMETERS\n" + "=" * 50 + "\n\n"
-            text_table += "PARAMETER\t\t\tVALUE\t\tUNIT\n" + "-" * 50 + "\n"
-            rows = [
-                ("ISA Variation", params['isaVar'], "°C"),
-                ("ISA Source", "Calculated" if params['isa_source'] == 'calculated' else "Manual input", ""),
-                ("IAS", params['IAS'], "kt"),
-                ("Altitude", params['altitude'], params['altitude_unit']),
-                ("Bank Angle", params['bankAngle'], "°"),
-                ("Wind Speed", params['w'], "kt"),
-                ("Turn Direction", params['turn_direction'], ""),
-            ]
-            for name, value, unit in rows:
-                text_table += f"{name:<25}\t{value}\t\t{unit}\n"
-            html_table = text_table.replace("\n", "<br>")
-
-        from ...parameters_inspector_dialog import ParametersInspectorDialog
-        dialog = ParametersInspectorDialog(
-            "Wind Spiral — Feature Parameters", html_table, text_table, parent=self)
-        dialog.show()
+        show_web_popup("Wind Spiral — Feature Parameters", [("Wind Spiral", params)])
         self.log("Wind Spiral parameters (from UI) shown in Parameters Inspector.")
 
     def copy_parameters_as_json(self):
