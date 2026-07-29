@@ -169,82 +169,37 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
    def show_parameters_table(self):
        """Mostrar los parámetros OAS ILS como una tabla HTML, con opción de copiar a Word"""
-       from ...utils import format_parameters_table
+       from ...parameters_inspector_dialog import show_web_popup
 
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-       html_chunks = []
-       text_chunks = []
-       found_params = False
+       sections = []
 
        for layer in vector_layers:
-           has_oas_params = False
-           if 'parameters' in [field.name() for field in layer.fields()]:
-               for feature in layer.getFeatures():
-                   params_json = feature.attribute('parameters')
-                   if params_json:
-                       try:
-                           params_dict = json.loads(params_json)
-                           if 'calculation_type' in params_dict and 'OAS ILS' in params_dict['calculation_type']:
-                               has_oas_params = True
-                               # Build table data
-                               layer_params = {}
-                               layer_sections = {}
-                               thr_value = params_dict.get('THR_elev', '')
-                               thr_unit = params_dict.get('THR_elev_unit', 'm')
-                               layer_params['THR_elev'] = {'value': thr_value, 'unit': thr_unit}
-                               layer_sections['THR_elev'] = 'Runway Data'
-
-                               layer_params['FAP_elev'] = {'value': params_dict.get('FAP_elev', ''), 'unit': 'ft'}
-                               layer_sections['FAP_elev'] = 'Calculation Inputs'
-
-                               layer_params['MOC_intermediate'] = {'value': params_dict.get('MOC_intermediate', ''), 'unit': 'm'}
-                               layer_sections['MOC_intermediate'] = 'Calculation Inputs'
-
-                               layer_params['calculation_date'] = {'value': params_dict.get('calculation_date', ''), 'unit': ''}
-                               layer_sections['calculation_date'] = 'Calculation Info'
-
-                               layer_params['calculation_type'] = {'value': params_dict.get('calculation_type', ''), 'unit': ''}
-                               layer_sections['calculation_type'] = 'Calculation Info'
-
-                               if 'ILS_surface' in [field.name() for field in layer.fields()]:
-                                   surface_type = feature.attribute('ILS_surface') or ''
-                                   layer_params['surface_type'] = {'value': surface_type, 'unit': ''}
-                                   layer_sections['surface_type'] = 'Surface Information'
-
-                               table_html = format_parameters_table(
-                                   "QPANSOPY OAS ILS PARAMETERS",
-                                   layer_params,
-                                   layer_sections,
-                                   as_html=True
-                               )
-                               text_table = format_parameters_table(
-                                   "QPANSOPY OAS ILS PARAMETERS",
-                                   layer_params,
-                                   layer_sections,
-                                   as_html=False
-                               )
-                               html_chunks.append(f"<h3>LAYER: {layer.name()}</h3>" + table_html)
-                               text_chunks.append(f"LAYER: {layer.name()}\n{text_table}")
-                               found_params = True
-                               break
-                       except Exception:
-                           pass
-
-           if has_oas_params:
+           if 'parameters' not in [field.name() for field in layer.fields()]:
                continue
+           for feature in layer.getFeatures():
+               params_json = feature.attribute('parameters')
+               if not params_json:
+                   continue
+               try:
+                   params_dict = json.loads(params_json)
+               except Exception:
+                   continue
+               if 'calculation_type' in params_dict and 'OAS ILS' in params_dict['calculation_type']:
+                   layer_params = dict(params_dict)
+                   if 'ILS_surface' in [field.name() for field in layer.fields()]:
+                       layer_params['surface_type'] = feature.attribute('ILS_surface') or ''
+                   sections.append((layer.name(), layer_params))
+                   break
 
-       if not found_params:
-           html_chunks.append("<p>No OAS ILS parameters found in any layer. Please run a calculation first.</p>")
-           text_chunks.append("No OAS ILS parameters found in any layer. Please run a calculation first.")
+       if not sections:
+           sections = [(
+               "No data",
+               {'message': 'No OAS ILS parameters found in any layer. Please run a calculation first.'}
+           )]
 
-       html_content = "<div>" + "<br>".join(html_chunks) + "</div>"
-       plain_content = "\n\n".join(text_chunks)
-
-       from ...parameters_inspector_dialog import ParametersInspectorDialog
-       dialog = ParametersInspectorDialog(
-           "OAS ILS — Feature Parameters", html_content, plain_content, parent=self)
-       dialog.show()
+       show_web_popup("OAS ILS — Feature Parameters", sections)
        self.log("OAS ILS parameters shown in Parameters Inspector.")
 
    def copy_parameters_as_json(self):

@@ -24,13 +24,11 @@ Procedure Analysis and Obstacle Protection Surfaces - ILS Module
 import os
 import json
 import datetime
-from collections import OrderedDict
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression, QMimeData
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from qgis.core import QgsProject, QgsVectorLayer
 from qgis.core import Qgis
-from ...utils import format_parameters_table
 from ...qt_compat import DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, Qt_ALLOWED_DOCK_AREAS, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 
 # Use __file__ to get the current script path
@@ -198,14 +196,13 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
    def show_parameters_table(self):
        """Mostrar los parámetros como una tabla HTML, con opción de copiar a Word"""
+       from ...parameters_inspector_dialog import show_web_popup
+
        layers = QgsProject.instance().mapLayers().values()
        vector_layers = [layer for layer in layers if isinstance(layer, QgsVectorLayer)]
-       params_text = ""
-       html_blocks = []
-       found_params = False
+       sections = []
 
        for layer in vector_layers:
-           has_ils_params = False
            if 'parameters' not in [field.name() for field in layer.fields()]:
                continue
 
@@ -221,59 +218,19 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
                calculation_type = params_dict.get('calculation_type', '')
                if calculation_type and 'Basic ILS' in calculation_type:
-                   has_ils_params = True
-                   layer_params = OrderedDict()
-                   layer_sections = {}
-
-                   thr_value = params_dict.get('thr_elev', '')
-                   thr_unit = params_dict.get('thr_elev_unit', 'm')
-                   layer_params['thr_elev'] = {'value': thr_value, 'unit': thr_unit}
-                   layer_sections['thr_elev'] = 'Runway Data'
-
-                   layer_params['calculation_date'] = {'value': params_dict.get('calculation_date', ''), 'unit': ''}
-                   layer_sections['calculation_date'] = 'Calculation Info'
-
-                   layer_params['calculation_type'] = {'value': calculation_type, 'unit': ''}
-                   layer_sections['calculation_type'] = 'Calculation Info'
-
+                   layer_params = dict(params_dict)
                    if 'ILS_surface' in [field.name() for field in layer.fields()]:
-                       surface_type = feature.attribute('ILS_surface') or ''
-                       layer_params['surface_type'] = {'value': surface_type, 'unit': ''}
-                       layer_sections['surface_type'] = 'Surface Information'
-
-                   formatted_table_html = format_parameters_table(
-                       "QPANSOPY BASIC ILS PARAMETERS",
-                       layer_params,
-                       layer_sections,
-                       as_html=True
-                   )
-                   formatted_table_text = format_parameters_table(
-                       "QPANSOPY BASIC ILS PARAMETERS",
-                       layer_params,
-                       layer_sections,
-                       as_html=False
-                   )
-
-                   params_text += f"LAYER: {layer.name()}\n{'-'*30}\n"
-                   params_text += formatted_table_text + "\n"
-                   html_blocks.append(f"<h3>LAYER: {layer.name()}</h3>{formatted_table_html}")
-                   found_params = True
+                       layer_params['surface_type'] = feature.attribute('ILS_surface') or ''
+                   sections.append((layer.name(), layer_params))
                    break
 
-           if has_ils_params:
-               params_text += "\n"
+       if not sections:
+           sections = [(
+               "No data",
+               {'message': 'No Basic ILS parameters found in any layer. Please run a calculation first.'}
+           )]
 
-       if not found_params:
-           params_text += "QPANSOPY BASIC ILS CALCULATION PARAMETERS\n"
-           params_text += "=" * 50 + "\n\n"
-           params_text += "No Basic ILS parameters found in any layer. Please run a calculation first.\n"
-           html_blocks.append("<p>No Basic ILS parameters found in any layer. Please run a calculation first.</p>")
-
-       from ...parameters_inspector_dialog import ParametersInspectorDialog
-       html_table = "<div>" + "<br>".join(html_blocks) + "</div>"
-       dialog = ParametersInspectorDialog(
-           "Basic ILS — Feature Parameters", html_table, params_text, parent=self)
-       dialog.show()
+       show_web_popup("Basic ILS — Feature Parameters", sections)
        self.log("Basic ILS parameters shown in Parameters Inspector.")
 
    def copy_parameters_as_json(self):

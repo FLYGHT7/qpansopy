@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Tests for issue #193: registering the 'Show Parameters' QGIS layer action and
-resolving a readable dialog title from the stored 'parameters' JSON.
+Tests for issue #193 (and its follow-up): registering the 'view parameters
+as HTML Table' QGIS layer action with the correct name/scopes, resolving a
+readable popup title, building the multi-section HTML, and the clipboard
+bridge used by the popup's 'Copy to Word' button.
 """
 import importlib
 
@@ -52,6 +54,19 @@ class _FakeLayer:
         return self._actions
 
 
+class _FakeQgsAction:
+    GenericPython = 'generic-python'
+
+    def __init__(self, action_type, name, action_code):
+        self.action_type = action_type
+        self.name = name
+        self.action_code = action_code
+        self.action_scopes = None
+
+    def setActionScopes(self, scopes):
+        self.action_scopes = scopes
+
+
 def test_register_parameters_action_uses_safe_substitution_tokens(monkeypatch):
     """
     Regression guard: the action code must resolve the feature via
@@ -60,26 +75,193 @@ def test_register_parameters_action_uses_safe_substitution_tokens(monkeypatch):
     that break the generated Python literal.
     """
     mod = _mod()
-
-    captured = {}
-
-    class _FakeQgsAction:
-        GenericPython = 'generic-python'
-
-        def __init__(self, action_type, name, action_code):
-            captured['action_type'] = action_type
-            captured['name'] = name
-            captured['action_code'] = action_code
-
     monkeypatch.setattr(mod, 'QgsAction', _FakeQgsAction)
 
     layer = _FakeLayer()
     mod.register_parameters_action(layer)
 
     assert len(layer._actions.added) == 1
-    code = captured['action_code']
+    action = layer._actions.added[0]
+    code = action.action_code
     assert 'show_parameters_inspector' in code
     assert '@layer_id' in code
     assert '$id' in code
     # Never interpolate the raw parameters JSON directly into the action code.
     assert '"parameters"' not in code
+
+
+def test_register_parameters_action_name_and_scopes(monkeypatch):
+    """
+    Regression guard for issue #193's follow-up: the action must be named
+    exactly 'view parameters as HTML Table', and must explicitly set the
+    Feature/Canvas action scopes -- without this the action is registered
+    but invisible until a user manually enables those scopes.
+    """
+    mod = _mod()
+    monkeypatch.setattr(mod, 'QgsAction', _FakeQgsAction)
+
+    layer = _FakeLayer()
+    mod.register_parameters_action(layer)
+
+    action = layer._actions.added[0]
+    assert action.name == 'view parameters as HTML Table'
+    assert action.action_scopes == {'Feature', 'Canvas'}
+
+
+# ---------------------------------------------------------------------------
+# HTML builder (_build_page_html / _build_rows_html / _build_section_html)
+# ---------------------------------------------------------------------------
+
+def test_build_page_html_single_section_has_no_subheading():
+    mod = _mod()
+    page = mod._build_page_html("Wind Spiral — Feature Parameters", [("Wind Spiral", {'IAS': 205})])
+
+    assert "Wind Spiral — Feature Parameters" in page
+    assert 'class="section-title"' not in page
+    assert "<td><b>IAS</b></td><td>205</td>" in page
+    assert 'class="dark-theme"' in page  # dark mode by default
+
+
+def test_build_page_html_multiple_sections_get_subheadings():
+    mod = _mod()
+    page = mod._build_page_html("Basic ILS — Feature Parameters", [
+        ("Layer A", {'thr_elev': 100}),
+        ("Layer B", {'thr_elev': 200}),
+    ])
+
+    assert page.count('class="section-title"') == 2
+    assert "Layer A" in page
+    assert "Layer B" in page
+
+
+def test_build_page_html_escapes_values():
+    mod = _mod()
+    page = mod._build_page_html("Title", [("Section", {'note': '<script>alert(1)</script>'})])
+
+    assert '<script>alert(1)</script>' not in page
+    assert '&lt;script&gt;' in page
+
+
+# ---------------------------------------------------------------------------
+# ClipboardBridge
+# ---------------------------------------------------------------------------
+
+def test_clipboard_bridge_copies_word_table(monkeypatch):
+    mod = _mod()
+
+    captured = {}
+
+    class _FakeMimeData:
+        def setHtml(self, value):
+            captured['html'] = value
+
+        def setText(self, value):
+            captured['text'] = value
+
+    class _FakeClipboard:
+        def setMimeData(self, mime):
+            captured['mime'] = mime
+
+    class _FakeQApplication:
+        @staticmethod
+        def clipboard():
+            return _FakeClipboard()
+
+    monkeypatch.setattr(mod, 'QMimeData', _FakeMimeData)
+    monkeypatch.setattr(mod, 'QApplication', _FakeQApplication)
+
+    bridge = mod.ClipboardBridge([("Wind Spiral", {'IAS': 205})])
+    bridge.copyToClipboard()
+
+    assert '205' in captured['html']
+    assert '205' in captured['text']
+    assert captured['mime'] is not None
+
+
+# ---------------------------------------------------------------------------
+# QTextBrowser fallback (QtWebEngine unavailable -- issue #193 follow-up)
+# ---------------------------------------------------------------------------
+
+def test_build_fallback_page_html_single_section_has_no_subheading():
+    mod = _mod()
+    page = mod._build_fallback_page_html("Wind Spiral — Feature Parameters", [("Wind Spiral", {'IAS': 205})])
+
+    # The title itself is shown via a native QLabel in the dialog header, not
+    # embedded in the browser HTML -- only "Feature Parameters" + the table are.
+    assert "Feature Parameters" in page
+    assert "<h4" not in page
+    assert "205" in page
+    assert "#0f172a" in page  # dark background by default
+
+
+def test_build_fallback_page_html_light_theme_uses_light_palette():
+    mod = _mod()
+    dark_page = mod._build_fallback_page_html("Title", [("Section", {'a': 1})], theme='dark')
+    light_page = mod._build_fallback_page_html("Title", [("Section", {'a': 1})], theme='light')
+
+    assert "#f4f6f9" in light_page  # light body background
+    assert "#f4f6f9" not in dark_page
+    assert "#0f172a" in dark_page  # dark body background
+    assert dark_page != light_page
+
+
+def test_fallback_dialog_toggle_theme_flips_state():
+    """Regression guard: the fallback popup must offer a working light/dark
+    toggle even without QtWebEngine/JS -- a plain button flips this state
+    and re-renders the static HTML."""
+    mod = _mod()
+    dialog = mod._FallbackParametersDialog("Title", [("Section", {'a': 1})])
+
+    assert dialog._theme == 'dark'
+    dialog._toggle_theme()
+    assert dialog._theme == 'light'
+    dialog._toggle_theme()
+    assert dialog._theme == 'dark'
+
+
+def test_build_fallback_page_html_multiple_sections_get_subheadings():
+    mod = _mod()
+    page = mod._build_fallback_page_html("Basic ILS — Feature Parameters", [
+        ("Layer A", {'thr_elev': 100}),
+        ("Layer B", {'thr_elev': 200}),
+    ])
+
+    assert page.count("<h4") == 2
+    assert "Layer A" in page
+    assert "Layer B" in page
+
+
+def test_build_fallback_page_html_escapes_values():
+    mod = _mod()
+    page = mod._build_fallback_page_html("Title", [("Section", {'note': '<script>alert(1)</script>'})])
+
+    assert '<script>alert(1)</script>' not in page
+    assert '&lt;script&gt;' in page
+
+
+def test_show_web_popup_falls_back_when_webengine_unavailable(monkeypatch):
+    """
+    Regression guard: on systems missing the optional QtWebEngine Qt
+    bindings (e.g. python-pyqt6-webengine not installed), show_web_popup()
+    must degrade to the QTextBrowser popup instead of raising.
+    """
+    mod = _mod()
+    monkeypatch.setattr(mod, '_WEBENGINE_AVAILABLE', False)
+
+    result = mod.show_web_popup("Wind Spiral — Feature Parameters", [("Wind Spiral", {'IAS': 205})])
+
+    assert isinstance(result, mod._FallbackParametersDialog)
+
+
+def test_show_web_popup_uses_webengine_when_available(monkeypatch):
+    mod = _mod()
+    monkeypatch.setattr(mod, '_WEBENGINE_AVAILABLE', True)
+
+    calls = []
+    monkeypatch.setattr(mod, '_show_webengine_popup', lambda title, sections: calls.append((title, sections)))
+    monkeypatch.setattr(mod, '_show_textbrowser_popup', lambda title, sections: (_ for _ in ()).throw(
+        AssertionError('should not use the fallback when WebEngine is available')))
+
+    mod.show_web_popup("Title", [("Section", {'a': 1})])
+
+    assert calls == [("Title", [("Section", {'a': 1})])]

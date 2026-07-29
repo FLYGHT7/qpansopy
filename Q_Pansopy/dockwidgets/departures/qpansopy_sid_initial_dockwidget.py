@@ -141,48 +141,11 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         The popup itself offers a 'Copy to Word' button (issue #193)."""
         params = self.get_parameters()
 
-        param_list = [
-            ('Aerodrome Elevation', params['aerodrome_elevation_m'], 'm'),
-            ('DER Elevation', params['der_elevation_m'], 'm'),
-            ('PDG', params['pdg_percent'], '%'),
-            ('Reference Temperature', params['reference_temp_c'], '°C'),
-            ('IAS', params['ias_kt'], 'kt'),
-            ('Turn Altitude', params['altitude_ft'], 'ft'),
-            ('Bank Angle', params['bank_angle_deg'], '°'),
-            ('Wind Speed', params['wind_kt'], 'kt'),
-            ('Pilot Reaction Time', params['pilot_time_s'], 's'),
-            ('Direction', 'End → Start' if self.direction_reversed else 'Start → End', '')
-        ]
+        flat_params = dict(params)
+        flat_params['direction'] = 'End → Start' if self.direction_reversed else 'Start → End'
 
-        # Create HTML table
-        html = '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">\n'
-        html += (
-            '<tr><th colspan="3" style="background-color: #4472C4; color: white; '
-            'text-align: center; font-weight: bold;">SID INITIAL CLIMB CALCULATION PARAMETERS</th></tr>\n'
-        )
-        html += (
-            '<tr style="background-color: #D9E1F2; font-weight: bold;">'
-            '<th>PARAMETER</th><th>VALUE</th><th>UNIT</th></tr>\n'
-        )
-
-        for i, (name, value, unit) in enumerate(param_list):
-            bg_color = '#FFFFFF' if i % 2 == 0 else '#F2F2F2'
-            html += (
-                f'<tr style="background-color: {bg_color};">'
-                f'<td>{name}</td><td style="text-align: right;">{value}</td><td>{unit}</td></tr>\n'
-            )
-
-        html += '</table>'
-
-        plain_text = "SID INITIAL CLIMB CALCULATION PARAMETERS\n"
-        plain_text += "=" * 50 + "\n\n"
-        for name, value, unit in param_list:
-            plain_text += f"{name}\t{value}\t{unit}\n"
-
-        from ...parameters_inspector_dialog import ParametersInspectorDialog
-        dialog = ParametersInspectorDialog(
-            "SID Initial Climb — Feature Parameters", html, plain_text, parent=self)
-        dialog.show()
+        from ...parameters_inspector_dialog import show_web_popup
+        show_web_popup("SID Initial Climb — Feature Parameters", [("SID Initial Climb", flat_params)])
         self.log("SID Initial parameters shown in Parameters Inspector.")
 
     def copy_parameters_as_json(self):

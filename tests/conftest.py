@@ -68,6 +68,8 @@ def _install_qgis_stubs():
         'Double': 6, 'QString': 10, 'Int': 2,
     })
     qtcore.pyqtSignal = lambda *a, **kw: None
+    qtcore.pyqtSlot = lambda *a, **kw: (lambda fn: fn)
+    qtcore.QObject = _Dummy
     qtcore.QMimeData = _Dummy
     qtgui.QColor = _Dummy
 
@@ -77,11 +79,20 @@ def _install_qgis_stubs():
     PyQt.uic = uic
     sys.modules['qgis.PyQt.uic'] = uic
 
+    # QtWebEngineWidgets / QtWebChannel stubs — needed by parameters_inspector_dialog.py
+    webengine = types.ModuleType('qgis.PyQt.QtWebEngineWidgets')
+    webengine.QWebEngineView = _Dummy
+    sys.modules['qgis.PyQt.QtWebEngineWidgets'] = webengine
+
+    webchannel = types.ModuleType('qgis.PyQt.QtWebChannel')
+    webchannel.QWebChannel = _Dummy
+    sys.modules['qgis.PyQt.QtWebChannel'] = webchannel
+
     for widget_name in [
         'QFileDialog', 'QDialog', 'QFormLayout', 'QLineEdit', 'QComboBox',
         'QDialogButtonBox', 'QMessageBox', 'QWidget', 'QApplication',
         'QDockWidget', 'QPushButton', 'QTextEdit', 'QGroupBox', 'QVBoxLayout',
-        'QHBoxLayout', 'QTextBrowser',
+        'QHBoxLayout', 'QTextBrowser', 'QLabel',
     ]:
         setattr(qtwidgets, widget_name, _Dummy)
 
@@ -132,7 +143,8 @@ def _install_qgis_stubs():
     finally:
         names_to_clean = [
             'PyQt5.QtWidgets', 'PyQt5.QtGui', 'PyQt5.QtCore', 'PyQt5',
-            'qgis.PyQt.uic', 'qgis.PyQt.QtWidgets', 'qgis.PyQt.QtCore',
+            'qgis.PyQt.uic', 'qgis.PyQt.QtWebEngineWidgets', 'qgis.PyQt.QtWebChannel',
+            'qgis.PyQt.QtWidgets', 'qgis.PyQt.QtCore',
             'qgis.PyQt.QtGui', 'qgis.PyQt', 'qgis.gui', 'qgis.core', 'qgis.utils', 'qgis',
         ]
         for name in names_to_clean:
