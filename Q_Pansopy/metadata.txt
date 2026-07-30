@@ -41,6 +41,7 @@ changelog=
  - Replace Wind Spiral's IAS and Altitude text fields with spin boxes so arrow keys can nudge values and immediately see the impact on the live preview
  - Group SID Initial Climb's 3 output layers (Protection Areas, Reference Line, Construction Lines) under a single 'SID Initial' layer tree group
  - Redesign the Copy to Word parameters table: readable acronym-aware labels (e.g. Bank Angle, ISA Variation) and a compact black-and-white style instead of the blue/gray Word table
+ - Wind Spiral IAS field now accepts decimal values (1 decimal place) instead of integers only, still nudged by 1 kt with the spinner arrows
  Version 0.4.0:
  - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
  - PBN 15 NM and 30 NM targets included

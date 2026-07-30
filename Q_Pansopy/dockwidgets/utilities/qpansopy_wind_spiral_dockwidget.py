@@ -177,10 +177,12 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.formLayout.addRow("ISA Variation (°C):", isa_container)
 
-        # IAS - spin box (integers) so arrow keys can nudge the live preview (issue #199)
-        self.IASSpinBox = QtWidgets.QSpinBox(self)
+        # IAS - decimal spin box so arrow keys nudge the live preview by 1 kt
+        # while still allowing fractional values (issue #214)
+        self.IASSpinBox = QtWidgets.QDoubleSpinBox(self)
         self.IASSpinBox.setRange(50, 400)
         self.IASSpinBox.setSingleStep(1)
+        self.IASSpinBox.setDecimals(1)
         self.IASSpinBox.setValue(205)
         self.IASSpinBox.valueChanged.connect(self._update_preview)
         self.IASSpinBox.setMinimumHeight(28)
