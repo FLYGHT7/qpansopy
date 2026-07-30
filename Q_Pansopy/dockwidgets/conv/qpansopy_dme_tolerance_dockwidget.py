@@ -20,24 +20,29 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     """
-    Shared dockwidget for the VOR/DME, NDB/DME, and LOC/DME fix tolerance
-    tools. Subclasses only need to override NAV_TYPE, DEFAULT_ROTATE, and
-    POINT_LAYER_LABEL.
+    Dockwidget for the VOR/DME, NDB/DME, and LOC/DME fix tolerance tools.
+    Tolerance type is picked via toleranceTypeComboBox (issue #181 follow-up)
+    instead of separate dockwidget subclasses/instances, so switching type
+    keeps the selected layers and live preview instead of losing them.
     """
 
     closingPlugin = pyqtSignal()
 
-    NAV_TYPE = 'VOR/DME'
-    DEFAULT_ROTATE = 5.2
-    POINT_LAYER_LABEL = 'DME Point Layer'
+    # (nav_type, default_rotate, point_layer_label)
+    _TOLERANCE_TYPES = [
+        ('VOR/DME', 5.2, 'DME Point Layer'),
+        ('NDB/DME', 6.9, 'NDB Point Layer'),
+        ('LOC/DME', 2.4, 'LOC Point Layer'),
+    ]
 
     def __init__(self, iface):
         super().__init__(iface.mainWindow())
         self.setupUi(self)
         self.iface = iface
 
-        self.pointLayerLabel.setText(self.POINT_LAYER_LABEL)
-        self.rotateDoubleSpinBox.setValue(self.DEFAULT_ROTATE)
+        for nav_type, default_rotate, point_layer_label in self._TOLERANCE_TYPES:
+            self.toleranceTypeComboBox.addItem(nav_type, (default_rotate, point_layer_label))
+        self.toleranceTypeComboBox.currentIndexChanged.connect(self._on_tolerance_type_changed)
 
         self.pointLayerComboBox.setFilters(MLPM_PointLayer)
         self.fixLayerComboBox.setFilters(MLPM_PointLayer)
@@ -56,7 +61,14 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.pointLayerComboBox.layerChanged.connect(self._on_layer_changed)
         self.fixLayerComboBox.layerChanged.connect(self._on_layer_changed)
         self.rotateDoubleSpinBox.valueChanged.connect(self._update_preview)
+
+        self._on_tolerance_type_changed()
         self._on_layer_changed()
+
+    def _on_tolerance_type_changed(self, *args):
+        default_rotate, point_layer_label = self.toleranceTypeComboBox.currentData()
+        self.pointLayerLabel.setText(point_layer_label)
+        self.rotateDoubleSpinBox.setValue(default_rotate)
 
     def closeEvent(self, event):
         self._clear_preview()
@@ -153,15 +165,16 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage('QPANSOPY', msg, level=Qgis.Warning)
             return
 
-        params = {'rotate': self.rotateDoubleSpinBox.value(), 'nav_type': self.NAV_TYPE}
+        nav_type = self.toleranceTypeComboBox.currentText()
+        params = {'rotate': self.rotateDoubleSpinBox.value(), 'nav_type': nav_type}
 
         try:
-            self.log(f"Calculating {self.NAV_TYPE} Tolerance...")
+            self.log(f"Calculating {nav_type} Tolerance...")
             from ...modules.conv.dme_tolerance import run_dme_tolerance
             result = run_dme_tolerance(self.iface, navid_layer, fix_layer, params)
             if result:
                 self._clear_preview()
-                self.log(f"{self.NAV_TYPE} Tolerance calculation completed successfully")
+                self.log(f"{nav_type} Tolerance calculation completed successfully")
         except Exception as e:
             self.log(f"Error during calculation: {e}")
             import traceback
