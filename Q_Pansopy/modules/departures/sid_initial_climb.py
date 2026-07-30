@@ -76,6 +76,26 @@ def point_with_z(point, z=0.0):
     return QgsPoint(point.x(), point.y(), z)
 
 
+def _get_or_create_layer_group(group_name):
+    """
+    Find a top-level layer tree group by name, creating it at the top of the
+    tree if it doesn't exist yet -- so repeated runs add layers into the same
+    group instead of creating "SID Initial (2)", "SID Initial (3)", etc.
+    (issue #207).
+
+    Args:
+        group_name (str): Name of the group.
+
+    Returns:
+        QgsLayerTreeGroup: The existing or newly created group.
+    """
+    root = QgsProject.instance().layerTreeRoot()
+    group = root.findGroup(group_name)
+    if group is None:
+        group = root.insertGroup(0, group_name)
+    return group
+
+
 # =============================================================================
 # CALCULATION FUNCTIONS
 # =============================================================================
@@ -243,11 +263,19 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     # -------------------------------------------------------------------------
     # ISA and TAS calculations
     # -------------------------------------------------------------------------
-    isa_values = calculate_isa_temperature(aerodrome_elevation_m, reference_temp_c)
-    log(f"ISA deviation: {isa_values['delta_isa']:.2f}°C")
+    # ISA deviation is used directly when the dockwidget supplies it (manual
+    # input or the ISA Calculator button, issue #204) -- calculate_isa_temperature()
+    # is still the fallback for callers that only pass AD elevation + reference temp.
+    isa_var = params.get('isa_var')
+    if isa_var is not None:
+        delta_isa = float(isa_var)
+        log(f"ISA deviation (from params, {params.get('isa_source', 'unspecified')}): {delta_isa:.4f}°C")
+    else:
+        delta_isa = calculate_isa_temperature(aerodrome_elevation_m, reference_temp_c)['delta_isa']
+        log(f"ISA deviation (calculated from AD elevation + Temp): {delta_isa:.4f}°C")
 
     tas_values = calculate_tas_and_turn_parameters(
-        ias_kt, altitude_ft, isa_values['delta_isa'], bank_angle_deg, wind_kt
+        ias_kt, altitude_ft, delta_isa, bank_angle_deg, wind_kt
     )
     log(f"TAS: {tas_values['tas_kt']:.2f}kt, Rate of Turn: {tas_values['rate_of_turn']:.2f}°/s")
     log(f"Radius of Turn: {tas_values['radius_of_turn_nm']:.2f}NM")
@@ -337,6 +365,9 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     log(f"Reference line half-width: {reference_half_width:.2f}m "
         f"({reference_half_width / 1852:.2f}NM)")
 
+    # Group all 3 output layers under a single "SID Initial" node (issue #207)
+    sid_group = _get_or_create_layer_group("SID Initial")
+
     # -------------------------------------------------------------------------
     # Create protection areas layer
     # -------------------------------------------------------------------------
@@ -371,7 +402,8 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     areas_layer.renderer().symbol().setOpacity(0.7)
     areas_layer.triggerRepaint()
 
-    QgsProject.instance().addMapLayers([areas_layer])
+    QgsProject.instance().addMapLayers([areas_layer], False)
+    sid_group.insertLayer(0, areas_layer)
 
     # -------------------------------------------------------------------------
     # Create reference line layer
@@ -398,7 +430,8 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     reference_line_layer.renderer().symbol().setWidth(0.5)
     reference_line_layer.triggerRepaint()
 
-    QgsProject.instance().addMapLayers([reference_line_layer])
+    QgsProject.instance().addMapLayers([reference_line_layer], False)
+    sid_group.insertLayer(0, reference_line_layer)
     log(f"Reference line layer added: {reference_line_layer_name}")
 
     # -------------------------------------------------------------------------
@@ -435,7 +468,8 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     lines_layer.renderer().symbol().setWidth(0.5)
     lines_layer.triggerRepaint()
 
-    QgsProject.instance().addMapLayers([lines_layer])
+    QgsProject.instance().addMapLayers([lines_layer], False)
+    sid_group.insertLayer(0, lines_layer)
 
     # -------------------------------------------------------------------------
     # Zoom to result
