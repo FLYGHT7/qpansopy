@@ -18,7 +18,7 @@ def test_vss_straight_copy_parameters_table_header_and_rows():
     assert "QPANSOPY VSS STRAIGHT PARAMETERS" in table
     assert "Runway Data" in table
     assert "Approach Parameters" in table
-    assert "Thr Elev" in table or "Threshold Elevation" in table
+    assert "THR Elev" in table
 
 
 def test_vss_loc_copy_parameters_table_header_and_rows():
