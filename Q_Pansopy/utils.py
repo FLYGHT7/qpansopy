@@ -241,6 +241,35 @@ def get_selected_feature(layer, show_error):
             return None
 
 
+_PARAM_LABEL_ACRONYMS = {
+    'IAS', 'ISA', 'PDG', 'TNA', 'MSA', 'CWY', 'DER', 'THR', 'OAS', 'FAP',
+    'MOC', 'VPA', 'OCH', 'RDH', 'ILS', 'KML', 'CRS', 'W',
+}
+
+_PARAM_LABEL_OVERRIDES = {
+    'isa_var': 'ISA Variation',
+}
+
+
+def _humanize_param_label(key):
+    """
+    Turn a raw parameters_dict key (snake_case or camelCase, sometimes with
+    aviation acronyms) into a readable label for the parameters table, e.g.
+    'bankAngle' -> 'Bank Angle', 'IAS' -> 'IAS', 'isa_source' -> 'ISA Source'
+    (issue #209 -- the previous naive `.replace('_', ' ').title()` mangled
+    both camelCase keys and existing acronym casing).
+    """
+    override = _PARAM_LABEL_OVERRIDES.get(key)
+    if override:
+        return override
+
+    spaced = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', str(key)).replace('_', ' ')
+    words = []
+    for word in spaced.split():
+        words.append(word.upper() if word.upper() in _PARAM_LABEL_ACRONYMS else word.capitalize())
+    return ' '.join(words)
+
+
 def format_parameters_table(title, params_dict, sections=None, as_html=False):
     """
     Format parameters as a standardized table for Word/text output.
@@ -325,25 +354,24 @@ def format_parameters_table(title, params_dict, sections=None, as_html=False):
         # Build simple HTML table with alternating row colors for Word
         html = []
         html.append(
-            '<table border="1" cellpadding="5" cellspacing="0"'
+            '<table border="1" cellpadding="4" cellspacing="0"'
             ' style="border-collapse: collapse; font-family: Calibri, Arial, sans-serif; font-size: 11pt;">'
         )
         html.append(
-            f'<tr style="background-color:#4472C4;color:white;font-weight:bold;text-align:center;">'
+            f'<tr style="background-color:#000000;color:#FFFFFF;font-weight:bold;text-align:center;">'
             f'<th colspan="3">{title}</th></tr>'
         )
         for sec in section_order:
             section_rows = [(p, v, u) for s, p, v, u in entries if s == sec]
-            html.append(f'<tr style="background-color:#D9E1F2;font-weight:bold;"><td colspan="3">{sec}</td></tr>')
+            html.append(f'<tr style="background-color:#FFFFFF;font-weight:bold;"><td colspan="3">{sec}</td></tr>')
             html.append(
-                '<tr style="background-color:#F2F2F2;font-weight:bold;">'
+                '<tr style="background-color:#FFFFFF;font-weight:bold;">'
                 '<td>Parameter</td><td>Value</td><td>Unit</td></tr>'
             )
-            for idx, (param_key, value, unit) in enumerate(section_rows):
-                bg = '#FFFFFF' if idx % 2 == 0 else '#F9F9F9'
-                param_name = str(param_key).replace('_', ' ').title()
+            for param_key, value, unit in section_rows:
+                param_name = _humanize_param_label(param_key)
                 html.append(
-                    f'<tr style="background-color:{bg};">'
+                    '<tr style="background-color:#FFFFFF;">'
                     f'<td>{param_name}</td><td style="text-align:right;">{value}</td><td>{unit}</td></tr>'
                 )
         html.append('</table>')
@@ -356,7 +384,7 @@ def format_parameters_table(title, params_dict, sections=None, as_html=False):
         table += "PARAMETER                    VALUE           UNIT\n"
         table += "-"*50 + "\n"
         for param_key, value, unit in section_rows:
-            param_name = str(param_key).replace('_', ' ').title()
+            param_name = _humanize_param_label(param_key)
             table += f"{param_name:<25} {str(value):<15} {unit}\n"
 
     return table
