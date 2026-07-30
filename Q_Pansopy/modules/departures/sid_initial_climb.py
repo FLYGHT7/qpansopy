@@ -263,11 +263,19 @@ def run_sid_initial_climb(iface, runway_layer, params, log_callback=None):
     # -------------------------------------------------------------------------
     # ISA and TAS calculations
     # -------------------------------------------------------------------------
-    isa_values = calculate_isa_temperature(aerodrome_elevation_m, reference_temp_c)
-    log(f"ISA deviation: {isa_values['delta_isa']:.2f}°C")
+    # ISA deviation is used directly when the dockwidget supplies it (manual
+    # input or the ISA Calculator button, issue #204) -- calculate_isa_temperature()
+    # is still the fallback for callers that only pass AD elevation + reference temp.
+    isa_var = params.get('isa_var')
+    if isa_var is not None:
+        delta_isa = float(isa_var)
+        log(f"ISA deviation (from params, {params.get('isa_source', 'unspecified')}): {delta_isa:.4f}°C")
+    else:
+        delta_isa = calculate_isa_temperature(aerodrome_elevation_m, reference_temp_c)['delta_isa']
+        log(f"ISA deviation (calculated from AD elevation + Temp): {delta_isa:.4f}°C")
 
     tas_values = calculate_tas_and_turn_parameters(
-        ias_kt, altitude_ft, isa_values['delta_isa'], bank_angle_deg, wind_kt
+        ias_kt, altitude_ft, delta_isa, bank_angle_deg, wind_kt
     )
     log(f"TAS: {tas_values['tas_kt']:.2f}kt, Rate of Turn: {tas_values['rate_of_turn']:.2f}°/s")
     log(f"Radius of Turn: {tas_values['radius_of_turn_nm']:.2f}NM")

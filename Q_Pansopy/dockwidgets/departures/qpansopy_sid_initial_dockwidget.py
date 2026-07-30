@@ -66,6 +66,10 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Store exact values entered by user
         self.exact_values = {}
 
+        # ISA Variation: manual input or calculated from AD elevation + Temp (issue #204)
+        self.isa_calculation_metadata = {'method': 'calculated'}
+        self._isa_updating = False
+
         # Configure dock widget properties
         self.setFeatures(DOCK_FEATURES_DEFAULT)
 
@@ -83,6 +87,8 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.directionButton.clicked.connect(self.toggle_direction)
+        self.isaVarSpinBox.valueChanged.connect(self._handle_isa_manual_change)
+        self.isaCalculateButton.clicked.connect(self._calculate_isa)
 
         # Setup copy buttons
         self.setup_copy_buttons()
@@ -171,6 +177,26 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             level=Qgis.Success
         )
 
+    def _handle_isa_manual_change(self, _value):
+        """User typed directly into the ISA Variation field: mark it manual,
+        unless this change came from _calculate_isa()'s own setValue()."""
+        if not self._isa_updating:
+            self.isa_calculation_metadata['method'] = 'manual'
+
+    def _calculate_isa(self):
+        """Recompute ISA Variation from the current AD elevation + Temp fields
+        (issue #204: give the option to input manually or calculate)."""
+        from ...modules.departures.sid_initial_climb import calculate_isa_temperature
+        isa_values = calculate_isa_temperature(self.adElevSpinBox.value(), self.tempSpinBox.value())
+
+        self._isa_updating = True
+        try:
+            self.isaVarSpinBox.setValue(isa_values['delta_isa'])
+        finally:
+            self._isa_updating = False
+        self.isa_calculation_metadata['method'] = 'calculated'
+        self.log(f"ISA Variation calculated: {isa_values['delta_isa']:.4f}°C")
+
     def get_parameters(self):
         """
         Get current parameter values from UI.
@@ -183,6 +209,8 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'der_elevation_m': self.derElevSpinBox.value(),
             'pdg_percent': self.pdgSpinBox.value(),
             'reference_temp_c': self.tempSpinBox.value(),
+            'isa_var': self.isaVarSpinBox.value(),
+            'isa_source': self.isa_calculation_metadata['method'],
             'ias_kt': self.iasSpinBox.value(),
             'altitude_ft': self.altitudeSpinBox.value(),
             'bank_angle_deg': self.bankAngleSpinBox.value(),
@@ -244,6 +272,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log(f"DER Elevation: {params['der_elevation_m']}m")
         self.log(f"PDG: {params['pdg_percent']}%")
         self.log(f"Temperature: {params['reference_temp_c']}°C")
+        self.log(f"ISA Variation: {params['isa_var']}°C ({params['isa_source']})")
         self.log(f"IAS: {params['ias_kt']}kt")
         self.log(f"Turn Altitude: {params['altitude_ft']}ft")
         self.log(f"Bank Angle: {params['bank_angle_deg']}°")

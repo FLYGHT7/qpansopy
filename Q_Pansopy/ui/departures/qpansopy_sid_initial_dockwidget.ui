@@ -137,7 +137,7 @@
           <double>0.000000000000000</double>
          </property>
          <property name="decimals">
-          <number>2</number>
+          <number>4</number>
          </property>
         </widget>
        </item>
@@ -160,7 +160,7 @@
           <double>0.000000000000000</double>
          </property>
          <property name="decimals">
-          <number>2</number>
+          <number>4</number>
          </property>
         </widget>
        </item>
@@ -216,7 +216,7 @@
           <double>3.300000000000000</double>
          </property>
          <property name="decimals">
-          <number>2</number>
+          <number>4</number>
          </property>
         </widget>
        </item>
@@ -239,18 +239,58 @@
           <double>15.000000000000000</double>
          </property>
          <property name="decimals">
-          <number>1</number>
+          <number>4</number>
          </property>
         </widget>
        </item>
        <item row="2" column="0">
+        <widget class="QLabel" name="isaVarLabel">
+         <property name="text">
+          <string>ISA Variation (°C):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <layout class="QHBoxLayout" name="isaVarLayout">
+         <item>
+          <widget class="QDoubleSpinBox" name="isaVarSpinBox">
+           <property name="minimum">
+            <double>-50.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>50.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>4</number>
+           </property>
+           <property name="value">
+            <double>0.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="isaCalculateButton">
+           <property name="maximumWidth">
+            <number>34</number>
+           </property>
+           <property name="toolTip">
+            <string>Calculate ISA Variation from AD elevation + Temp</string>
+           </property>
+           <property name="text">
+            <string>🧮</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="0">
         <widget class="QLabel" name="iasLabel">
          <property name="text">
           <string>IAS (kt):</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
+       <item row="3" column="1">
         <widget class="QSpinBox" name="iasSpinBox">
          <property name="minimum">
           <number>50</number>
@@ -263,14 +303,14 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QLabel" name="altitudeLabel">
          <property name="text">
           <string>Alt (ft):</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="4" column="1">
         <widget class="QDoubleSpinBox" name="altitudeSpinBox">
          <property name="minimum">
           <double>100.000000000000000</double>
@@ -285,18 +325,18 @@
           <double>5000.000000000000000</double>
          </property>
          <property name="decimals">
-          <number>2</number>
+          <number>4</number>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QLabel" name="bankAngleLabel">
          <property name="text">
           <string>Bank (°):</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="5" column="1">
         <widget class="QSpinBox" name="bankAngleSpinBox">
          <property name="minimum">
           <number>5</number>
@@ -309,14 +349,14 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="6" column="0">
         <widget class="QLabel" name="windLabel">
          <property name="text">
           <string>Wind (kt):</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="6" column="1">
         <widget class="QSpinBox" name="windSpinBox">
          <property name="minimum">
           <number>0</number>
@@ -329,14 +369,14 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="0">
+       <item row="7" column="0">
         <widget class="QLabel" name="pilotTimeLabel">
          <property name="text">
           <string>Pilot (s):</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="7" column="1">
         <widget class="QSpinBox" name="pilotTimeSpinBox">
          <property name="minimum">
           <number>1</number>
