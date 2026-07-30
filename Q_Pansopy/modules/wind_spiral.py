@@ -141,21 +141,24 @@ def _build_wind_spiral_parameters_json(IAS, altitude_ft, bankAngle, w, isa_var,
     isa_source = isa_calculation_metadata.get('method', 'manual')
 
     parameters_dict = {
-        'IAS': str(IAS),
-        'altitude': str(altitude_ft),
-        'altitude_unit': 'ft',
-        'bankAngle': str(bankAngle),
-        'w': str(w),
         'isa_var': str(round(isa_var, 2)),
         'isa_source': isa_source,
-        'turn_direction': turn_direction,
-        'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        'calculation_type': 'Wind Spiral'
     }
     if isa_source == 'calculated':
         parameters_dict['isa_source_elevation'] = isa_calculation_metadata.get('elevation_original')
         parameters_dict['isa_source_elevation_unit'] = isa_calculation_metadata.get('elevation_unit')
         parameters_dict['isa_source_temp_ref'] = isa_calculation_metadata.get('temperature_reference')
+
+    parameters_dict.update({
+        'IAS': str(IAS),
+        'altitude': str(altitude_ft),
+        'altitude_unit': 'ft',
+        'bankAngle': str(bankAngle),
+        'w': str(w),
+        'turn_direction': turn_direction,
+        'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'calculation_type': 'Wind Spiral'
+    })
 
     return json.dumps(parameters_dict)
 

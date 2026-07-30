@@ -213,6 +213,7 @@ def _build_omni_parameters_json(params, der_elevation_m, pdg_percent, tna_ft, ms
     from the data itself (issue #177) instead of only from the layer name.
     """
     parameters_dict = {
+        'reverse_direction': reverse_direction,
         'der_elevation_m': der_elevation_m,
         'der_elevation_unit': params.get('der_elevation_unit', 'm'),
         'pdg': pdg_percent,
@@ -222,7 +223,6 @@ def _build_omni_parameters_json(params, der_elevation_m, pdg_percent, tna_ft, ms
         'cwy_distance_unit': params.get('cwy_distance_unit', 'm'),
         'allow_turns_before_der': allow_turns_before_der,
         'include_construction_points': include_construction_points,
-        'reverse_direction': reverse_direction,
         'calculation_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'calculation_type': 'Omnidirectional SID',
     }
