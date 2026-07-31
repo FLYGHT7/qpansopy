@@ -393,29 +393,6 @@ except AttributeError:
     QFormLayout_FieldsStayAtSizeHint = QFormLayout.FieldsStayAtSizeHint    # type: ignore[attr-defined]
     QFormLayout_ExpandingFieldsGrow = QFormLayout.ExpandingFieldsGrow      # type: ignore[attr-defined]
 
-# ---------------------------------------------------------------------------
-# Qt5/Qt6 compatible QTextEdit.LineWrapMode enum values
-#
-# Qt5: QTextEdit.WidgetWidth / QTextEdit.NoWrap  (unscoped)
-# Qt6: QTextEdit.LineWrapMode.WidgetWidth  (scoped)
-# ---------------------------------------------------------------------------
-try:
-    from qgis.PyQt.QtWidgets import QToolButton as _QToolButton  # noqa: F401
-except ImportError:
-    try:
-        from PyQt6.QtWidgets import QToolButton as _QToolButton  # noqa: F401
-    except ImportError:
-        from PyQt5.QtWidgets import QToolButton as _QToolButton  # noqa: F401
-
-try:
-    _tbpm = _QToolButton.ToolButtonPopupMode  # Qt6 scoped enum namespace
-    QToolButton_InstantPopup = _tbpm.InstantPopup
-    QToolButton_MenuButtonPopup = _tbpm.MenuButtonPopup
-    QToolButton_DelayedPopup = _tbpm.DelayedPopup
-except AttributeError:
-    QToolButton_InstantPopup = _QToolButton.InstantPopup            # type: ignore[attr-defined]
-    QToolButton_MenuButtonPopup = _QToolButton.MenuButtonPopup      # type: ignore[attr-defined]
-    QToolButton_DelayedPopup = _QToolButton.DelayedPopup            # type: ignore[attr-defined]
 
 try:
     _dbb = QDialogButtonBox.StandardButton  # Qt6 scoped enum namespace
