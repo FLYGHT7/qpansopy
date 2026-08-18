@@ -1,71 +1,62 @@
-# This file contains metadata for your plugin.
-
 [general]
-name=qPANSOPY
+name=qPansopy
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 description=QPANSOPY Plugin for QGIS - Procedure Analysis and Obstacle Protection Surfaces (PANSOPS)
-version=0.4.0
+version=0.5.0
 author=FLYGHT7
 email=info@flyght7.com
 
-about=QPANSOPY Plugin for QGIS to create aviation surfaces including VSS, OCS, ILS, OAS, Wind Spiral and PBN-LNAV protection surfaces according to ICAO PANS-OPS Doc 8168 standards. Compatible with QGIS 3.34 LTR and QGIS 4.x (Qt6).
+about=QPANSOPY Plugin for QGIS to create aviation surfaces including VSS, OCS, ILS, OAS, Wind Spiral and PBN-LNAV protection surfaces according to ICAO PANS-OPS Doc 8168 standards. 
 
 tracker=https://github.com/FLYGHT7/qpansopy/issues
 repository=https://github.com/FLYGHT7/qpansopy
-# End of mandatory metadata
-
-# Recommended items:
-
-changelog=
- Version 0.4.1:
- - Fix widget allocation 
- - Fix Holding Pattern Direcion
- - Inclusion of VOR/DME Tolerance creation
- - Inclusion of NDB/DME Tolerance creation
- - Fix NDB/DME Tolerance tool not appearing in the CONV toolbar
- - Require exactly one selected feature per layer in VOR/DME and NDB/DME Tolerance tools
- - Add optional live DER marker (direction + CWY offset) preview to the OMNI SID tool
- - Show a clear error when the LNAV Routing layer is missing the required 'segment' field
- - Require 'segment' == 'departure' for LNAV SID and rename its output layer to 'PBN RNAV 1/2 Departure'
- - OMNI SID DER marker: plain green triangle plus a connector line to the runway edge when CWY > 0
- - Store Area 1/2/3 distances (meters, 4 decimals) in the OMNI SID output attribute table
- - Combine VOR/DME and NDB/DME tolerance tools under one CONV toolbar dropdown icon and add LOC/DME Tolerance (2.4° default)
- - Fix Wind Spiral ISA calculator and Settings dialog crashing on QGIS 4 / Qt6 (QDialogButtonBox scoped enum, dlg.exec_() removed in PyQt6)
- - Fix ISA Calculator dialog: invisible unit combo text on Windows, field alignment, default ISA Variation now 15, Calculate now closes the dialog immediately
- - Add live green rubber-band preview of the wind spiral curve, updated as parameters/layers change
- - Fix Wind Spiral ISA Variation field being silently ignored by the actual calculation
- - Update PBN Target layer style: thinner outline (0.25mm) and add ARP-distance labels
- - Fix Basic ILS missed approach surface lateral half-width formula (was incorrectly using a flat 15% splay instead of the 14.3% transition-slope-derived offset), restoring parity with the reference script
- - Store all input parameters (DER elevation, PDG, TNA, MSA, CWY distance, options) as a JSON 'parameters' field on every OMNI SID output feature (areas, reference line, construction points)
- - Replace Wind Spiral's IAS and Altitude text fields with spin boxes so arrow keys can nudge values and immediately see the impact on the live preview
- - Group SID Initial Climb's 3 output layers (Protection Areas, Reference Line, Construction Lines) under a single 'SID Initial' layer tree group
- - Redesign the Copy to Word parameters table: readable acronym-aware labels (e.g. Bank Angle, ISA Variation) and a compact black-and-white style instead of the blue/gray Word table
- - Wind Spiral IAS field now accepts decimal values (1 decimal place) instead of integers only, still nudged by 1 kt with the spinner arrows
- Version 0.4.0:
- - Fixes to initial realease to code logic including QGIS Plugin Store Compliance
- - PBN 15 NM and 30 NM targets included
- - Active layer pre-selection for routing combo boxes
- - QGIS 4 / Qt6 compatibility: all imports migrated to qgis.PyQt shim
- - QRegExp replaced with QRegularExpression (Qt6 requirement)
- - Added BasePansopyDockWidget base class centralising log/error/feedback
- - Added _run_with_feedback() to disable Calculate button during execution
- - Added QSS stylesheet for consistent dark-mode dockwidget styling
- - Added field tooltips on ILS and VSS dockwidgets (threshold elevation, runway width)
- - Removed unused imports and dead code across all dockwidgets
- - Phase 3–5 module refactoring: constants.py, LNAV shared helpers, desktop-path centralised
- Version 0.2.0:
- - Fixed inputs to accept decimal values
- - Improved panel management (only one panel shown at a time)
- - All feedback messages in English
- - Fixed Basic ILS surface styling (green with 50% opacity)
- - Prevented KML overwriting by using timestamps in filenames
 
 hasProcessingProvider=no
-tags=python, aviation, aeronautical, navigation, surfaces, VSS, OCS, ILS, ICAO, PANS-OPS, instrument approach
+tags=python,aviation,PANSOPS,PBN,RNP,RNAV,RNPAR,runway,obstacle,ICAO
 
-homepage=https://github.com/FLYGHT7/qpansopy
-category=Plugins
-icon=icons/qpansopy_icon.png
+homepage=https://flyght7.com/qpansopy-opensource-pansops-qgis-instrument-flight-procedure-design/
+category=Vector
+icon=icon.png
 experimental=True
 deprecated=False
+
+changelog=
+    Version 0.5.0:
+    - Fix widget allocation
+    - Fix Holding Pattern Direction
+    - Inclusion of VOR and DME, NDB and DME, LOC and DME Tolerance creation
+    - Include Holding Basic Area with option for visualizing wind circles for cross-checking
+    - OMNI SID feet and meters unit toggle
+    - OMNI SID live DER marker
+    - OMNI SID stores the lengths for Area 1 and Area 2 plus the calculated radius for Area 3
+    - OMNI SID stores now used values in parameters field
+    - Add reference line to SID Initial tool
+    - SID Initial layers grouped when added to layer tree
+    - SID Initial climb inputs improvement including calculate ISA option
+    - Improvement on LNAV tool requirement for routing layer "segment" field
+    - Fix Wind Spiral ISA calculator Qt6 crash and bug related to stored parameters fixed
+    - Wind Spiral live rubberband preview including inputs with spinners for IAS and Altitude
+    - Wind Spiral Parameters order now matches inputs for easier review
+    - PBN target style
+    - Basic ILS surfaces bug on Z surface creation fixed
+    - HTML viewer for stored parameters using QGIS actions
+    - Copy to word improvements
+    Version 0.4.0:
+    - Fixes to initial release to code logic including QGIS Plugin Store Compliance
+    - PBN 15 NM and 30 NM targets included
+    - Active layer pre-selection for routing combo boxes
+    - QGIS 4 and Qt6 compatibility: all imports migrated to qgis.PyQt shim
+    - QRegExp replaced with QRegularExpression (Qt6 requirement)
+    - Added BasePansopyDockWidget base class centralising log, error, and feedback
+    - Added _run_with_feedback() to disable Calculate button during execution
+    - Added QSS stylesheet for consistent dark-mode dockwidget styling
+    - Added field tooltips on ILS and VSS dockwidgets (threshold elevation, runway width)
+    - Removed unused imports and dead code across all dockwidgets
+    - Phase 3 to 5 module refactoring: constants.py, LNAV shared helpers, desktop-path centralised
+    Version 0.2.0:
+    - Fixed inputs to accept decimal values
+    - Improved panel management (only one panel shown at a time)
+    - All feedback messages in English
+    - Fixed Basic ILS surface styling (green with 50 percent opacity)
+    - Prevented KML overwriting by using timestamps in filenames
