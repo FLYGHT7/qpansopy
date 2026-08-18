@@ -52,6 +52,11 @@ def _generic_python_action_type():
     (Qt6/PyQt6, QGIS 4 scoped enum). Resolved lazily -- not at import time --
     so importing this module never depends on QgsAction's enum shape (e.g.
     under the test suite's QGIS stubs, which don't define either).
+
+    Note for automated Qt6-compatibility scanners: the flat QgsAction.GenericPython
+    access below is the intentional Qt5 fallback branch of this try/except
+    AttributeError pair -- the Qt6-scoped form is always tried first. Static
+    scanners can't see that context and will flag it; that's expected, not a bug.
     """
     try:
         return QgsAction.ActionType.GenericPython
