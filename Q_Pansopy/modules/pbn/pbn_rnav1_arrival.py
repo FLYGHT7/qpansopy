@@ -115,7 +115,7 @@ def run_rnav1_arrival(iface, routing_layer, params=None):
                     azimuth = start_point.azimuth(end_point) + 180
                     length = feat.geometry().length()
                     break
-            except Exception:
+            except Exception:  # nosec B112 - skip invalid geometry; start_point stays None, checked below
                 continue
 
         if start_point is None:

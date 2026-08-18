@@ -336,7 +336,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                         continue
                     try:
                         data = json.loads(params_json)
-                    except Exception:
+                    except Exception:  # nosec B112 - skip malformed 'parameters' JSON, keep scanning other features
                         continue
                     if str(data.get('calculation_type', '')).lower().find('wind spiral') == -1:
                         continue
@@ -424,7 +424,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         for lyr in self._connected_layers:
             try:
                 lyr.selectionChanged.disconnect(self._update_preview)
-            except Exception:
+            except Exception:  # nosec B110 - signal may already be disconnected; safe to ignore
                 pass
         self._connected_layers = []
 
@@ -492,7 +492,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                 point_geom, azimuth, IAS, altitude, isa_var, bank_angle, wind_speed, turn_direction)
             if geom and not geom.isEmpty():
                 self._preview_band.setToGeometry(geom, None)
-        except Exception:
+        except Exception:  # nosec B110 - best-effort live preview; a geometry/transform glitch must not crash the tool
             pass
 
     def validate_inputs(self):

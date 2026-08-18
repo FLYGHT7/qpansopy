@@ -119,7 +119,7 @@ class QPANSOPYPointFilterDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 getattr(QtWidgets.QFormLayout, 'ItemRole', QtWidgets.QFormLayout).FieldRole
             )
             self.parametersLayout.setWidget(0, _field_role, container)
-        except Exception:
+        except Exception:  # nosec B110 - Qt5/Qt6 FieldRole enum compat; cosmetic layout tweak
             pass
 
     def setup_connections(self):

@@ -184,7 +184,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
             v_layer.renderer().symbol().setColor(QColor("magenta"))
             v_layer.renderer().symbol().setWidth(0.7)
             v_layer.triggerRepaint()
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic styling; must not abort a successful calculation
             pass
 
         # Basic holding area — isolated so failures do not affect the nominal return value
@@ -208,7 +208,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
                     wc_layer.renderer().symbol().setColor(QColor(255, 0, 0, 128))
                     wc_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor("red"))
                     wc_layer.triggerRepaint()
-                except Exception:
+                except Exception:  # nosec B110 - cosmetic styling; must not abort a successful calculation
                     pass
 
             if valid_circles:
@@ -230,7 +230,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
                         ba_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor("red"))
                         ba_layer.renderer().symbol().symbolLayer(0).setStrokeWidth(0.5)
                         ba_layer.triggerRepaint()
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic styling; must not abort a successful calculation
                         pass
                 else:
                     iface.messageBar().pushMessage(

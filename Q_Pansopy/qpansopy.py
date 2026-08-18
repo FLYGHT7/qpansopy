@@ -114,7 +114,7 @@ class Qpansopy:
         if not os.path.exists(self.icons_dir):
             try:
                 os.makedirs(self.icons_dir)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 # If we can't create the folder, use default icons
                 pass
 
@@ -346,7 +346,7 @@ class Qpansopy:
                     tb = self.iface.addToolBar(f"QPANSOPY - {toolbar_name}")
                     try:
                         tb.setObjectName(f"QPANSOPY{toolbar_name}ToolBar")
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
                     self.toolbars[toolbar_name] = tb
                 self.toolbars[toolbar_name].addAction(action)
@@ -446,7 +446,7 @@ class Qpansopy:
                 if callable(run_cb):
                     try:
                         run_cb()
-                    except Exception:
+                    except Exception:  # nosec B110 - a failing module action must not crash the toolbar dispatch
                         pass
                 return
             instance = self.modules[name]["GUI_INSTANCE"] = dock_widget_cls(self.iface)
@@ -454,15 +454,15 @@ class Qpansopy:
             # Basic metadata (ignore failures silently)
             try:
                 instance.setObjectName(f"QPANSOPY_{name}")
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             try:
                 instance.setWindowTitle(f"QPANSOPY - {title}")
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             try:
                 instance.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             # Initial configuration
             # PointFilter is an exception - it doesn't have a KML export button by design
@@ -494,13 +494,13 @@ class Qpansopy:
                     # Fallback to just the editor visibility
                     try:
                         instance.logTextEdit.setVisible(show_log)
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
                 # Ensure the log panel is actually resizable regardless of UI max heights (only when visible)
                 if show_log:
                     try:
                         self._ensure_resizable_log(instance)
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
             instance.closingPlugin.connect(lambda: self.on_dock_closed(name))
 
@@ -600,20 +600,20 @@ class Qpansopy:
             # Ensure horizontal content never forces wider than the dock
             try:
                 log_widget.setLineWrapMode(QTextEdit_WidgetWidth)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             try:
                 # Only import when available in QGIS' Qt shim
                 from qgis.PyQt import QtGui as _QtGui  # type: ignore
                 log_widget.setWordWrapMode(_QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             try:
                 log_widget.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
                 log_widget.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
-        except Exception:
+        except Exception:  # nosec B110 - outer defensive wrapper around cosmetic dock/log setup
             pass
 
         # If enclosed in a group box with a capped max height, clear it too
@@ -624,7 +624,7 @@ class Qpansopy:
             if isinstance(parent, QtWidgets.QGroupBox):
                 parent.setMaximumHeight(16777215)
                 parent.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
         # Avoid forcing stretch so default stays compact; only relax form layout growth
@@ -632,7 +632,7 @@ class Qpansopy:
             layout = log_widget.parentWidget().layout() or dock_instance.layout()
             if isinstance(layout, QtWidgets.QFormLayout):
                 layout.setFieldGrowthPolicy(QFormLayout_AllNonFixedFieldsGrow)
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
         # Option A: ensure no leftover splitter from an older instance
@@ -665,11 +665,11 @@ class Qpansopy:
                         try:
                             top_container.setParent(None)
                             top_container.deleteLater()
-                        except Exception:
+                        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                             pass
                 dock_instance._qpansopy_hasSplitter = False
                 dock_instance._qpansopy_logSplitter = None
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
         # Build an internal resize handle that only changes the log height
@@ -697,14 +697,14 @@ class Qpansopy:
                 for i in range(lg_layout.count()):
                     try:
                         lg_layout.setStretch(i, 0)
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
                 # Prefer top alignment for contained widgets
                 try:
                     lg_layout.setAlignment(Qt_AlignTop)
-                except Exception:
+                except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                     pass
-            except Exception:
+            except Exception:  # nosec B110 - outer defensive wrapper around cosmetic dock/log setup
                 pass
 
             # Ensure default compact size via fixed height (user can adjust with handle)
@@ -717,7 +717,7 @@ class Qpansopy:
             # Prevent the log group from expanding vertically; keep it tight to content
             try:
                 log_group.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Fixed)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
 
             # Add a thin handle below the log editor if not already
@@ -757,7 +757,7 @@ class Qpansopy:
                                 # Ask layouts to recompute sizes so group doesn't leave gray gaps
                                 log_group.adjustSize()
                                 log_group.updateGeometry()
-                            except Exception:
+                            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                                 pass
                             return True
                         if et == QEvent_MouseButtonRelease:
@@ -799,7 +799,7 @@ class Qpansopy:
                         for j in range(layout.count()):
                             layout.setStretch(j, 0)
                         layout.setAlignment(Qt_AlignTop)
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
 
                 if root_layout:
@@ -807,21 +807,21 @@ class Qpansopy:
                     try:
                         # Use SetDefaultConstraint instead of SetMinAndMaxSize to avoid forcing QGIS window resize
                         root_layout.setSizeConstraint(QLayout_SetDefaultConstraint)
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
 
                 # Ensure every group box hugs its content (no vertical expansion)
                 for gb in root_widget.findChildren(QtWidgets.QGroupBox):
                     try:
                         gb.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Minimum)
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
 
                 # Don't force geometry recalculation - let Qt handle it naturally
                 # This prevents QGIS window resizing when switching between docks
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
-        except Exception:
+        except Exception:  # nosec B110 - outer defensive wrapper around cosmetic dock/log setup
             pass
 
     def on_dock_closed(self, name):
@@ -865,7 +865,7 @@ class Qpansopy:
         # This prevents geometry conflicts when switching rapidly between tools (issue #39)
         try:
             QgsApplication.processEvents()
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
     def _ensure_scroll_area_wrapper(self, dock_instance):
@@ -916,7 +916,7 @@ class Qpansopy:
             # Set the scroll area as the dock's widget
             dock_instance.setWidget(scroll_area)
 
-        except Exception:
+        except Exception:  # nosec B110 - if the scroll-area wrap fails, the dock still works unwrapped
             # If wrapping fails, continue without scroll area
             # Better to have the dock work (even with resize issue) than to crash
             pass
@@ -968,7 +968,7 @@ class Qpansopy:
             # Fallback to hardcoded safe size
             try:
                 dock_instance.resize(300, 350)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
 
     def _expand_dock_to_fill(self, dock_instance):
@@ -989,7 +989,7 @@ class Qpansopy:
             self.iface.mainWindow().resizeDocks(
                 [dock_instance], [available_height], Qt_Vertical
             )
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
     def _wait_for_geometry_update(self):
@@ -1016,7 +1016,7 @@ class Qpansopy:
             time.sleep(0.20)  # 200 milliseconds
             # Process any remaining events after the delay
             QgsApplication.processEvents()
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
     def _force_initial_geometry_calculation(self, dock_instance):
@@ -1070,7 +1070,7 @@ class Qpansopy:
             # Final event processing to ensure cache is updated
             QgsApplication.processEvents()
 
-        except Exception:
+        except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
     def _apply_maximum_size_constraint(self, dock_instance):
@@ -1156,7 +1156,7 @@ class Qpansopy:
                 dock_instance.setMaximumSize(800, 600)
                 size_policy = QSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
                 dock_instance.setSizePolicy(size_policy)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
 
     def _ensure_dock_anchor(self, name, instance):
@@ -1187,7 +1187,7 @@ class Qpansopy:
         if self.dock_anchor is not instance:
             try:
                 self.iface.mainWindow().tabifyDockWidget(self.dock_anchor, instance)
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
 
         self.dock_anchor = instance
@@ -1292,7 +1292,7 @@ class Qpansopy:
             # Apply log visibility immediately to all existing docks
             try:
                 self._apply_log_visibility(vals["show_log"])
-            except Exception:
+            except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
 
     def create_callback(self, name):
@@ -1353,7 +1353,7 @@ class Qpansopy:
             try:
                 from qgis.core import Qgis as _Q
                 self.iface.messageBar().pushMessage("QPANSOPY", f"Merge failed: {e}", level=_Q.Critical)
-            except Exception:
+            except Exception:  # nosec B110 - last-resort error reporter; must not raise while handling a merge failure
                 pass
 
     def _apply_log_visibility(self, show_log: bool):
@@ -1378,7 +1378,7 @@ class Qpansopy:
                 if show_log:
                     try:
                         self._ensure_resizable_log(inst)
-                    except Exception:
+                    except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
-            except Exception:
+            except Exception:  # nosec B112 - skip a dock instance whose cosmetic re-apply fails; continue with rest
                 continue

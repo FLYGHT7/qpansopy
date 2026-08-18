@@ -62,7 +62,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
        self.setFeatures(DOCK_FEATURES_DEFAULT)
        try:
            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
-       except Exception:
+       except Exception:  # nosec B110 - setAllowedAreas signature varies Qt5/Qt6; must not block dock creation
            pass
        # Aumentar el espaciado en los layouts
        self.verticalLayout.setSpacing(8)
@@ -184,7 +184,7 @@ class QPANSOPYOASILSDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
                    continue
                try:
                    params_dict = json.loads(params_json)
-               except Exception:
+               except Exception:  # nosec B112 - skip malformed 'parameters' JSON on this feature, keep scanning others
                    continue
                if 'calculation_type' in params_dict and 'OAS ILS' in params_dict['calculation_type']:
                    layer_params = dict(params_dict)
