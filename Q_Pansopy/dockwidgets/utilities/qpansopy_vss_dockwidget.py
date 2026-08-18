@@ -60,7 +60,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Allow docking left/right and avoid aggressive size constraints
         try:
             self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
-        except Exception:
+        except Exception:  # nosec B110 - setAllowedAreas signature varies Qt5/Qt6; must not block dock creation
             pass
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)

@@ -79,7 +79,7 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         for lyr in self._connected_layers:
             try:
                 lyr.selectionChanged.disconnect(self._update_preview)
-            except Exception:
+            except Exception:  # nosec B110 - signal may already be disconnected; safe to ignore
                 pass
         self._connected_layers = []
 
@@ -140,7 +140,7 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             tolerance_area, _ = build_tolerance_geometry(navid_geom, fix_geom, rotate, da)
             if tolerance_area and not tolerance_area.isEmpty():
                 self._preview_band.setToGeometry(tolerance_area, None)
-        except Exception:
+        except Exception:  # nosec B110 - best-effort live preview; a geometry/transform glitch must not crash the tool
             pass
 
     def calculate(self):

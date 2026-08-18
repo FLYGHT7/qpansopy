@@ -469,5 +469,5 @@ def preseed_active_layer(iface, combo_box, geom_type) -> None:
                 and isinstance(active, QgsVectorLayer)
                 and active.geometryType() == geom_type):
             combo_box.setLayer(active)
-    except Exception:
+    except Exception:  # nosec B110 - best-effort active-layer preseed; must not block combo box setup
         pass

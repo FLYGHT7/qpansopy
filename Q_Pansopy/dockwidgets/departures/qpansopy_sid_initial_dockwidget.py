@@ -75,7 +75,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         try:
             self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
-        except Exception:
+        except Exception:  # nosec B110 - setAllowedAreas signature varies Qt5/Qt6; must not block dock creation
             pass
 
         # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize

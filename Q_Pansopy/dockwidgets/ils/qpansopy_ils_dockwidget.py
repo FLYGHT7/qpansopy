@@ -58,7 +58,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.setFeatures(DOCK_FEATURES_DEFAULT)
        try:
            self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
-       except Exception:
+       except Exception:  # nosec B110 - setAllowedAreas signature varies Qt5/Qt6; must not block dock creation
            pass
        # Connect signals
        self.calculateButton.clicked.connect(self.calculate)

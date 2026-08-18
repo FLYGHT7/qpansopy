@@ -59,7 +59,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setFeatures(DOCK_FEATURES_DEFAULT)
         try:
             self.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
-        except Exception:
+        except Exception:  # nosec B110 - setAllowedAreas signature varies Qt5/Qt6; must not block dock creation
             pass
         # Don't set minimum height - let dock adjust naturally to prevent QGIS window resize
 
@@ -204,7 +204,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
             triangle = QgsGeometry(QgsPolygon(QgsLineString([der_cwy_point, base_left, base_right])))
             self._der_marker_band.setToGeometry(triangle, None)
-        except Exception:
+        except Exception:  # nosec B110 - best-effort live preview; a geometry/transform glitch must not crash the tool
             pass
 
     def log(self, message):
