@@ -3,7 +3,7 @@ name=qPansopy
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 description=QPANSOPY Plugin for QGIS - Procedure Analysis and Obstacle Protection Surfaces (PANSOPS)
-version=0.5.0
+version=0.5.1
 author=FLYGHT7
 email=info@flyght7.com
 
@@ -22,6 +22,8 @@ experimental=True
 deprecated=False
 
 changelog=
+    Version 0.5.1:
+    - Qt6 reviews to reduce false positives
     Version 0.5.0:
     - Fix widget allocation
     - Fix Holding Pattern Direction
