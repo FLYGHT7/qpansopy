@@ -38,6 +38,7 @@ try:
     from .dockwidgets.utilities.qpansopy_object_selection_dockwidget import QPANSOPYObjectSelectionDockWidget
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
     from .dockwidgets.utilities.qpansopy_holding_dockwidget import QPANSOPYHoldingDockWidget
+    from .dockwidgets.utilities.qpansopy_circling_dockwidget import QPANSOPYCirclingDockWidget
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.pbn.qpansopy_gnss_waypoint_dockwidget import QPANSOPYGNSSWaypointDockWidget
     from .dockwidgets.pbn.qpansopy_pbn_target_dockwidget import QPANSOPYPBNTargetDockWidget
@@ -278,6 +279,15 @@ class Qpansopy:
                     "TOOLTIP": "Conventional holding (racetrack) generator",
                     "ICON": "holding.svg",
                     "DOCK_WIDGET": QPANSOPYHoldingDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "CIRCLING": {
+                    "TITLE": "Circling",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Visual Manoeuvring (Circling) Protection Area - "
+                               "per-category radius rings from selected thresholds",
+                    "ICON": "circling.svg",
+                    "DOCK_WIDGET": QPANSOPYCirclingDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "SID_INITIAL": {
