@@ -40,9 +40,10 @@ def extract_objects(iface, point_layer, surface_layer,
     :return: dict with 'count' and optionally 'kml_path', or None on failure
     """
     map_crs = QgsProject.instance().crs()
+    reprojected = point_layer.crs() != map_crs
 
     # ----- Optional reprojection of obstacle layer -----
-    if point_layer.crs() != map_crs:
+    if reprojected:
         transform = QgsCoordinateTransform(point_layer.crs(), map_crs, QgsProject.instance())
         transformed_features = []
         source_features = (
@@ -83,11 +84,17 @@ def extract_objects(iface, point_layer, surface_layer,
         surface_index.addFeature(f)
     intersecting_features = []
 
-    source_features = (
-        work_layer.selectedFeatures() if use_selection_only
-        else work_layer.getFeatures()
-    )
-    for pt in source_features:
+    if reprojected:
+        # work_layer is a fresh memory layer already holding exactly the
+        # requested points (selected-or-all); it carries no selection, so the
+        # use_selection_only filter must not be re-applied here.
+        point_features = work_layer.getFeatures()
+    else:
+        point_features = (
+            work_layer.selectedFeatures() if use_selection_only
+            else work_layer.getFeatures()
+        )
+    for pt in point_features:
         geom = pt.geometry()
         if not geom or geom.isEmpty():
             continue

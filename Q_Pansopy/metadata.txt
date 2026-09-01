@@ -24,6 +24,7 @@ deprecated=False
 changelog=
     Version 0.5.2:
     - Add Circling (Visual Manoeuvring) Protection Area tool on the UTILITIES toolbar: per-category (CAT A-E) circling radius from the PANS-OPS web calculator, drawn as a convex-hull racetrack around the selected runway thresholds with optional KML export
+    - Object Selection: fix "Use selection only" returning zero objects when the point layer CRS differs from the project CRS, and warn when the option is checked without a map-canvas selection in both input layers
     Version 0.5.1:
     - Qt6 reviews to reduce false positives
     Version 0.5.0:
