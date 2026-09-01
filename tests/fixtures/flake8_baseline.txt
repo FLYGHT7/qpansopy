@@ -1,0 +1,33 @@
+# Flake8 compliance baseline for the Q_Pansopy plugin.
+#
+# Each line is:  <plugin-relative path>: <flake8 code> <count>
+# i.e. the pre-existing findings that `flake8 --config=Q_Pansopy/setup.cfg Q_Pansopy`
+# still reports, accepted as tracked tech debt (see setup.cfg "Unblocked by: TD-00x").
+#
+# tests/integration/test_flake8_compliance.py enforces this file:
+#   - FAILS if a NEW (path, code) appears or an existing count grows  -> a regression;
+#     new code must be flake8-clean under the plugin setup.cfg.
+#   - FAILS if a listed finding disappears or a count shrinks         -> debt was paid
+#     down; regenerate this file so the ratchet keeps the number honest.
+#
+# Regenerate after legitimately reducing findings:
+#   python tests/scripts/gen_flake8_baseline.py
+#
+# Total: 33 findings.
+dockwidgets/conv/qpansopy_conv_initial_dockwidget.py: F401 3
+dockwidgets/conv/qpansopy_ndb_dockwidget.py: F401 3
+dockwidgets/conv/qpansopy_vor_dockwidget.py: F401 3
+dockwidgets/departures/qpansopy_sid_initial_dockwidget.py: E501 1
+dockwidgets/departures/qpansopy_sid_initial_dockwidget.py: F401 2
+dockwidgets/departures/qpansopy_sid_initial_dockwidget.py: W293 1
+dockwidgets/ils/qpansopy_ils_dockwidget.py: W293 1
+dockwidgets/ils/qpansopy_oas_ils_dockwidget.py: W293 1
+dockwidgets/pbn/qpansopy_gnss_waypoint_dockwidget.py: F401 3
+dockwidgets/pbn/qpansopy_gnss_waypoint_dockwidget.py: W293 1
+dockwidgets/pbn/qpansopy_lnav_dockwidget.py: F401 3
+dockwidgets/pbn/qpansopy_pbn_target_dockwidget.py: F401 1
+dockwidgets/utilities/qpansopy_holding_dockwidget.py: F401 1
+dockwidgets/utilities/qpansopy_vss_dockwidget.py: E501 1
+dockwidgets/utilities/qpansopy_vss_dockwidget.py: W293 1
+dockwidgets/utilities/qpansopy_wind_spiral_dockwidget.py: E501 1
+dockwidgets/utilities/qpansopy_wind_spiral_dockwidget.py: F401 6

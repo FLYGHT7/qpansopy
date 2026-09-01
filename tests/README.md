@@ -11,6 +11,26 @@ Comprehensive external testing system for QPANSOPY mathematical formulas and cal
 - **Real-world Scenarios**: Tests with actual airport data and ICAO standards
 - **Detailed Reporting**: JSON reports with execution statistics and error analysis
 - **Production Safe**: External testing approach with no impact on production code
+- **Store-compliance guard**: `pytest` re-runs the QGIS Plugin Repository's Flake8 check so
+  regressions fail CI instead of surfacing only at upload time
+
+## Flake8 store-compliance guard
+
+`tests/integration/test_flake8_compliance.py` runs
+`flake8 --config=Q_Pansopy/setup.cfg Q_Pansopy` and diffs it against
+`tests/fixtures/flake8_baseline.txt` (the accepted pre-existing findings, per `(path, code)`):
+
+- **new finding / higher count** → `test_no_new_flake8_findings` fails; new code must be
+  Flake8-clean under the plugin `setup.cfg` (or, for genuine tech debt, get a scoped
+  `per-file-ignores` rule with an `Unblocked by:` note).
+- **finding resolved / lower count** → `test_flake8_baseline_is_tight` fails; regenerate the
+  ratchet:
+
+  ```bash
+  python tests/scripts/gen_flake8_baseline.py
+  ```
+
+Needs `flake8` (pinned in `tests/requirements.txt`); the test skips if it is not installed.
 
 ## Quick Start
 
