@@ -71,3 +71,48 @@ def test_metres_elevation_is_converted_to_feet():
     in_from_m = mod.calc_circling_category(180, 1000, elev_ft_from_m, 20, 15, 0.5)
     assert in_from_m['circling_radius_nm'] == pytest.approx(
         in_ft['circling_radius_nm'], abs=1e-9)
+
+
+# --- run_circling selection-count guard (Issue #223) ---------------------
+
+class _RecordingMessageBar:
+    def __init__(self):
+        self.messages = []
+
+    def pushMessage(self, *args, **kwargs):
+        self.messages.append((args, kwargs))
+
+
+class _FakeIface:
+    def __init__(self):
+        self._bar = _RecordingMessageBar()
+
+    def messageBar(self):
+        return self._bar
+
+
+class _FakeThresholdLayer:
+    """Minimal stand-in: run_circling only needs selectedFeatures() before the
+    count guard rejects it."""
+
+    def __init__(self, selected_count):
+        self._selected = [object() for _ in range(selected_count)]
+
+    def selectedFeatures(self):
+        return list(self._selected)
+
+
+@pytest.mark.parametrize('selected_count', [0, 1])
+def test_run_circling_requires_at_least_two_thresholds(selected_count):
+    mod = _mod()
+    iface = _FakeIface()
+    layer = _FakeThresholdLayer(selected_count)
+
+    result = mod.run_circling(iface, layer, {'ias_by_cat': {'A': 100}})
+
+    assert result is False
+    assert iface.messageBar().messages, 'expected a warning to be pushed'
+    text = ' '.join(
+        str(part) for args, _ in iface.messageBar().messages for part in args
+    ).lower()
+    assert 'at least 2' in text
