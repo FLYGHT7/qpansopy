@@ -2,7 +2,7 @@
 """
 Object extraction module for QPANSOPY.
 
-Provides extract_objects() to find obstacle points that intersect
+Provides extract_objects() to find obstacle points that fall inside
 obstacle assessment surfaces, called from the Object Selection dockwidget.
 """
 
@@ -10,106 +10,118 @@ import os
 import datetime
 from qgis.core import (
     QgsProject,
-    QgsFeatureRequest,
     QgsSpatialIndex,
     QgsCoordinateTransform,
+    QgsCoordinateReferenceSystem,
     QgsVectorLayer,
-    QgsWkbTypes,
-    QgsFeature,
+    QgsGeometry,
     QgsSymbol,
     QgsSimpleMarkerSymbolLayer,
     QgsVectorFileWriter,
-    QgsCoordinateReferenceSystem,
     Qgis,
 )
 from qgis.PyQt.QtGui import QColor
+
+from ...utils import fix_kml_altitude_mode
+
+
+def _prepare_surfaces(surface_layer):
+    """Index every surface feature and cache a prepared geometry engine for it.
+
+    Geometries stay in the surface layer's own CRS (the working CRS for the
+    intersection test), so nothing is transformed here. Preparing each geometry
+    once lets the per-point test hit a GEOS prepared-geometry fast path instead
+    of re-reading the surface provider.
+
+    Each map value is an ``(engine, geometry)`` pair: the engine borrows a
+    pointer into that geometry, so the geometry has to be kept alive for as
+    long as the engine is used.
+
+    :return: (QgsSpatialIndex, {fid: (QgsGeometryEngine, QgsGeometry)})
+    """
+    index = QgsSpatialIndex()
+    surfaces = {}
+    for feat in surface_layer.getFeatures():
+        geom = feat.geometry()
+        if not geom or geom.isEmpty():
+            continue
+        fid = feat.id()
+        index.addFeature(fid, geom.boundingBox())
+        engine = QgsGeometry.createGeometryEngine(geom.constGet())
+        engine.prepareGeometry()
+        surfaces[fid] = (engine, geom)
+    return index, surfaces
 
 
 def extract_objects(iface, point_layer, surface_layer,
                     export_kml=False, output_dir=None, use_selection_only=False):
     """
-    Extract obstacle points that intersect any surface in *surface_layer*.
+    Extract obstacle points that fall inside any surface of *surface_layer*.
+
+    The intersection test runs entirely in the surface layer's CRS; obstacle
+    point geometries are transformed into it on the fly when the two layers
+    differ. The project/canvas CRS does not affect the result.
 
     :param iface: QGIS interface instance
     :param point_layer: QgsVectorLayer with obstacle points (any CRS)
     :param surface_layer: QgsVectorLayer with assessment surfaces (polygon)
     :param export_kml: Whether to export the result to a KML file
     :param output_dir: Directory for the KML file (required when export_kml=True)
-    :param use_selection_only: Only process currently-selected features of point_layer
-        and surface_layer
-    :return: dict with 'count' and optionally 'kml_path', or None on failure
+    :param use_selection_only: Only process currently-selected features of
+        point_layer; every surface feature is always considered
+    :return: dict with 'count' and optionally 'kml_path'
     """
-    map_crs = QgsProject.instance().crs()
-    reprojected = point_layer.crs() != map_crs
+    work_crs = surface_layer.crs()
 
-    # ----- Optional reprojection of obstacle layer -----
-    if reprojected:
-        transform = QgsCoordinateTransform(point_layer.crs(), map_crs, QgsProject.instance())
-        transformed_features = []
-        source_features = (
-            point_layer.selectedFeatures() if use_selection_only
-            else point_layer.getFeatures()
+    xform = None
+    if point_layer.crs() != work_crs:
+        xform = QgsCoordinateTransform(
+            point_layer.crs(), work_crs, QgsProject.instance()
         )
-        for f in source_features:
-            geom = f.geometry()
-            if geom and not geom.isEmpty():
-                geom.transform(transform)
-                f.setGeometry(geom)
-                transformed_features.append(f)
 
-        work_layer = QgsVectorLayer(
-            f"Point?crs={map_crs.authid()}", "reprojected_opea", "memory"
-        )
-        work_layer.dataProvider().addAttributes(point_layer.fields())
-        work_layer.updateFields()
-        work_layer.dataProvider().addFeatures(transformed_features)
+    surface_index, surfaces = _prepare_surfaces(surface_layer)
 
-        if point_layer.crs().authid() == 'EPSG:4326':
-            iface.messageBar().pushMessage(
-                "Reprojection Notice",
-                f"'{point_layer.name()}' was reprojected from EPSG:4326 to match the map CRS.",
-                level=Qgis.Info,
-                duration=5,
-            )
-    else:
-        work_layer = point_layer
-
-    # ----- Spatial index & intersection test -----
-    surface_source_features = (
-        surface_layer.selectedFeatures() if use_selection_only
-        else surface_layer.getFeatures()
+    point_features = (
+        point_layer.selectedFeatures() if use_selection_only
+        else point_layer.getFeatures()
     )
-    surface_index = QgsSpatialIndex()
-    for f in surface_source_features:
-        surface_index.addFeature(f)
-    intersecting_features = []
 
-    if reprojected:
-        # work_layer is a fresh memory layer already holding exactly the
-        # requested points (selected-or-all); it carries no selection, so the
-        # use_selection_only filter must not be re-applied here.
-        point_features = work_layer.getFeatures()
-    else:
-        point_features = (
-            work_layer.selectedFeatures() if use_selection_only
-            else work_layer.getFeatures()
-        )
+    intersecting_features = []
+    skipped_transforms = 0
     for pt in point_features:
-        geom = pt.geometry()
-        if not geom or geom.isEmpty():
+        src_geom = pt.geometry()
+        if not src_geom or src_geom.isEmpty():
             continue
-        candidate_ids = surface_index.intersects(geom.boundingBox())
-        for surf in surface_layer.getFeatures(
-            QgsFeatureRequest().setFilterFids(candidate_ids)
-        ):
-            if geom.intersects(surf.geometry()):
+        test_geom = QgsGeometry(src_geom)
+        if xform is not None:
+            try:
+                # 0 == Qgis.GeometryOperationResult.Success (flat int, Qt5/Qt6 safe)
+                failed = test_geom.transform(xform) != 0
+            except Exception:
+                # QgsCsException etc. - treat as an unreprojectable point
+                failed = True
+            if failed:
+                skipped_transforms += 1
+                continue
+        abstract = test_geom.constGet()
+        for fid in surface_index.intersects(test_geom.boundingBox()):
+            if surfaces[fid][0].intersects(abstract):
                 intersecting_features.append(pt)
                 break
 
-    # ----- Build result layer -----
-    extracted_layer = QgsVectorLayer(
-        f"Point?crs={work_layer.crs().authid()}", "Extracted Objects", "memory"
-    )
+    if skipped_transforms:
+        iface.messageBar().pushMessage(
+            "QPANSOPY:",
+            "{0} obstacle point(s) could not be reprojected to the surface "
+            "CRS and were skipped".format(skipped_transforms),
+            level=Qgis.Warning,
+        )
+
+    # ----- Build result layer (original, untransformed geometries) -----
+    # setCrs() with the CRS object, not an authid string: a custom/unregistered
+    # point-layer CRS has an empty authid and would yield an invalid layer.
+    extracted_layer = QgsVectorLayer("Point", "Extracted Objects", "memory")
+    extracted_layer.setCrs(point_layer.crs())
     extracted_layer.dataProvider().addAttributes(point_layer.fields())
     extracted_layer.updateFields()
     extracted_layer.dataProvider().addFeatures(intersecting_features)
@@ -135,9 +147,15 @@ def extract_objects(iface, point_layer, surface_layer,
         kml_path = os.path.join(output_dir, f"extracted_objects_{timestamp}.kml")
         kml_crs = QgsCoordinateReferenceSystem("EPSG:4326")
         err = QgsVectorFileWriter.writeAsVectorFormat(
-            extracted_layer, kml_path, 'utf-8', kml_crs, 'KML'
+            extracted_layer, kml_path, 'utf-8', kml_crs, 'KML',
+            layerOptions=['MODE=2']
         )
         if err[0] == QgsVectorFileWriter.NoError:
+            fix_kml_altitude_mode(kml_path)
             result['kml_path'] = kml_path
+        else:
+            iface.messageBar().pushMessage(
+                "QPANSOPY:", "KML export failed", level=Qgis.Warning
+            )
 
     return result

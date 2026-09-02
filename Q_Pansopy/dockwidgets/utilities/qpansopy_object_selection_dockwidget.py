@@ -68,21 +68,14 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             output_dir = self.outputFolderLineEdit.text() if export_kml else None
             use_selection_only = self.useSelectionOnlyCheckBox.isChecked()
 
-            # 'Use selection only' needs a map-canvas selection in both layers;
-            # otherwise the tool would silently extract nothing.
-            if use_selection_only:
-                missing = []
-                if point_layer.selectedFeatureCount() == 0:
-                    missing.append(point_layer.name())
-                if surface_layer.selectedFeatureCount() == 0:
-                    missing.append(surface_layer.name())
-                if missing:
-                    self.log(
-                        "Error: 'Use selection only' is checked but no features "
-                        "are selected in: " + ", ".join(missing) +
-                        ". Select features in both layers or uncheck the option."
-                    )
-                    return
+            # 'Use selection only' filters the obstacle points; it needs a
+            # map-canvas selection in the point layer or nothing is extracted.
+            if use_selection_only and point_layer.selectedFeatureCount() == 0:
+                self.log(
+                    "Error: 'Use selection only' is checked but no features are "
+                    "selected in the point layer '" + point_layer.name() + "'."
+                )
+                return
 
             # Mensaje de inicio de procesamiento
             self.log("Starting object extraction...")
