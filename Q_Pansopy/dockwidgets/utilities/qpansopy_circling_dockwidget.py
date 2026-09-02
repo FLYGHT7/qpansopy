@@ -76,8 +76,8 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not layer:
             self.log("Error: Please select a threshold point layer")
             return
-        if layer.selectedFeatureCount() < 1:
-            msg = "Select at least one threshold feature in the map before calculating"
+        if layer.selectedFeatureCount() < 2:
+            msg = "Select at least 2 threshold features in the map before calculating"
             self.log("Error: {0}".format(msg))
             self.iface.messageBar().pushMessage("QPANSOPY", msg, level=Qgis.Warning)
             return

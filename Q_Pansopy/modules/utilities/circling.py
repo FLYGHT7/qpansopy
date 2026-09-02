@@ -153,7 +153,7 @@ def run_circling(iface, threshold_layer, params=None):
     points.
 
     :param iface: QGIS interface.
-    :param threshold_layer: Point layer with one or more selected threshold
+    :param threshold_layer: Point layer with two or more selected threshold
         features.
     :param params: dict with keys ``elev`` (float), ``elev_unit`` ('ft'|'m'),
         ``bank_deg``, ``delta_isa``, ``prot_height_ft``, ``ias_by_cat``
@@ -166,9 +166,9 @@ def run_circling(iface, threshold_layer, params=None):
         params = {}
 
     selected = list(threshold_layer.selectedFeatures())
-    if not selected:
+    if len(selected) < 2:
         iface.messageBar().pushMessage(
-            "QPANSOPY:", "Select at least one threshold feature before calculating",
+            "QPANSOPY:", "Select at least 2 threshold features before calculating",
             level=Qgis.Warning,
         )
         return False
