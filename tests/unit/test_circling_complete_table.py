@@ -57,7 +57,7 @@ def test_complete_table_matches_web_layout_and_precision():
     html, text = mod.format_circling_complete_table(_summary(), _params())
 
     assert '<th' in html
-    assert 'background:#0c2240' in html
+    assert 'background-color:#000000' in html
     assert html.count('<th') == 6
     assert '<b>Bank Angle [°]</b>' in html
     assert '<b>Circling Radius = 2r + S [NM]</b>' in html
@@ -165,6 +165,69 @@ def test_copy_complete_table_sets_html_and_plain_text(
     assert captured['mime'] is not None
     assert captured['log'] == 'Complete Circling table copied to clipboard for Word.'
     assert captured['message'][0][1] == 'Complete Circling table copied to clipboard'
+
+
+def test_show_table_copy_action_uses_complete_matrix(
+        monkeypatch, dockwidget_module):
+    """The inspector's Copy to Word action must not copy one table per CAT."""
+    dock_mod = dockwidget_module
+    inspector_mod = importlib.import_module(
+        'Q_Pansopy.parameters_inspector_dialog')
+    captured = {}
+
+    def _capture_popup(title, sections, clipboard_content=None):
+        captured['title'] = title
+        captured['sections'] = sections
+        captured['clipboard_content'] = clipboard_content
+
+    class _FakeDock:
+        last_summary = _summary()
+        last_params = _params()
+
+        @staticmethod
+        def log(message):
+            captured['log'] = message
+
+    monkeypatch.setattr(inspector_mod, 'show_web_popup', _capture_popup)
+
+    dock_mod.QPANSOPYCirclingDockWidget.show_parameters_table(_FakeDock())
+
+    content = captured['clipboard_content']
+    assert content is not None
+    assert content.html.count('<table') == 1
+    assert content.html.count('<th') == 6
+    assert content.text.startswith(
+        'Parameters\tCAT A\tCAT B\tCAT C\tCAT D\tCAT E')
+    # The on-screen per-category inspector remains available as before.
+    assert [title for title, _params in captured['sections']] == [
+        'CAT A', 'CAT B', 'CAT C', 'CAT D', 'CAT E']
+
+
+def test_show_table_requires_complete_calculation_snapshot(
+        monkeypatch, dockwidget_module):
+    """A partial cached result must not open a popup or raise unexpectedly."""
+    dock_mod = dockwidget_module
+    inspector_mod = importlib.import_module(
+        'Q_Pansopy.parameters_inspector_dialog')
+    messages = []
+
+    class _FakeDock:
+        last_summary = _summary()
+        last_params = None
+
+        @staticmethod
+        def log(message):
+            messages.append(message)
+
+    monkeypatch.setattr(
+        inspector_mod,
+        'show_web_popup',
+        lambda *args, **kwargs: pytest.fail('popup must not be opened'),
+    )
+
+    dock_mod.QPANSOPYCirclingDockWidget.show_parameters_table(_FakeDock())
+
+    assert messages == ['Error: No calculation available to show']
 
 
 def test_copy_complete_table_requires_a_successful_calculation(

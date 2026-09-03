@@ -21,6 +21,8 @@ with a button to copy it to the clipboard as a Word-pasteable table.
 """
 import html
 import json
+from dataclasses import dataclass
+from typing import Optional
 
 from qgis.core import QgsAction, QgsProject
 from qgis.PyQt.QtCore import QMimeData, QObject, pyqtSlot
@@ -29,6 +31,15 @@ from qgis.PyQt.QtWidgets import (
 )
 
 from .utils import format_parameters_table
+
+
+@dataclass(frozen=True)
+class ClipboardContent:
+    """HTML and plain-text representations for one clipboard operation."""
+
+    html: str
+    text: str
+
 
 # QtWebEngineWidgets/QtWebChannel are optional, heavy Qt components (bundled
 # separately from base PyQt -- e.g. `python-pyqt6-webengine` on Arch/CachyOS)
@@ -229,30 +240,54 @@ def _build_page_html(title, sections):
     return page
 
 
+def _build_clipboard_content(sections):
+    """Build the default one-table-per-section clipboard representation."""
+    html_parts = [
+        format_parameters_table(title, params, as_html=True)
+        for title, params in sections
+    ]
+    text_parts = [
+        format_parameters_table(title, params, as_html=False)
+        for title, params in sections
+    ]
+    multi = len(sections) > 1
+    return ClipboardContent(
+        html=(
+            "<div>" + "<br>".join(html_parts) + "</div>"
+            if multi else html_parts[0]
+        ),
+        text="\n\n".join(text_parts),
+    )
+
+
 class ClipboardBridge(QObject):
     """JS-callable bridge (via QWebChannel) that copies a clean, Word-pasteable
     HTML table to the native clipboard -- QWebEngineView content runs in a
     separate process/sandbox, so JS can't touch the OS clipboard directly."""
 
-    def __init__(self, sections):
+    def __init__(
+            self, sections,
+            clipboard_content: Optional[ClipboardContent] = None):
         super().__init__()
         self._sections = sections
+        self._clipboard_content = clipboard_content
 
     @pyqtSlot()
     def copyToClipboard(self):
-        multi = len(self._sections) > 1
-        html_parts = []
-        text_parts = []
-        for section_title, flat_params in self._sections:
-            html_parts.append(format_parameters_table(section_title, flat_params, as_html=True))
-            text_parts.append(format_parameters_table(section_title, flat_params, as_html=False))
+        content = (
+            self._clipboard_content
+            if self._clipboard_content is not None
+            else _build_clipboard_content(self._sections)
+        )
         mime = QMimeData()
-        mime.setHtml("<div>" + "<br>".join(html_parts) + "</div>" if multi else html_parts[0])
-        mime.setText("\n\n".join(text_parts))
+        mime.setHtml(content.html)
+        mime.setText(content.text)
         QApplication.clipboard().setMimeData(mime)
 
 
-def show_web_popup(title, sections):
+def show_web_popup(
+        title, sections,
+        clipboard_content: Optional[ClipboardContent] = None):
     """
     Show a Parameters Inspector popup for one or more (section_title,
     flat_params_dict) pairs. Non-modal; kept alive in _open_views until
@@ -261,15 +296,17 @@ def show_web_popup(title, sections):
     falling back to a QTextBrowser popup otherwise.
     """
     if _WEBENGINE_AVAILABLE:
-        return _show_webengine_popup(title, sections)
-    return _show_textbrowser_popup(title, sections)
+        return _show_webengine_popup(title, sections, clipboard_content)
+    return _show_textbrowser_popup(title, sections, clipboard_content)
 
 
-def _show_webengine_popup(title, sections):
+def _show_webengine_popup(
+        title, sections,
+        clipboard_content: Optional[ClipboardContent] = None):
     page_html = _build_page_html(title, sections)
 
     view = QWebEngineView()
-    bridge = ClipboardBridge(sections)
+    bridge = ClipboardBridge(sections, clipboard_content)
     channel = QWebChannel(view.page())
     view.page().setWebChannel(channel)
     channel.registerObject("pyBridge", bridge)
@@ -377,11 +414,14 @@ class _FallbackParametersDialog(QDialog):
     """Static QTextBrowser popup used when QtWebEngine isn't installed.
     Ships its own native (non-JS) light/dark toggle button."""
 
-    def __init__(self, title, sections, parent=None):
+    def __init__(
+            self, title, sections, parent=None,
+            clipboard_content: Optional[ClipboardContent] = None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setMinimumSize(520, 360)
         self._sections = sections
+        self._clipboard_content = clipboard_content
         self._title = title
         self._theme = 'dark'
 
@@ -425,11 +465,15 @@ class _FallbackParametersDialog(QDialog):
         self._render()
 
     def _copy_to_word(self):
-        ClipboardBridge(self._sections).copyToClipboard()
+        ClipboardBridge(
+            self._sections, self._clipboard_content).copyToClipboard()
 
 
-def _show_textbrowser_popup(title, sections):
-    dialog = _FallbackParametersDialog(title, sections)
+def _show_textbrowser_popup(
+        title, sections,
+        clipboard_content: Optional[ClipboardContent] = None):
+    dialog = _FallbackParametersDialog(
+        title, sections, clipboard_content=clipboard_content)
     key = id(dialog)
     _open_views[key] = dialog
     dialog.finished.connect(lambda _result: _open_views.pop(key, None))

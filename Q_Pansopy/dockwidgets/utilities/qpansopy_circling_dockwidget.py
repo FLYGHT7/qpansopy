@@ -139,7 +139,7 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def show_parameters_table(self):
         summary = self.last_summary
-        if not summary:
+        if not summary or not self.last_params:
             self.log("Error: No calculation available to show")
             return
 
@@ -160,8 +160,16 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'Circling_radius_NM': "{0:.4f}".format(res['circling_radius_nm']),
             }))
 
-        from ...parameters_inspector_dialog import show_web_popup
-        show_web_popup("Circling Protection Area - Parameters", sections)
+        from ...modules.utilities.circling import format_circling_complete_table
+        from ...parameters_inspector_dialog import ClipboardContent, show_web_popup
+
+        table_html, table_text = format_circling_complete_table(
+            summary, self.last_params)
+        show_web_popup(
+            "Circling Protection Area - Parameters",
+            sections,
+            clipboard_content=ClipboardContent(table_html, table_text),
+        )
         self.log("Circling parameters shown in Parameters Inspector.")
 
     def copy_complete_table(self):
