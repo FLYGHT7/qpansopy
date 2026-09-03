@@ -30,6 +30,7 @@ def _install_qgis_stubs():
         'QgsCoordinateReferenceSystem', 'QgsCoordinateTransform', 'QgsPointXY',
         'QgsWkbTypes', 'QgsField', 'QgsFields', 'QgsPoint', 'QgsLineString',
         'QgsPolygon', 'QgsVectorFileWriter', 'QgsCircularString',
+        'QgsFeatureSink', 'QgsMemoryProviderUtils',
         # Renderers & symbols
         'QgsRuleBasedRenderer', 'QgsFillSymbol', 'QgsSymbol',
         'QgsCategorizedSymbolRenderer', 'QgsRendererCategory',
@@ -155,6 +156,9 @@ def _install_qgis_stubs():
 
 
 def pytest_runtest_setup(item):
+    if item.get_closest_marker('qgis_runtime'):
+        item._qgis_stub_ctx = None
+        return
     item._qgis_stub_ctx = _install_qgis_stubs()
     item._qgis_stub_ctx.__enter__()
 
