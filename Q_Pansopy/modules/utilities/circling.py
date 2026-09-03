@@ -112,15 +112,18 @@ def format_circling_complete_table(
         "background-color:#000000;color:#ffffff;padding:8px;"
         "text-align:center;font-weight:bold"
     )
-    cell_style = "padding:8px;text-align:left"
+    cell_style = (
+        "background-color:#ffffff;color:#000000;padding:8px;text-align:left"
+    )
     header_html = "".join(
-        '<th style="{0}">{1}</th>'.format(header_style, html.escape(value))
-        for value in headers
+        '<th style="{0};width:{1}%">{2}</th>'.format(
+            header_style, 35 if index == 0 else 13, html.escape(value))
+        for index, value in enumerate(headers)
     )
     body_html = []
     for label, values in rendered_rows:
         cells = [
-            '<td style="{0}"><b>{1}</b></td>'.format(
+            '<td style="{0}"><b style="color:#000000">{1}</b></td>'.format(
                 cell_style, html.escape(label))
         ]
         cells.extend(

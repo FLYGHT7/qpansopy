@@ -142,6 +142,22 @@ def test_build_page_html_escapes_values():
     assert '&lt;script&gt;' in page
 
 
+def test_build_page_html_uses_complete_table_content():
+    mod = _mod()
+    content = mod.TableContent(
+        '<table id="complete"><tr><th>Parameters</th><th>CAT A</th></tr></table>',
+        'Parameters\tCAT A',
+    )
+
+    page = mod._build_page_html(
+        "Circling", [("CAT A", {'IAS': 100})], table_content=content)
+
+    assert page.count('<table') == 1
+    assert 'id="complete"' in page
+    assert '<td><b>IAS</b></td>' not in page
+    assert 'complete-table-card' in page
+
+
 # ---------------------------------------------------------------------------
 # ClipboardBridge
 # ---------------------------------------------------------------------------
@@ -201,14 +217,14 @@ def test_clipboard_bridge_uses_custom_single_table_content(monkeypatch):
 
     monkeypatch.setattr(mod, 'QMimeData', _FakeMimeData)
     monkeypatch.setattr(mod, 'QApplication', _FakeQApplication)
-    content = mod.ClipboardContent(
+    content = mod.TableContent(
         html='<table><tr><th>Parameters</th><th>CAT A</th></tr></table>',
         text='Parameters\tCAT A',
     )
 
     bridge = mod.ClipboardBridge(
         [('CAT A', {'IAS': 100}), ('CAT B', {'IAS': 135})],
-        clipboard_content=content,
+        table_content=content,
     )
     bridge.copyToClipboard()
 
@@ -278,6 +294,21 @@ def test_build_fallback_page_html_escapes_values():
     assert '&lt;script&gt;' in page
 
 
+def test_build_fallback_page_html_uses_complete_table_content():
+    mod = _mod()
+    content = mod.TableContent(
+        '<table id="complete"><tr><th>Parameters</th><th>CAT A</th></tr></table>',
+        'Parameters\tCAT A',
+    )
+
+    page = mod._build_fallback_page_html(
+        "Circling", [("CAT A", {'IAS': 100})], table_content=content)
+
+    assert page.count('<table') == 1
+    assert 'id="complete"' in page
+    assert '<b>IAS</b>' not in page
+
+
 def test_show_web_popup_falls_back_when_webengine_unavailable(monkeypatch):
     """
     Regression guard: on systems missing the optional QtWebEngine Qt
@@ -299,8 +330,8 @@ def test_show_web_popup_uses_webengine_when_available(monkeypatch):
     calls = []
     monkeypatch.setattr(
         mod, '_show_webengine_popup',
-        lambda title, sections, clipboard_content: calls.append(
-            (title, sections, clipboard_content)))
+        lambda title, sections, table_content: calls.append(
+            (title, sections, table_content)))
     monkeypatch.setattr(mod, '_show_textbrowser_popup', lambda *args: (_ for _ in ()).throw(
         AssertionError('should not use the fallback when WebEngine is available')))
 
@@ -312,19 +343,19 @@ def test_show_web_popup_uses_webengine_when_available(monkeypatch):
 def test_show_web_popup_forwards_custom_content_to_webengine(monkeypatch):
     mod = _mod()
     monkeypatch.setattr(mod, '_WEBENGINE_AVAILABLE', True)
-    content = mod.ClipboardContent('<table>complete</table>', 'complete')
+    content = mod.TableContent('<table>complete</table>', 'complete')
     calls = []
 
     monkeypatch.setattr(
         mod,
         '_show_webengine_popup',
-        lambda title, sections, clipboard_content: calls.append(
-            (title, sections, clipboard_content)),
+        lambda title, sections, table_content: calls.append(
+            (title, sections, table_content)),
     )
 
     mod.show_web_popup(
         "Title", [("CAT A", {'IAS': 100})],
-        clipboard_content=content,
+        table_content=content,
     )
 
     assert calls == [("Title", [("CAT A", {'IAS': 100})], content)]
@@ -333,19 +364,19 @@ def test_show_web_popup_forwards_custom_content_to_webengine(monkeypatch):
 def test_show_web_popup_forwards_custom_content_to_fallback(monkeypatch):
     mod = _mod()
     monkeypatch.setattr(mod, '_WEBENGINE_AVAILABLE', False)
-    content = mod.ClipboardContent('<table>complete</table>', 'complete')
+    content = mod.TableContent('<table>complete</table>', 'complete')
     calls = []
 
     monkeypatch.setattr(
         mod,
         '_show_textbrowser_popup',
-        lambda title, sections, clipboard_content: calls.append(
-            (title, sections, clipboard_content)),
+        lambda title, sections, table_content: calls.append(
+            (title, sections, table_content)),
     )
 
     mod.show_web_popup(
         "Title", [("CAT A", {'IAS': 100})],
-        clipboard_content=content,
+        table_content=content,
     )
 
     assert calls == [("Title", [("CAT A", {'IAS': 100})], content)]

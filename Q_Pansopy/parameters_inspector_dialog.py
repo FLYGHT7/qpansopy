@@ -34,8 +34,8 @@ from .utils import format_parameters_table
 
 
 @dataclass(frozen=True)
-class ClipboardContent:
-    """HTML and plain-text representations for one clipboard operation."""
+class TableContent:
+    """HTML and plain-text representations of one rendered table."""
 
     html: str
     text: str
@@ -129,6 +129,9 @@ _PAGE_TEMPLATE = """<html>
     h3 { margin: 0 0 16px 0; font-size: 20px; font-weight: 600; padding-bottom: 8px; }
     .section-title { margin: 20px 0 8px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
     .table-card { border-radius: 8px; overflow: hidden; transition: background 0.2s, border 0.2s; }
+    .complete-table-card { overflow-x: auto; }
+    .complete-table-card table { min-width: 900px; }
+    .complete-table-card th, .complete-table-card td { word-break: normal; white-space: nowrap; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th, td { padding: 14px 18px; font-size: 14px; line-height: 1.5; word-break: break-all; }
     th { font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em; width: 35%; }
@@ -223,18 +226,25 @@ def _build_section_html(section_title, flat_params, show_heading):
     )
 
 
-def _build_page_html(title, sections):
+def _build_page_html(
+        title, sections, table_content: Optional[TableContent] = None):
     """
     sections: list of (section_title, flat_params_dict) pairs. A single
     section renders exactly like the reference sample (no sub-heading);
     multiple sections (e.g. Basic ILS/OAS ILS aggregating every matching
     layer in the project) each get their own labelled table-card.
     """
-    show_heading = len(sections) > 1
-    sections_html = "".join(
-        _build_section_html(section_title, flat_params, show_heading)
-        for section_title, flat_params in sections
-    )
+    if table_content is None:
+        show_heading = len(sections) > 1
+        sections_html = "".join(
+            _build_section_html(section_title, flat_params, show_heading)
+            for section_title, flat_params in sections
+        )
+    else:
+        sections_html = (
+            '<div class="table-card complete-table-card">{0}</div>'.format(
+                table_content.html)
+        )
     page = _PAGE_TEMPLATE.replace("__QPANSOPY_TITLE__", html.escape(title))
     page = page.replace("__QPANSOPY_SECTIONS__", sections_html)
     return page
@@ -251,7 +261,7 @@ def _build_clipboard_content(sections):
         for title, params in sections
     ]
     multi = len(sections) > 1
-    return ClipboardContent(
+    return TableContent(
         html=(
             "<div>" + "<br>".join(html_parts) + "</div>"
             if multi else html_parts[0]
@@ -267,16 +277,16 @@ class ClipboardBridge(QObject):
 
     def __init__(
             self, sections,
-            clipboard_content: Optional[ClipboardContent] = None):
+            table_content: Optional[TableContent] = None):
         super().__init__()
         self._sections = sections
-        self._clipboard_content = clipboard_content
+        self._table_content = table_content
 
     @pyqtSlot()
     def copyToClipboard(self):
         content = (
-            self._clipboard_content
-            if self._clipboard_content is not None
+            self._table_content
+            if self._table_content is not None
             else _build_clipboard_content(self._sections)
         )
         mime = QMimeData()
@@ -287,7 +297,7 @@ class ClipboardBridge(QObject):
 
 def show_web_popup(
         title, sections,
-        clipboard_content: Optional[ClipboardContent] = None):
+        table_content: Optional[TableContent] = None):
     """
     Show a Parameters Inspector popup for one or more (section_title,
     flat_params_dict) pairs. Non-modal; kept alive in _open_views until
@@ -296,17 +306,17 @@ def show_web_popup(
     falling back to a QTextBrowser popup otherwise.
     """
     if _WEBENGINE_AVAILABLE:
-        return _show_webengine_popup(title, sections, clipboard_content)
-    return _show_textbrowser_popup(title, sections, clipboard_content)
+        return _show_webengine_popup(title, sections, table_content)
+    return _show_textbrowser_popup(title, sections, table_content)
 
 
 def _show_webengine_popup(
         title, sections,
-        clipboard_content: Optional[ClipboardContent] = None):
-    page_html = _build_page_html(title, sections)
+        table_content: Optional[TableContent] = None):
+    page_html = _build_page_html(title, sections, table_content)
 
     view = QWebEngineView()
-    bridge = ClipboardBridge(sections, clipboard_content)
+    bridge = ClipboardBridge(sections, table_content)
     channel = QWebChannel(view.page())
     view.page().setWebChannel(channel)
     channel.registerObject("pyBridge", bridge)
@@ -315,7 +325,10 @@ def _show_webengine_popup(
     view.setWindowTitle(title)
 
     screen = view.screen().geometry()
-    max_width = int(screen.width() / 3)
+    max_width = (
+        min(int(screen.width() * 0.85), 1200)
+        if table_content is not None else int(screen.width() / 3)
+    )
     max_height = int(screen.height() * 0.75)
     view.resize(max_width, max_height)
 
@@ -394,13 +407,19 @@ def _build_fallback_section_html(section_title, flat_params, show_heading, palet
     )
 
 
-def _build_fallback_page_html(title, sections, theme='dark'):
+def _build_fallback_page_html(
+        title, sections, theme='dark',
+        table_content: Optional[TableContent] = None):
     palette = _FALLBACK_PALETTES[theme]
-    show_heading = len(sections) > 1
-    sections_html = "".join(
-        _build_fallback_section_html(section_title, flat_params, show_heading, palette)
-        for section_title, flat_params in sections
-    )
+    if table_content is None:
+        show_heading = len(sections) > 1
+        sections_html = "".join(
+            _build_fallback_section_html(
+                section_title, flat_params, show_heading, palette)
+            for section_title, flat_params in sections
+        )
+    else:
+        sections_html = table_content.html
     return (
         f'<body style="background-color:{palette["bg"]}; color:{palette["value_fg"]}; '
         'font-family:\'Segoe UI\',Arial,sans-serif; padding:4px;">'
@@ -416,12 +435,15 @@ class _FallbackParametersDialog(QDialog):
 
     def __init__(
             self, title, sections, parent=None,
-            clipboard_content: Optional[ClipboardContent] = None):
+            table_content: Optional[TableContent] = None):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.setMinimumSize(520, 360)
+        self.setMinimumSize(
+            820 if table_content is not None else 520,
+            460 if table_content is not None else 360,
+        )
         self._sections = sections
-        self._clipboard_content = clipboard_content
+        self._table_content = table_content
         self._title = title
         self._theme = 'dark'
 
@@ -458,7 +480,8 @@ class _FallbackParametersDialog(QDialog):
         self._browser.setStyleSheet(
             f"QTextBrowser {{ background-color: {palette['bg']}; border: 1px solid {palette['card_border']}; }}"
         )
-        self._browser.setHtml(_build_fallback_page_html(self._title, self._sections, self._theme))
+        self._browser.setHtml(_build_fallback_page_html(
+            self._title, self._sections, self._theme, self._table_content))
 
     def _toggle_theme(self):
         self._theme = 'light' if self._theme == 'dark' else 'dark'
@@ -466,14 +489,14 @@ class _FallbackParametersDialog(QDialog):
 
     def _copy_to_word(self):
         ClipboardBridge(
-            self._sections, self._clipboard_content).copyToClipboard()
+            self._sections, self._table_content).copyToClipboard()
 
 
 def _show_textbrowser_popup(
         title, sections,
-        clipboard_content: Optional[ClipboardContent] = None):
+        table_content: Optional[TableContent] = None):
     dialog = _FallbackParametersDialog(
-        title, sections, clipboard_content=clipboard_content)
+        title, sections, table_content=table_content)
     key = id(dialog)
     _open_views[key] = dialog
     dialog.finished.connect(lambda _result: _open_views.pop(key, None))

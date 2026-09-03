@@ -59,8 +59,13 @@ def test_complete_table_matches_web_layout_and_precision():
     assert '<th' in html
     assert 'background-color:#000000' in html
     assert html.count('<th') == 6
-    assert '<b>Bank Angle [°]</b>' in html
-    assert '<b>Circling Radius = 2r + S [NM]</b>' in html
+    assert html.count('width:35%') == 1
+    assert html.count('width:13%') == 5
+    assert '<b style="color:#000000">Bank Angle [°]</b>' in html
+    assert (
+        '<b style="color:#000000">Circling Radius = 2r + S [NM]</b>'
+        in html
+    )
     assert 'Parameters\tCAT A\tCAT B\tCAT C\tCAT D\tCAT E' in text
     assert text.splitlines() == [
         'Parameters\tCAT A\tCAT B\tCAT C\tCAT D\tCAT E',
@@ -175,10 +180,10 @@ def test_show_table_copy_action_uses_complete_matrix(
         'Q_Pansopy.parameters_inspector_dialog')
     captured = {}
 
-    def _capture_popup(title, sections, clipboard_content=None):
+    def _capture_popup(title, sections, table_content=None):
         captured['title'] = title
         captured['sections'] = sections
-        captured['clipboard_content'] = clipboard_content
+        captured['table_content'] = table_content
 
     class _FakeDock:
         last_summary = _summary()
@@ -192,15 +197,14 @@ def test_show_table_copy_action_uses_complete_matrix(
 
     dock_mod.QPANSOPYCirclingDockWidget.show_parameters_table(_FakeDock())
 
-    content = captured['clipboard_content']
+    content = captured['table_content']
     assert content is not None
     assert content.html.count('<table') == 1
     assert content.html.count('<th') == 6
     assert content.text.startswith(
         'Parameters\tCAT A\tCAT B\tCAT C\tCAT D\tCAT E')
-    # The on-screen per-category inspector remains available as before.
-    assert [title for title, _params in captured['sections']] == [
-        'CAT A', 'CAT B', 'CAT C', 'CAT D', 'CAT E']
+    # Custom content replaces the generic per-category cards in the popup.
+    assert captured['sections'] == []
 
 
 def test_show_table_requires_complete_calculation_snapshot(
