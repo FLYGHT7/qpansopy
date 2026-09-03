@@ -4,6 +4,7 @@ import importlib
 import pathlib
 import sys
 import types
+import xml.etree.ElementTree as ElementTree  # nosec B405 - trusted local UI
 
 import pytest
 
@@ -95,6 +96,39 @@ def test_complete_table_keeps_disabled_category_columns_with_dashes():
         assert cells[5] == '—'
 
 
+def test_complete_table_uses_each_category_protected_height():
+    mod = _circling_module()
+    heights = {'A': 900, 'B': 1000, 'C': 1100, 'D': 1200, 'E': 1300}
+    summary = {
+        cat: mod.calc_circling_category(
+            mod.IAS_DEFAULTS[cat], heights[cat], 28, 20, 15,
+            mod.S_CONST[cat])
+        for cat in mod.CATEGORIES
+    }
+
+    _, text = mod.format_circling_complete_table(summary, _params())
+    rows = {row.split('\t', 1)[0]: row.split('\t')[1:]
+            for row in text.splitlines()[1:]}
+
+    assert rows['Protected Height [ft AGL]'] == [
+        '900', '1000', '1100', '1200', '1300']
+    assert rows['Altitude (h1) [ft]'] == [
+        '928.0000', '1028.0000', '1128.0000', '1228.0000', '1328.0000']
+
+
+def test_complete_table_supports_legacy_summary_height():
+    mod = _circling_module()
+    summary = _summary(categories=('A',))
+    del summary['A']['protected_height_ft']
+
+    _, text = mod.format_circling_complete_table(summary, _params())
+    height_row = next(
+        row for row in text.splitlines()
+        if row.startswith('Protected Height [ft AGL]'))
+
+    assert height_row.split('\t')[1:] == ['1000', '—', '—', '—', '—']
+
+
 def test_complete_table_rejects_incomplete_calculation_data():
     mod = _circling_module()
     incomplete = {'A': {'ias_kt': 100}}
@@ -114,6 +148,158 @@ def test_circling_ui_declares_complete_table_button():
 
     assert 'name="copyCompleteTableButton"' in ui_text
     assert '<string>Copy Complete Table</string>' in ui_text
+
+
+def test_circling_ui_declares_speed_and_height_per_category():
+    ui_path = (
+        pathlib.Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/qpansopy_circling_dockwidget.ui'
+    )
+
+    root = ElementTree.fromstring(  # nosec B314 - trusted repository file
+        ui_path.read_text(encoding='utf-8'))
+    widgets = {widget.attrib['name']: widget for widget in root.iter('widget')}
+    layouts = {layout.attrib['name']: layout for layout in root.iter('layout')}
+
+    assert 'protHeightSpinBox' not in widgets
+    assert layouts['categoryGridLayout'].find(
+        "property[@name='columnStretch']") is None
+    assert widgets['iasHeaderLabel'].find("property[@name='text']/string").text == (
+        'Speed (kt)')
+    assert widgets['heightHeaderLabel'].find(
+        "property[@name='text']/string").text == 'Height (ft AGL)'
+
+    for cat in 'ABCDE':
+        widget = widgets['protHeight{0}SpinBox'.format(cat)]
+        assert float(widget.find("property[@name='minimum']/double").text) == 0
+        assert float(widget.find("property[@name='maximum']/double").text) == 5000
+        assert float(widget.find("property[@name='value']/double").text) == 1000
+
+
+def test_category_grid_stretch_uses_integer_columns(dockwidget_module):
+    dock_mod = dockwidget_module
+    calls = []
+
+    class _GridLayout:
+        @staticmethod
+        def setColumnStretch(column, stretch):
+            calls.append((column, stretch))
+
+    class _FakeDock:
+        categoryGridLayout = _GridLayout()
+
+    dock_mod.QPANSOPYCirclingDockWidget._configure_category_grid(_FakeDock())
+
+    assert calls == [(1, 1), (2, 1)]
+    assert all(isinstance(value, int) for call in calls for value in call)
+
+
+def test_category_inputs_collect_aligned_values_for_enabled_categories(
+        dockwidget_module):
+    dock_mod = dockwidget_module
+
+    class _CheckBox:
+        def __init__(self, checked):
+            self._checked = checked
+
+        def isChecked(self):
+            return self._checked
+
+    class _SpinBox:
+        def __init__(self, value):
+            self._value = value
+
+        def value(self):
+            return self._value
+
+    class _FakeDock:
+        pass
+
+    dock = _FakeDock()
+    enabled = {'A': True, 'B': False, 'C': True, 'D': False, 'E': True}
+    speeds = {'A': 100, 'B': 135, 'C': 180, 'D': 205, 'E': 240}
+    heights = {'A': 900, 'B': 1000, 'C': 1100, 'D': 1200, 'E': 1300}
+    for cat in 'ABCDE':
+        setattr(dock, 'cat{0}CheckBox'.format(cat), _CheckBox(enabled[cat]))
+        setattr(dock, 'ias{0}SpinBox'.format(cat), _SpinBox(speeds[cat]))
+        setattr(
+            dock, 'protHeight{0}SpinBox'.format(cat), _SpinBox(heights[cat]))
+
+    ias_by_cat, height_by_cat = (
+        dock_mod.QPANSOPYCirclingDockWidget._category_inputs(dock))
+
+    assert ias_by_cat == {'A': 100, 'C': 180, 'E': 240}
+    assert height_by_cat == {'A': 900, 'C': 1100, 'E': 1300}
+
+
+def test_calculate_passes_category_heights_to_engine(
+        monkeypatch, dockwidget_module):
+    dock_mod = dockwidget_module
+    circling_mod = _circling_module()
+    captured = {}
+
+    class _ValueControl:
+        def __init__(self, value):
+            self._value = value
+
+        def value(self):
+            return self._value
+
+        def currentText(self):
+            return self._value
+
+        def isChecked(self):
+            return self._value
+
+        def text(self):
+            return self._value
+
+    class _Layer:
+        @staticmethod
+        def selectedFeatureCount():
+            return 2
+
+    class _LayerControl:
+        @staticmethod
+        def currentLayer():
+            return _Layer()
+
+    def _run_circling(iface, layer, params):
+        captured['params'] = params
+        return {'summary': {}, 'kml_path': None}
+
+    class _FakeDock:
+        thresholdLayerComboBox = _LayerControl()
+        elevSpinBox = _ValueControl(28)
+        elevUnitCombo = _ValueControl('ft')
+        bankSpinBox = _ValueControl(20)
+        isaSpinBox = _ValueControl(15)
+        exportKmlCheckBox = _ValueControl(False)
+        outputFolderLineEdit = _ValueControl('test-output')
+        iface = object()
+
+        @staticmethod
+        def _category_inputs():
+            return ({'A': 100, 'C': 180}, {'A': 900, 'C': 1300})
+
+        @staticmethod
+        def log(message):
+            captured.setdefault('logs', []).append(message)
+
+        @staticmethod
+        def _log_summary(summary):
+            captured['summary'] = summary
+
+    monkeypatch.setattr(circling_mod, 'run_circling', _run_circling)
+    dock = _FakeDock()
+
+    dock_mod.QPANSOPYCirclingDockWidget.calculate(dock)
+
+    assert captured['params']['ias_by_cat'] == {'A': 100, 'C': 180}
+    assert captured['params']['prot_height_ft_by_cat'] == {
+        'A': 900, 'C': 1300}
+    assert 'prot_height_ft' not in captured['params']
+    assert dock.last_params == {'bank_deg': 20, 'delta_isa': 15}
 
 
 def test_copy_complete_table_sets_html_and_plain_text(
