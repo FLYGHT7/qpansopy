@@ -15,7 +15,7 @@ import html
 import json
 import math
 import os
-from typing import Mapping, Tuple
+from typing import Dict, Mapping, Tuple
 
 from qgis.core import (
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeature, QgsField,
@@ -34,6 +34,7 @@ S_CONST = {"A": 0.3, "B": 0.4, "C": 0.5, "D": 0.6, "E": 0.7}
 IAS_DEFAULTS = {"A": 100, "B": 135, "C": 180, "D": 205, "E": 240}
 
 CATEGORIES = ("A", "B", "C", "D", "E")
+DEFAULT_PROTECTED_HEIGHT_FT = 1000.0
 
 FT2M = 0.3048
 KT2MS = 0.514444
@@ -56,7 +57,7 @@ _COMPLETE_TABLE_ROWS = (
     ("Bank Angle [°]", "params.bank_deg", 1),
     ("ΔT ISA [°C]", "params.delta_isa", 1),
     ("IAS [KT]", "ias_kt", 0),
-    ("Protected Height [ft AGL]", "params.prot_height_ft", 0),
+    ("Protected Height [ft AGL]", "protected_height_ft", 0),
     ("Altitude (h1) [ft]", "h1_ft", 4),
     ("K Factor", "k_factor", 4),
     ("TAS + 25KT", "tas_plus_wind_kt", 4),
@@ -76,7 +77,12 @@ def _complete_table_value(
         if source.startswith("params."):
             value = params[source.split(".", 1)[1]]
         else:
-            value = category_result[source]
+            try:
+                value = category_result[source]
+            except KeyError:
+                if source != "protected_height_ft":
+                    raise
+                value = params["prot_height_ft"]
         return "{0:.{1}f}".format(float(value), decimals)
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError(
@@ -157,8 +163,8 @@ def calc_circling_category(ias_kt, prot_height_ft, elev_ft, bank_deg, delta_isa,
     :param bank_deg: Average achieved bank angle (deg).
     :param delta_isa: Temperature deviation from ISA (deg C).
     :param s_const: Straight segment constant S for this category (NM).
-    :return: dict with h1_ft, k_factor, tas_kt, tas_plus_wind_kt,
-        rate_turn_calc, rate_turn_used, nominal_radius_nm,
+    :return: dict with protected_height_ft, h1_ft, k_factor, tas_kt,
+        tas_plus_wind_kt, rate_turn_calc, rate_turn_used, nominal_radius_nm,
         straight_segment_nm and circling_radius_nm.
     """
     h1_ft = elev_ft + prot_height_ft
@@ -178,6 +184,7 @@ def calc_circling_category(ias_kt, prot_height_ft, elev_ft, bank_deg, delta_isa,
 
     return {
         "ias_kt": ias_kt,
+        "protected_height_ft": prot_height_ft,
         "h1_ft": h1_ft,
         "k_factor": k_factor,
         "tas_kt": tas_kt,
@@ -206,6 +213,45 @@ def build_circling_area(points_map_crs, radius_m):
 
 def _elev_to_ft(value, unit):
     return value / FT2M if unit == "m" else value
+
+
+def _protected_height_for_category(
+        params: Mapping[str, object], category: str) -> float:
+    """Resolve one category height, retaining the legacy global fallback."""
+    category_heights = params.get("prot_height_ft_by_cat")
+    if isinstance(category_heights, Mapping) and category in category_heights:
+        raw_height = category_heights[category]
+    else:
+        raw_height = params.get(
+            "prot_height_ft", DEFAULT_PROTECTED_HEIGHT_FT)
+
+    try:
+        return float(raw_height)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "Invalid protected height for CAT {0}".format(category)
+        ) from exc
+
+
+def _isa_provenance(params: Mapping[str, object]) -> Dict[str, object]:
+    """Normalize optional ISA calculator metadata for layer parameters."""
+    metadata = params.get('isa_calculation_metadata')
+    if not isinstance(metadata, Mapping):
+        return {'isa_source': 'manual'}
+    if metadata.get('method') != 'calculated':
+        return {'isa_source': 'manual'}
+
+    provenance = {'isa_source': 'calculated'}
+    output_keys = {
+        'elevation_original': 'isa_source_elevation',
+        'elevation_unit': 'isa_source_elevation_unit',
+        'temperature_reference': 'isa_source_temp_ref',
+        'isa_temperature': 'isa_temperature_c',
+    }
+    for source, destination in output_keys.items():
+        if source in metadata:
+            provenance[destination] = metadata[source]
+    return provenance
 
 
 def _threshold_points_map_crs(features, layer, map_crs, project):
@@ -246,9 +292,12 @@ def run_circling(iface, threshold_layer, params=None):
     :param threshold_layer: Point layer with two or more selected threshold
         features.
     :param params: dict with keys ``elev`` (float), ``elev_unit`` ('ft'|'m'),
-        ``bank_deg``, ``delta_isa``, ``prot_height_ft``, ``ias_by_cat``
-        (``{cat: ias_kt}`` for the categories to draw), ``export_kml`` (bool)
-        and ``output_dir`` (str).
+        ``bank_deg``, ``delta_isa``, ``ias_by_cat`` (``{cat: ias_kt}`` for the
+        categories to draw), ``prot_height_ft_by_cat``
+        (``{cat: height_ft_agl}``), ``export_kml`` (bool), and ``output_dir``
+        (str). Optional ``isa_calculation_metadata`` records whether ΔT ISA
+        was entered manually or calculated. Legacy callers may supply one
+        global ``prot_height_ft``.
     :return: dict with ``layer``, ``summary`` (``{cat: params_dict}``) and
         ``kml_path`` on success, or ``False`` on failure.
     """
@@ -274,8 +323,6 @@ def run_circling(iface, threshold_layer, params=None):
                           params.get("elev_unit", "ft"))
     bank_deg = float(params.get("bank_deg", 20.0))
     delta_isa = float(params.get("delta_isa", 15.0))
-    prot_height_ft = float(params.get("prot_height_ft", 1000.0))
-
     project = QgsProject.instance()
     map_crs = iface.mapCanvas().mapSettings().destinationCrs()
     map_srid = map_crs.authid()
@@ -319,6 +366,7 @@ def run_circling(iface, threshold_layer, params=None):
         if cat not in ias_by_cat:
             continue
         ias_kt = float(ias_by_cat[cat])
+        prot_height_ft = _protected_height_for_category(params, cat)
         res = calc_circling_category(
             ias_kt, prot_height_ft, elev_ft, bank_deg, delta_isa, S_CONST[cat],
         )
@@ -335,7 +383,7 @@ def run_circling(iface, threshold_layer, params=None):
         row = {
             "category": cat,
             "ias_kt": round(ias_kt, 4),
-            "protected_height_ft": round(prot_height_ft, 4),
+            "protected_height_ft": round(res["protected_height_ft"], 4),
             "aerodrome_elev_ft": round(elev_ft, 4),
             "bank_deg": round(bank_deg, 4),
             "delta_isa_c": round(delta_isa, 4),
@@ -349,6 +397,7 @@ def run_circling(iface, threshold_layer, params=None):
             "straight_segment_nm": round(res["straight_segment_nm"], 4),
             "circling_radius_nm": round(res["circling_radius_nm"], 4),
         }
+        row.update(_isa_provenance(params))
         feat = QgsFeature()
         feat.setGeometry(area)
         feat.setAttributes([

@@ -23,6 +23,8 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Circling ΔT ISA can be calculated from the current aerodrome elevation and a reference temperature, while preserving manual entry and recording the calculation source in output parameters
+    - Circling protected height can be configured independently for each enabled aircraft category, with matching values in calculations, output attributes, and result tables
     - Add Circling (Visual Manoeuvring) Protection Area tool on the UTILITIES toolbar: per-category (CAT A-E) circling radius from the PANS-OPS web calculator, drawn as a convex-hull racetrack around the selected runway thresholds with optional KML export
     - Object Selection: "Use selection only" filters the surface features while every obstacle point remains eligible; intersections run in the surface CRS independently of the map canvas and obstacle candidates are spatially prefiltered for faster extraction; result layers preserve the source geometry/schema and reject partial batch inserts; visible busy feedback is shown during large extractions
     Version 0.5.1:

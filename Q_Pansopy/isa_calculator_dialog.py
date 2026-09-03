@@ -21,6 +21,8 @@ Procedure Analysis and Obstacle Protection Surfaces - ISA Calculator
 ***************************************************************************/
 """
 
+from typing import Optional
+
 from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
                                  QLineEdit, QComboBox, QPushButton, QLabel,
                                  QMessageBox, QGroupBox, QWidget)
@@ -28,12 +30,14 @@ from qgis.PyQt.QtCore import QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
 from .qt_compat import Qt_AlignRight, Qt_AlignVCenter
 from .dockwidgets.base_dockwidget import load_base_qss
+from .modules.isa import calculate_isa_variation
 
 
 class ISACalculatorDialog(QDialog):
     """Dialog for ISA calculation with independent inputs"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, fixed_elevation: Optional[float] = None,
+                 fixed_elevation_unit: str = 'ft'):
         super().__init__(parent)
         self.setWindowTitle("ISA Calculator")
         self.setFixedSize(400, 300)
@@ -44,6 +48,9 @@ class ISACalculatorDialog(QDialog):
         self.calculation_metadata = {}
 
         self.setup_ui()
+        if fixed_elevation is not None:
+            self._apply_fixed_elevation(
+                fixed_elevation, fixed_elevation_unit)
 
     def setup_ui(self):
         """Setup the user interface"""
@@ -96,7 +103,7 @@ class ISACalculatorDialog(QDialog):
 
         # Calculate button — calculating also accepts and closes the dialog,
         # applying the result to the caller immediately (no separate OK step)
-        self.calculate_btn = QPushButton("🧮 Calculate ISA Variation")
+        self.calculate_btn = QPushButton("Calculate ISA Variation")
         self.calculate_btn.setMinimumHeight(35)
         self.calculate_btn.clicked.connect(self.calculate_isa)
         calc_layout.addWidget(self.calculate_btn)
@@ -116,6 +123,20 @@ class ISACalculatorDialog(QDialog):
         self.cancel_btn.clicked.connect(self.reject)
         cancel_row.addWidget(self.cancel_btn)
         layout.addLayout(cancel_row)
+
+    def _apply_fixed_elevation(self, elevation: float, unit: str) -> None:
+        """Prefill and lock elevation when it belongs to the calling tool."""
+        if unit not in ('ft', 'm'):
+            raise ValueError(
+                'Unsupported elevation unit: {0}'.format(unit))
+        self.elevation_edit.setText('{0:g}'.format(float(elevation)))
+        self.elevation_edit.setReadOnly(True)
+        self.elevation_edit.setToolTip(
+            'Aerodrome elevation provided by the Circling tool')
+        self.elevation_unit_combo.setCurrentText(unit)
+        self.elevation_unit_combo.setEnabled(False)
+        self.elevation_unit_combo.setToolTip(
+            'Elevation unit provided by the Circling tool')
 
     def calculate_isa(self):
         """Calculate ISA variation"""
@@ -137,31 +158,12 @@ class ISACalculatorDialog(QDialog):
                                     "Please enter valid numeric values")
                 return
 
-            # Convert elevation to feet if needed
             elevation_unit = self.elevation_unit_combo.currentText()
-            if elevation_unit == 'm':
-                elevation_ft = elevation * 3.28084
-            else:
-                elevation_ft = elevation
+            result = calculate_isa_variation(
+                elevation, elevation_unit, temperature)
 
-            # Calculate ISA temperature at elevation
-            # ISA temperature decreases at 1.98°C per 1000 ft (or 0.00198°C per ft)
-            isa_temp = 15 - (0.00198 * elevation_ft)
-
-            # Calculate ISA variation (actual temperature - ISA temperature)
-            isa_variation = temperature - isa_temp
-
-            # Store results
-            self.isa_variation = isa_variation
-            self.calculation_metadata = {
-                'method': 'calculated',
-                'isa_temperature': isa_temp,
-                'elevation_feet': elevation_ft,
-                'elevation_original': elevation,
-                'elevation_unit': elevation_unit,
-                'temperature_reference': temperature,
-                'isa_variation_calculated': isa_variation
-            }
+            self.isa_variation = result['isa_variation_calculated']
+            self.calculation_metadata = result
 
             # Calculation succeeded — accept and close immediately, no extra
             # confirmation step. The caller reads the result via

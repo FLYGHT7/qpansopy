@@ -163,176 +163,283 @@
          <property name="text">
           <string>ΔT ISA (°C)</string>
          </property>
-        </widget>
+       </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QDoubleSpinBox" name="isaSpinBox">
-         <property name="minimum">
-          <double>-60.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>60.000000000000000</double>
-         </property>
-         <property name="decimals">
-          <number>1</number>
-         </property>
-         <property name="value">
-          <double>15.000000000000000</double>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="isaRowLayout">
+         <item>
+          <widget class="QDoubleSpinBox" name="isaSpinBox">
+           <property name="minimum">
+            <double>-60.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>60.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>4</number>
+           </property>
+           <property name="value">
+            <double>15.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="isaCalculateButton">
+           <property name="maximumSize">
+            <size>
+             <width>75</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Calculate ΔT ISA from the current aerodrome elevation and reference temperature</string>
+           </property>
+           <property name="text">
+            <string>Calculate</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="protHeightLabel">
-         <property name="text">
-          <string>Protected Height (ft AGL)</string>
+       <item row="3" column="0" colspan="2">
+        <layout class="QGridLayout" name="categoryGridLayout">
+         <property name="horizontalSpacing">
+          <number>4</number>
          </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QDoubleSpinBox" name="protHeightSpinBox">
-         <property name="minimum">
-          <double>0.000000000000000</double>
+         <property name="verticalSpacing">
+          <number>2</number>
          </property>
-         <property name="maximum">
-          <double>5000.000000000000000</double>
-         </property>
-         <property name="decimals">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <double>1000.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QCheckBox" name="catACheckBox">
-         <property name="text">
-          <string>CAT A</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QDoubleSpinBox" name="iasASpinBox">
-         <property name="minimum">
-          <double>1.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>400.000000000000000</double>
-         </property>
-         <property name="decimals">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <double>100.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QCheckBox" name="catBCheckBox">
-         <property name="text">
-          <string>CAT B</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QDoubleSpinBox" name="iasBSpinBox">
-         <property name="minimum">
-          <double>1.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>400.000000000000000</double>
-         </property>
-         <property name="decimals">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <double>135.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QCheckBox" name="catCCheckBox">
-         <property name="text">
-          <string>CAT C</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <widget class="QDoubleSpinBox" name="iasCSpinBox">
-         <property name="minimum">
-          <double>1.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>400.000000000000000</double>
-         </property>
-         <property name="decimals">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <double>180.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="0">
-        <widget class="QCheckBox" name="catDCheckBox">
-         <property name="text">
-          <string>CAT D</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="1">
-        <widget class="QDoubleSpinBox" name="iasDSpinBox">
-         <property name="minimum">
-          <double>1.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>400.000000000000000</double>
-         </property>
-         <property name="decimals">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <double>205.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="0">
-        <widget class="QCheckBox" name="catECheckBox">
-         <property name="text">
-          <string>CAT E</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="1">
-        <widget class="QDoubleSpinBox" name="iasESpinBox">
-         <property name="minimum">
-          <double>1.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>400.000000000000000</double>
-         </property>
-         <property name="decimals">
-          <number>0</number>
-         </property>
-         <property name="value">
-          <double>240.000000000000000</double>
-         </property>
-        </widget>
+         <item row="0" column="1">
+          <widget class="QLabel" name="iasHeaderLabel">
+           <property name="text">
+            <string>Speed (kt)</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="heightHeaderLabel">
+           <property name="text">
+            <string>Height (ft AGL)</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="catACheckBox">
+           <property name="text">
+            <string>CAT A</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QDoubleSpinBox" name="iasASpinBox">
+           <property name="minimum">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>400.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>100.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QDoubleSpinBox" name="protHeightASpinBox">
+           <property name="minimum">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>5000.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>1000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QCheckBox" name="catBCheckBox">
+           <property name="text">
+            <string>CAT B</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QDoubleSpinBox" name="iasBSpinBox">
+           <property name="minimum">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>400.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>135.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QDoubleSpinBox" name="protHeightBSpinBox">
+           <property name="minimum">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>5000.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>1000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QCheckBox" name="catCCheckBox">
+           <property name="text">
+            <string>CAT C</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QDoubleSpinBox" name="iasCSpinBox">
+           <property name="minimum">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>400.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>180.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="2">
+          <widget class="QDoubleSpinBox" name="protHeightCSpinBox">
+           <property name="minimum">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>5000.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>1000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QCheckBox" name="catDCheckBox">
+           <property name="text">
+            <string>CAT D</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QDoubleSpinBox" name="iasDSpinBox">
+           <property name="minimum">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>400.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>205.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="2">
+          <widget class="QDoubleSpinBox" name="protHeightDSpinBox">
+           <property name="minimum">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>5000.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>1000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QCheckBox" name="catECheckBox">
+           <property name="text">
+            <string>CAT E</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QDoubleSpinBox" name="iasESpinBox">
+           <property name="minimum">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>400.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>240.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="2">
+          <widget class="QDoubleSpinBox" name="protHeightESpinBox">
+           <property name="minimum">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>5000.000000000000000</double>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <double>1000.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </widget>

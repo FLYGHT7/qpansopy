@@ -7,6 +7,7 @@ screenshot: aerodrome elevation 92 ft, bank angle 20 deg, delta ISA 20 deg C,
 protected height 1000 ft AGL, default per-category IAS.
 """
 import importlib
+import json
 
 import pytest
 
@@ -46,6 +47,7 @@ def test_calc_circling_category_matches_web_calculator(cat):
         s_const=mod.S_CONST[cat],
     )
 
+    assert res['protected_height_ft'] == pytest.approx(1000.0)
     assert res['h1_ft'] == pytest.approx(1092.0)
     assert res['k_factor'] == pytest.approx(exp_k, abs=1e-4)
     assert res['tas_plus_wind_kt'] == pytest.approx(exp_tpw, abs=1e-3)
@@ -71,6 +73,75 @@ def test_metres_elevation_is_converted_to_feet():
     in_from_m = mod.calc_circling_category(180, 1000, elev_ft_from_m, 20, 15, 0.5)
     assert in_from_m['circling_radius_nm'] == pytest.approx(
         in_ft['circling_radius_nm'], abs=1e-9)
+
+
+@pytest.mark.parametrize(
+    'params,cat,expected',
+    [
+        ({'prot_height_ft_by_cat': {'A': 900, 'B': 1200}}, 'A', 900.0),
+        ({'prot_height_ft_by_cat': {'A': 900, 'B': 1200}}, 'B', 1200.0),
+        ({'prot_height_ft_by_cat': {'A': 900}}, 'C', 1000.0),
+        ({'prot_height_ft': 850}, 'D', 850.0),
+        ({}, 'E', 1000.0),
+    ],
+)
+def test_protected_height_resolves_per_category_with_legacy_fallback(
+        params, cat, expected):
+    mod = _mod()
+
+    assert mod._protected_height_for_category(params, cat) == expected
+
+
+def test_invalid_category_height_identifies_the_category():
+    mod = _mod()
+
+    with pytest.raises(ValueError, match='Invalid protected height for CAT B'):
+        mod._protected_height_for_category(
+            {'prot_height_ft_by_cat': {'B': 'not-a-height'}}, 'B')
+
+
+def test_category_height_changes_altitude_and_radius():
+    mod = _mod()
+
+    low = mod.calc_circling_category(180, 900, 28, 20, 15, 0.5)
+    high = mod.calc_circling_category(180, 1400, 28, 20, 15, 0.5)
+
+    assert low['protected_height_ft'] == 900
+    assert high['protected_height_ft'] == 1400
+    assert low['h1_ft'] == pytest.approx(928.0)
+    assert high['h1_ft'] == pytest.approx(1428.0)
+    assert high['k_factor'] > low['k_factor']
+    assert high['circling_radius_nm'] > low['circling_radius_nm']
+
+
+def test_manual_isa_provenance_contains_only_source():
+    mod = _mod()
+
+    assert mod._isa_provenance({}) == {'isa_source': 'manual'}
+    assert mod._isa_provenance({
+        'isa_calculation_metadata': {'method': 'manual'}
+    }) == {'isa_source': 'manual'}
+
+
+def test_calculated_isa_provenance_is_normalized_for_output():
+    mod = _mod()
+    params = {
+        'isa_calculation_metadata': {
+            'method': 'calculated',
+            'elevation_original': 1000,
+            'elevation_unit': 'm',
+            'temperature_reference': 14,
+            'isa_temperature': 8.5039368,
+        }
+    }
+
+    assert mod._isa_provenance(params) == {
+        'isa_source': 'calculated',
+        'isa_source_elevation': 1000,
+        'isa_source_elevation_unit': 'm',
+        'isa_source_temp_ref': 14,
+        'isa_temperature_c': 8.5039368,
+    }
 
 
 # --- run_circling selection-count guard (Issue #223) ---------------------
@@ -116,3 +187,156 @@ def test_run_circling_requires_at_least_two_thresholds(selected_count):
         str(part) for args, _ in iface.messageBar().messages for part in args
     ).lower()
     assert 'at least 2' in text
+
+
+def test_run_circling_propagates_category_heights_to_output(monkeypatch):
+    mod = _mod()
+    message_bar = _RecordingMessageBar()
+    built_radii = []
+
+    class _MapCrs:
+        @staticmethod
+        def authid():
+            return 'EPSG:32616'
+
+        @staticmethod
+        def isGeographic():
+            return False
+
+    class _MapSettings:
+        @staticmethod
+        def destinationCrs():
+            return _MapCrs()
+
+    class _MapCanvas:
+        @staticmethod
+        def mapSettings():
+            return _MapSettings()
+
+        @staticmethod
+        def zoomToSelected(layer):
+            return None
+
+    class _Iface:
+        @staticmethod
+        def mapCanvas():
+            return _MapCanvas()
+
+        @staticmethod
+        def messageBar():
+            return message_bar
+
+    class _ThresholdLayer:
+        @staticmethod
+        def selectedFeatures():
+            return [object(), object()]
+
+    class _Area:
+        @staticmethod
+        def isEmpty():
+            return False
+
+    class _Feature:
+        def setGeometry(self, geometry):
+            self.geometry = geometry
+
+        def setAttributes(self, attributes):
+            self.attributes = attributes
+
+    class _Provider:
+        def __init__(self):
+            self.features = []
+
+        @staticmethod
+        def addAttributes(fields):
+            return True
+
+        def addFeatures(self, features):
+            self.features.extend(features)
+            return True
+
+    class _VectorLayer:
+        def __init__(self, *args):
+            self.provider = _Provider()
+
+        def dataProvider(self):
+            return self.provider
+
+        @staticmethod
+        def updateFields():
+            return None
+
+        @staticmethod
+        def updateExtents():
+            return None
+
+        @staticmethod
+        def selectAll():
+            return None
+
+        @staticmethod
+        def removeSelection():
+            return None
+
+    class _Project:
+        added_layers = []
+
+        @classmethod
+        def instance(cls):
+            return cls()
+
+        def addMapLayer(self, layer):
+            self.added_layers.append(layer)
+
+    def _build_area(points, radius_m):
+        built_radii.append(radius_m)
+        return _Area()
+
+    monkeypatch.setattr(mod, 'QgsProject', _Project)
+    monkeypatch.setattr(mod, 'QgsVectorLayer', _VectorLayer)
+    monkeypatch.setattr(mod, 'QgsFeature', _Feature)
+    monkeypatch.setattr(
+        mod, '_threshold_points_map_crs', lambda *args: [object(), object()])
+    monkeypatch.setattr(mod, 'build_circling_area', _build_area)
+    monkeypatch.setattr(mod, '_apply_categorized_style', lambda layer: None)
+    monkeypatch.setattr(mod, 'register_parameters_action', lambda layer: None)
+
+    result = mod.run_circling(
+        _Iface(), _ThresholdLayer(), {
+            'elev': 28,
+            'elev_unit': 'ft',
+            'bank_deg': 20,
+            'delta_isa': 15,
+            'ias_by_cat': {'A': 100, 'C': 180},
+            'prot_height_ft_by_cat': {'A': 900, 'C': 1300},
+            'isa_calculation_metadata': {
+                'method': 'calculated',
+                'elevation_original': 28,
+                'elevation_unit': 'ft',
+                'temperature_reference': 20,
+                'isa_temperature': 14.94456,
+            },
+        })
+
+    assert result['summary']['A']['protected_height_ft'] == 900
+    assert result['summary']['C']['protected_height_ft'] == 1300
+    assert result['summary']['A']['h1_ft'] == pytest.approx(928.0)
+    assert result['summary']['C']['h1_ft'] == pytest.approx(1328.0)
+    assert built_radii == pytest.approx([
+        result['summary']['C']['circling_radius_nm'] * mod.NM2M,
+        result['summary']['A']['circling_radius_nm'] * mod.NM2M,
+    ])
+
+    features = result['layer'].provider.features
+    attributes_by_cat = {feature.attributes[0]: feature.attributes
+                         for feature in features}
+    assert attributes_by_cat['A'][2] == 900
+    assert attributes_by_cat['C'][2] == 1300
+    assert json.loads(attributes_by_cat['A'][15])['protected_height_ft'] == 900
+    assert json.loads(attributes_by_cat['C'][15])['protected_height_ft'] == 1300
+    stored = json.loads(attributes_by_cat['A'][15])
+    assert stored['isa_source'] == 'calculated'
+    assert stored['isa_source_elevation'] == 28
+    assert stored['isa_source_elevation_unit'] == 'ft'
+    assert stored['isa_source_temp_ref'] == 20
+    assert stored['isa_temperature_c'] == pytest.approx(14.94456)

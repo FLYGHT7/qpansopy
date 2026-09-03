@@ -2,6 +2,7 @@
 """Dockwidget for the Visual Manoeuvring (Circling) Protection Area tool."""
 import os
 import traceback
+from typing import Dict, Mapping, Tuple
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import QMimeData, pyqtSignal
@@ -16,6 +17,13 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
     'qpansopy_circling_dockwidget.ui'))
 
 _CATEGORIES = ('A', 'B', 'C', 'D', 'E')
+_CATEGORY_WIDGET_NAMES = {
+    'A': ('catACheckBox', 'iasASpinBox', 'protHeightASpinBox'),
+    'B': ('catBCheckBox', 'iasBSpinBox', 'protHeightBSpinBox'),
+    'C': ('catCCheckBox', 'iasCSpinBox', 'protHeightCSpinBox'),
+    'D': ('catDCheckBox', 'iasDSpinBox', 'protHeightDSpinBox'),
+    'E': ('catECheckBox', 'iasESpinBox', 'protHeightESpinBox'),
+}
 
 
 class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -27,8 +35,11 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         super().__init__(iface.mainWindow())
         self.iface = iface
         self.setupUi(self)
+        self._configure_category_grid()
         self.last_summary = None
         self.last_params = None
+        self._isa_updating = False
+        self.isa_calculation_metadata = {'method': 'manual'}
 
         self.thresholdLayerComboBox.setFilters(MLPM_PointLayer)
         preseed_active_layer(iface, self.thresholdLayerComboBox, Qgis_GeomType_Point)
@@ -36,9 +47,19 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.outputFolderLineEdit.setText(self.get_desktop_path())
 
         self.calculateButton.clicked.connect(self.calculate)
+        self.isaCalculateButton.clicked.connect(self._calculate_isa)
+        self.isaSpinBox.valueChanged.connect(self._handle_isa_manual_change)
+        self.elevSpinBox.valueChanged.connect(self._handle_isa_context_change)
+        self.elevUnitCombo.currentTextChanged.connect(
+            self._handle_isa_context_change)
         self.browseButton.clicked.connect(self.browse_output_folder)
         self.showTableButton.clicked.connect(self.show_parameters_table)
         self.copyCompleteTableButton.clicked.connect(self.copy_complete_table)
+
+    def _configure_category_grid(self) -> None:
+        """Balance numeric columns with Qt5/Qt6-safe integer arguments."""
+        self.categoryGridLayout.setColumnStretch(1, 1)
+        self.categoryGridLayout.setColumnStretch(2, 1)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
@@ -54,24 +75,71 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if folder:
             self.outputFolderLineEdit.setText(folder)
 
+    def _handle_isa_manual_change(self, _value: float) -> None:
+        """Discard calculator provenance after a manual ISA value change."""
+        if not self._isa_updating:
+            self.isa_calculation_metadata = {'method': 'manual'}
+
+    def _handle_isa_context_change(self, _value: object) -> None:
+        """Invalidate ISA provenance when its source elevation changes."""
+        self._handle_isa_manual_change(0.0)
+
+    def _apply_calculated_isa(
+            self, isa_variation: float,
+            metadata: Mapping[str, object]) -> bool:
+        """Apply a calculator result without allowing silent spinbox clamps."""
+        minimum = self.isaSpinBox.minimum()
+        maximum = self.isaSpinBox.maximum()
+        if not minimum <= isa_variation <= maximum:
+            self.log(
+                'Error: Calculated ΔT ISA {0:.4f} °C is outside the allowed '
+                'range ({1:.4f} to {2:.4f} °C)'.format(
+                    isa_variation, minimum, maximum))
+            return False
+
+        self._isa_updating = True
+        try:
+            self.isaSpinBox.setValue(isa_variation)
+        finally:
+            self._isa_updating = False
+        self.isa_calculation_metadata = dict(metadata)
+        self.log(
+            'Calculated ΔT ISA: {0:.4f} °C'.format(isa_variation))
+        return True
+
+    def _calculate_isa(self) -> None:
+        """Calculate ISA deviation using this tool's aerodrome elevation."""
+        from ...isa_calculator_dialog import ISACalculatorDialog
+
+        dialog = ISACalculatorDialog(
+            self,
+            fixed_elevation=self.elevSpinBox.value(),
+            fixed_elevation_unit=self.elevUnitCombo.currentText(),
+        )
+        if not dialog.exec():
+            return
+
+        isa_variation = dialog.get_isa_variation()
+        if isa_variation is None:
+            return
+        self._apply_calculated_isa(
+            isa_variation, dialog.get_calculation_metadata())
+
     def log(self, message):
         self.logTextEdit.append(message)
         self.logTextEdit.ensureCursorVisible()
 
-    def _ias_by_cat(self):
-        checkboxes = {
-            'A': self.catACheckBox, 'B': self.catBCheckBox, 'C': self.catCCheckBox,
-            'D': self.catDCheckBox, 'E': self.catECheckBox,
-        }
-        spinboxes = {
-            'A': self.iasASpinBox, 'B': self.iasBSpinBox, 'C': self.iasCSpinBox,
-            'D': self.iasDSpinBox, 'E': self.iasESpinBox,
-        }
-        return {
-            cat: spinboxes[cat].value()
-            for cat in _CATEGORIES
-            if checkboxes[cat].isChecked()
-        }
+    def _category_inputs(self) -> Tuple[Dict[str, float], Dict[str, float]]:
+        """Return aligned speed and protected-height maps for enabled CATs."""
+        ias_by_cat = {}
+        prot_height_ft_by_cat = {}
+        for cat in _CATEGORIES:
+            checkbox_name, ias_name, height_name = _CATEGORY_WIDGET_NAMES[cat]
+            if not getattr(self, checkbox_name).isChecked():
+                continue
+            ias_by_cat[cat] = getattr(self, ias_name).value()
+            prot_height_ft_by_cat[cat] = getattr(self, height_name).value()
+        return ias_by_cat, prot_height_ft_by_cat
 
     def calculate(self):
         layer = self.thresholdLayerComboBox.currentLayer()
@@ -84,7 +152,7 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage("QPANSOPY", msg, level=Qgis.Warning)
             return
 
-        ias_by_cat = self._ias_by_cat()
+        ias_by_cat, prot_height_ft_by_cat = self._category_inputs()
         if not ias_by_cat:
             self.log("Error: Enable at least one aircraft category")
             return
@@ -94,8 +162,10 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'elev_unit': self.elevUnitCombo.currentText(),
             'bank_deg': self.bankSpinBox.value(),
             'delta_isa': self.isaSpinBox.value(),
-            'prot_height_ft': self.protHeightSpinBox.value(),
+            'isa_calculation_metadata': dict(
+                self.isa_calculation_metadata),
             'ias_by_cat': ias_by_cat,
+            'prot_height_ft_by_cat': prot_height_ft_by_cat,
             'export_kml': self.exportKmlCheckBox.isChecked(),
             'output_dir': self.outputFolderLineEdit.text(),
         }
@@ -117,7 +187,6 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.last_params = {
             'bank_deg': params['bank_deg'],
             'delta_isa': params['delta_isa'],
-            'prot_height_ft': params['prot_height_ft'],
         }
         self._log_summary(self.last_summary)
         kml_path = result.get('kml_path')
@@ -131,11 +200,12 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if not res:
                 continue
             self.log(
-                "CAT {0} | K {1:.4f} | TAS+25 {2:.2f} kt | R {3:.3f} deg/s | "
-                "r {4:.3f} NM | Circling R {5:.3f} NM".format(
-                    cat, res['k_factor'], res['tas_plus_wind_kt'],
-                    res['rate_turn_used'], res['nominal_radius_nm'],
-                    res['circling_radius_nm']))
+                "CAT {0} | Height {1:.0f} ft AGL | K {2:.4f} | "
+                "TAS+25 {3:.2f} kt | R {4:.3f} deg/s | r {5:.3f} NM | "
+                "Circling R {6:.3f} NM".format(
+                    cat, res['protected_height_ft'], res['k_factor'],
+                    res['tas_plus_wind_kt'], res['rate_turn_used'],
+                    res['nominal_radius_nm'], res['circling_radius_nm']))
 
     def show_parameters_table(self):
         summary = self.last_summary
@@ -150,6 +220,8 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 continue
             sections.append(("CAT {0}".format(cat), {
                 'IAS_kt': "{0:.0f}".format(res['ias_kt']),
+                'Protected_height_ft_AGL': "{0:.0f}".format(
+                    res['protected_height_ft']),
                 'Altitude_h1_ft': "{0:.1f}".format(res['h1_ft']),
                 'K_factor': "{0:.4f}".format(res['k_factor']),
                 'TAS_plus_25kt': "{0:.4f}".format(res['tas_plus_wind_kt']),

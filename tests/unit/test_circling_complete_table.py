@@ -4,6 +4,7 @@ import importlib
 import pathlib
 import sys
 import types
+import xml.etree.ElementTree as ElementTree  # nosec B405 - trusted local UI
 
 import pytest
 
@@ -95,6 +96,39 @@ def test_complete_table_keeps_disabled_category_columns_with_dashes():
         assert cells[5] == '—'
 
 
+def test_complete_table_uses_each_category_protected_height():
+    mod = _circling_module()
+    heights = {'A': 900, 'B': 1000, 'C': 1100, 'D': 1200, 'E': 1300}
+    summary = {
+        cat: mod.calc_circling_category(
+            mod.IAS_DEFAULTS[cat], heights[cat], 28, 20, 15,
+            mod.S_CONST[cat])
+        for cat in mod.CATEGORIES
+    }
+
+    _, text = mod.format_circling_complete_table(summary, _params())
+    rows = {row.split('\t', 1)[0]: row.split('\t')[1:]
+            for row in text.splitlines()[1:]}
+
+    assert rows['Protected Height [ft AGL]'] == [
+        '900', '1000', '1100', '1200', '1300']
+    assert rows['Altitude (h1) [ft]'] == [
+        '928.0000', '1028.0000', '1128.0000', '1228.0000', '1328.0000']
+
+
+def test_complete_table_supports_legacy_summary_height():
+    mod = _circling_module()
+    summary = _summary(categories=('A',))
+    del summary['A']['protected_height_ft']
+
+    _, text = mod.format_circling_complete_table(summary, _params())
+    height_row = next(
+        row for row in text.splitlines()
+        if row.startswith('Protected Height [ft AGL]'))
+
+    assert height_row.split('\t')[1:] == ['1000', '—', '—', '—', '—']
+
+
 def test_complete_table_rejects_incomplete_calculation_data():
     mod = _circling_module()
     incomplete = {'A': {'ias_kt': 100}}
@@ -114,6 +148,325 @@ def test_circling_ui_declares_complete_table_button():
 
     assert 'name="copyCompleteTableButton"' in ui_text
     assert '<string>Copy Complete Table</string>' in ui_text
+
+
+def test_circling_ui_declares_speed_and_height_per_category():
+    ui_path = (
+        pathlib.Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/qpansopy_circling_dockwidget.ui'
+    )
+
+    root = ElementTree.fromstring(  # nosec B314 - trusted repository file
+        ui_path.read_text(encoding='utf-8'))
+    widgets = {widget.attrib['name']: widget for widget in root.iter('widget')}
+    layouts = {layout.attrib['name']: layout for layout in root.iter('layout')}
+
+    assert 'protHeightSpinBox' not in widgets
+    assert layouts['categoryGridLayout'].find(
+        "property[@name='columnStretch']") is None
+    assert widgets['iasHeaderLabel'].find("property[@name='text']/string").text == (
+        'Speed (kt)')
+    assert widgets['heightHeaderLabel'].find(
+        "property[@name='text']/string").text == 'Height (ft AGL)'
+    assert 'isaCalculateButton' in widgets
+    assert widgets['isaCalculateButton'].find(
+        "property[@name='text']/string").text == 'Calculate'
+    assert int(widgets['isaSpinBox'].find(
+        "property[@name='decimals']/number").text) == 4
+
+    for cat in 'ABCDE':
+        widget = widgets['protHeight{0}SpinBox'.format(cat)]
+        assert float(widget.find("property[@name='minimum']/double").text) == 0
+        assert float(widget.find("property[@name='maximum']/double").text) == 5000
+        assert float(widget.find("property[@name='value']/double").text) == 1000
+
+
+def test_category_grid_stretch_uses_integer_columns(dockwidget_module):
+    dock_mod = dockwidget_module
+    calls = []
+
+    class _GridLayout:
+        @staticmethod
+        def setColumnStretch(column, stretch):
+            calls.append((column, stretch))
+
+    class _FakeDock:
+        categoryGridLayout = _GridLayout()
+
+    dock_mod.QPANSOPYCirclingDockWidget._configure_category_grid(_FakeDock())
+
+    assert calls == [(1, 1), (2, 1)]
+    assert all(isinstance(value, int) for call in calls for value in call)
+
+
+def test_category_inputs_collect_aligned_values_for_enabled_categories(
+        dockwidget_module):
+    dock_mod = dockwidget_module
+
+    class _CheckBox:
+        def __init__(self, checked):
+            self._checked = checked
+
+        def isChecked(self):
+            return self._checked
+
+    class _SpinBox:
+        def __init__(self, value):
+            self._value = value
+
+        def value(self):
+            return self._value
+
+    class _FakeDock:
+        pass
+
+    dock = _FakeDock()
+    enabled = {'A': True, 'B': False, 'C': True, 'D': False, 'E': True}
+    speeds = {'A': 100, 'B': 135, 'C': 180, 'D': 205, 'E': 240}
+    heights = {'A': 900, 'B': 1000, 'C': 1100, 'D': 1200, 'E': 1300}
+    for cat in 'ABCDE':
+        setattr(dock, 'cat{0}CheckBox'.format(cat), _CheckBox(enabled[cat]))
+        setattr(dock, 'ias{0}SpinBox'.format(cat), _SpinBox(speeds[cat]))
+        setattr(
+            dock, 'protHeight{0}SpinBox'.format(cat), _SpinBox(heights[cat]))
+
+    ias_by_cat, height_by_cat = (
+        dock_mod.QPANSOPYCirclingDockWidget._category_inputs(dock))
+
+    assert ias_by_cat == {'A': 100, 'C': 180, 'E': 240}
+    assert height_by_cat == {'A': 900, 'C': 1100, 'E': 1300}
+
+
+def test_calculate_passes_category_heights_to_engine(
+        monkeypatch, dockwidget_module):
+    dock_mod = dockwidget_module
+    circling_mod = _circling_module()
+    captured = {}
+
+    class _ValueControl:
+        def __init__(self, value):
+            self._value = value
+
+        def value(self):
+            return self._value
+
+        def currentText(self):
+            return self._value
+
+        def isChecked(self):
+            return self._value
+
+        def text(self):
+            return self._value
+
+    class _Layer:
+        @staticmethod
+        def selectedFeatureCount():
+            return 2
+
+    class _LayerControl:
+        @staticmethod
+        def currentLayer():
+            return _Layer()
+
+    def _run_circling(iface, layer, params):
+        captured['params'] = params
+        return {'summary': {}, 'kml_path': None}
+
+    class _FakeDock:
+        thresholdLayerComboBox = _LayerControl()
+        elevSpinBox = _ValueControl(28)
+        elevUnitCombo = _ValueControl('ft')
+        bankSpinBox = _ValueControl(20)
+        isaSpinBox = _ValueControl(15)
+        exportKmlCheckBox = _ValueControl(False)
+        outputFolderLineEdit = _ValueControl('test-output')
+        isa_calculation_metadata = {
+            'method': 'calculated',
+            'temperature_reference': 20,
+        }
+        iface = object()
+
+        @staticmethod
+        def _category_inputs():
+            return ({'A': 100, 'C': 180}, {'A': 900, 'C': 1300})
+
+        @staticmethod
+        def log(message):
+            captured.setdefault('logs', []).append(message)
+
+        @staticmethod
+        def _log_summary(summary):
+            captured['summary'] = summary
+
+    monkeypatch.setattr(circling_mod, 'run_circling', _run_circling)
+    dock = _FakeDock()
+
+    dock_mod.QPANSOPYCirclingDockWidget.calculate(dock)
+
+    assert captured['params']['ias_by_cat'] == {'A': 100, 'C': 180}
+    assert captured['params']['prot_height_ft_by_cat'] == {
+        'A': 900, 'C': 1300}
+    assert 'prot_height_ft' not in captured['params']
+    assert captured['params']['isa_calculation_metadata'] == {
+        'method': 'calculated', 'temperature_reference': 20}
+    assert dock.last_params == {'bank_deg': 20, 'delta_isa': 15}
+
+
+def test_manual_isa_edit_clears_calculation_provenance(dockwidget_module):
+    dock_mod = dockwidget_module
+    dock = types.SimpleNamespace(
+        _isa_updating=False,
+        isa_calculation_metadata={
+            'method': 'calculated',
+            'temperature_reference': 20,
+            'isa_temperature': 14,
+        },
+    )
+
+    dock_mod.QPANSOPYCirclingDockWidget._handle_isa_manual_change(dock, 6)
+
+    assert dock.isa_calculation_metadata == {'method': 'manual'}
+
+
+def test_elevation_change_clears_calculation_provenance(dockwidget_module):
+    dock_mod = dockwidget_module
+    dock = types.SimpleNamespace(
+        _isa_updating=False,
+        isa_calculation_metadata={
+            'method': 'calculated',
+            'elevation_original': 92.5,
+        },
+    )
+    dock._handle_isa_manual_change = types.MethodType(
+        dock_mod.QPANSOPYCirclingDockWidget._handle_isa_manual_change, dock)
+
+    dock_mod.QPANSOPYCirclingDockWidget._handle_isa_context_change(
+        dock, 100)
+
+    assert dock.isa_calculation_metadata == {'method': 'manual'}
+
+
+@pytest.mark.parametrize('accepted', [True, False])
+def test_isa_calculator_uses_current_elevation_and_honors_cancel(
+        monkeypatch, dockwidget_module, accepted):
+    dock_mod = dockwidget_module
+    captured = {}
+
+    class _ValueControl:
+        def __init__(self, value, dock=None):
+            self._value = value
+            self._dock = dock
+
+        def value(self):
+            return self._value
+
+        def currentText(self):
+            return self._value
+
+        def setValue(self, value):
+            self._value = value
+            dock_mod.QPANSOPYCirclingDockWidget._handle_isa_manual_change(
+                self._dock, value)
+
+        @staticmethod
+        def minimum():
+            return -60
+
+        @staticmethod
+        def maximum():
+            return 60
+
+    class _Dialog:
+        def __init__(self, parent, fixed_elevation, fixed_elevation_unit):
+            captured['parent'] = parent
+            captured['elevation'] = fixed_elevation
+            captured['unit'] = fixed_elevation_unit
+
+        @staticmethod
+        def exec():
+            return accepted
+
+        @staticmethod
+        def get_isa_variation():
+            return 5.18315
+
+        @staticmethod
+        def get_calculation_metadata():
+            return {
+                'method': 'calculated',
+                'elevation_original': 92.5,
+                'elevation_unit': 'ft',
+                'temperature_reference': 20,
+                'isa_temperature': 14.81685,
+                'isa_variation_calculated': 5.18315,
+            }
+
+    dialog_module = types.ModuleType('Q_Pansopy.isa_calculator_dialog')
+    dialog_module.ISACalculatorDialog = _Dialog
+    monkeypatch.setitem(
+        sys.modules, 'Q_Pansopy.isa_calculator_dialog', dialog_module)
+
+    dock = types.SimpleNamespace(
+        elevSpinBox=_ValueControl(92.5),
+        elevUnitCombo=_ValueControl('ft'),
+        isaSpinBox=None,
+        _isa_updating=False,
+        isa_calculation_metadata={'method': 'manual'},
+        log=lambda message: captured.setdefault('logs', []).append(message),
+    )
+    dock.isaSpinBox = _ValueControl(15, dock)
+    dock._apply_calculated_isa = types.MethodType(
+        dock_mod.QPANSOPYCirclingDockWidget._apply_calculated_isa, dock)
+
+    dock_mod.QPANSOPYCirclingDockWidget._calculate_isa(dock)
+
+    assert captured['parent'] is dock
+    assert captured['elevation'] == 92.5
+    assert captured['unit'] == 'ft'
+    if accepted:
+        assert dock.isaSpinBox.value() == pytest.approx(5.18315)
+        assert dock.isa_calculation_metadata['method'] == 'calculated'
+        assert dock.isa_calculation_metadata['temperature_reference'] == 20
+        assert dock._isa_updating is False
+    else:
+        assert dock.isaSpinBox.value() == 15
+        assert dock.isa_calculation_metadata == {'method': 'manual'}
+
+
+def test_out_of_range_calculated_isa_is_not_silently_clamped(
+        dockwidget_module):
+    dock_mod = dockwidget_module
+    messages = []
+
+    class _SpinBox:
+        @staticmethod
+        def minimum():
+            return -60
+
+        @staticmethod
+        def maximum():
+            return 60
+
+        @staticmethod
+        def setValue(value):
+            raise AssertionError('out-of-range value must not be applied')
+
+    dock = types.SimpleNamespace(
+        isaSpinBox=_SpinBox(),
+        _isa_updating=False,
+        isa_calculation_metadata={'method': 'manual'},
+        log=messages.append,
+    )
+
+    applied = dock_mod.QPANSOPYCirclingDockWidget._apply_calculated_isa(
+        dock, 65, {'method': 'calculated'})
+
+    assert applied is False
+    assert dock.isa_calculation_metadata == {'method': 'manual'}
+    assert messages == [
+        'Error: Calculated ΔT ISA 65.0000 °C is outside the allowed '
+        'range (-60.0000 to 60.0000 °C)']
 
 
 def test_copy_complete_table_sets_html_and_plain_text(
