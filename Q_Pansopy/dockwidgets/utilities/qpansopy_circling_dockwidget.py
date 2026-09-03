@@ -4,7 +4,7 @@ import os
 import traceback
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt.QtCore import QMimeData, pyqtSignal
 from qgis.core import Qgis
 
 from ...qt_compat import (
@@ -28,6 +28,7 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
         self.setupUi(self)
         self.last_summary = None
+        self.last_params = None
 
         self.thresholdLayerComboBox.setFilters(MLPM_PointLayer)
         preseed_active_layer(iface, self.thresholdLayerComboBox, Qgis_GeomType_Point)
@@ -37,6 +38,7 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
         self.showTableButton.clicked.connect(self.show_parameters_table)
+        self.copyCompleteTableButton.clicked.connect(self.copy_complete_table)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
@@ -111,8 +113,13 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Circling Protection Area calculation failed")
             return
 
-        self.last_summary = result.get('summary')
-        self._log_summary(result.get('summary') or {})
+        self.last_summary = result.get('summary') or {}
+        self.last_params = {
+            'bank_deg': params['bank_deg'],
+            'delta_isa': params['delta_isa'],
+            'prot_height_ft': params['prot_height_ft'],
+        }
+        self._log_summary(self.last_summary)
         kml_path = result.get('kml_path')
         if kml_path:
             self.log("KML exported to: {0}".format(kml_path))
@@ -156,3 +163,29 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         from ...parameters_inspector_dialog import show_web_popup
         show_web_popup("Circling Protection Area - Parameters", sections)
         self.log("Circling parameters shown in Parameters Inspector.")
+
+    def copy_complete_table(self):
+        """Copy the last Circling calculation as one CAT A-E Word table."""
+        if not self.last_summary or not self.last_params:
+            self.log("Error: No calculation available to copy")
+            return
+
+        from ...modules.utilities.circling import format_circling_complete_table
+
+        try:
+            table_html, table_text = format_circling_complete_table(
+                self.last_summary, self.last_params)
+            mime = QMimeData()
+            mime.setHtml(table_html)
+            mime.setText(table_text)
+            QtWidgets.QApplication.clipboard().setMimeData(mime)
+        except Exception as exc:
+            self.log(
+                "Error copying complete Circling table: {0}".format(exc))
+            return
+
+        self.log("Complete Circling table copied to clipboard for Word.")
+        self.iface.messageBar().pushMessage(
+            "QPANSOPY", "Complete Circling table copied to clipboard",
+            level=Qgis.Success,
+        )

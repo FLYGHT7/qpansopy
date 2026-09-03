@@ -421,6 +421,16 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QPushButton" name="copyCompleteTableButton">
+         <property name="toolTip">
+          <string>Copy one Word-compatible table containing CAT A-E</string>
+         </property>
+         <property name="text">
+          <string>Copy Complete Table</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
