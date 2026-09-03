@@ -1,7 +1,11 @@
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 from qgis.core import Qgis
-from ...qt_compat import MLPM_PointLayer, MLPM_PolygonLayer
+from ...qt_compat import (
+    MLPM_PointLayer,
+    MLPM_PolygonLayer,
+    Qt_WaitCursor,
+)
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -15,6 +19,7 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         super(QPANSOPYObjectSelectionDockWidget, self).__init__(iface.mainWindow())
         self.setupUi(self)
         self.iface = iface
+        self._extracting = False
 
         # Setup layer combos
         self.pointLayerComboBox.setFilters(MLPM_PointLayer)
@@ -55,6 +60,10 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def extract_objects(self):
         """Extract intersecting objects"""
+        if self._extracting:
+            return
+
+        cursor_set = False
         try:
             point_layer = self.pointLayerComboBox.currentLayer()
             surface_layer = self.surfaceLayerComboBox.currentLayer()
@@ -68,23 +77,38 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             output_dir = self.outputFolderLineEdit.text() if export_kml else None
             use_selection_only = self.useSelectionOnlyCheckBox.isChecked()
 
-            # 'Use selection only' filters the obstacle points; it needs a
-            # map-canvas selection in the point layer or nothing is extracted.
-            if use_selection_only and point_layer.selectedFeatureCount() == 0:
-                self.log(
-                    "Error: 'Use selection only' is checked but no features are "
-                    "selected in the point layer '" + point_layer.name() + "'."
+            # 'Use selection only' limits the assessment surfaces. Every
+            # obstacle point inside those selected surfaces is considered.
+            if (use_selection_only
+                    and surface_layer.selectedFeatureCount() == 0):
+                message = (
+                    "Error: 'Use selection only' is checked but no features "
+                    "are selected in the surface layer '" +
+                    surface_layer.name() + "'."
+                )
+                self.log(message)
+                self.iface.messageBar().pushMessage(
+                    "QPANSOPY", message, level=Qgis.Warning
                 )
                 return
 
-            # Mensaje de inicio de procesamiento
-            self.log("Starting object extraction...")
-            self.iface.messageBar().pushMessage("QPANSOPY", "Extracting objects...", level=Qgis.Info)
+            self._extracting = True
+            self.calculateButton.setEnabled(False)
 
-            # Importar directamente la función de extracción y ejecutarla
+            QtWidgets.QApplication.setOverrideCursor(Qt_WaitCursor)
+            cursor_set = True
+
+            self.log("Starting object extraction...")
+            self.iface.messageBar().pushMessage(
+                "QPANSOPY",
+                "Extracting objects...",
+                level=Qgis.Info,
+                duration=0,
+            )
+            QtWidgets.QApplication.processEvents()
+
             from ...modules.utilities.selection_of_objects import extract_objects
 
-            # IMPORTANTE: Ejecutar directamente la función sin abrir diálogos
             result = extract_objects(
                 self.iface,
                 point_layer,
@@ -94,7 +118,6 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 use_selection_only=use_selection_only
             )
 
-            # Mostrar resultados
             if result:
                 msg = f"Extracted {result['count']} objects"
                 if export_kml and 'kml_path' in result:
@@ -107,3 +130,9 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)
             import traceback
             self.log(traceback.format_exc())
+        finally:
+            if cursor_set:
+                QtWidgets.QApplication.restoreOverrideCursor()
+            if self._extracting:
+                self.calculateButton.setEnabled(True)
+                self._extracting = False
