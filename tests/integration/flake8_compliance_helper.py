@@ -40,11 +40,13 @@ def run_flake8():
     # paths; --config kept absolute so discovery is cwd-independent.
     proc = subprocess.run(
         [sys.executable, "-m", "flake8",
-         "--config", str(SETUP_CFG), PLUGIN_REL],
+         "--jobs", "1", "--config", str(SETUP_CFG), PLUGIN_REL],
         capture_output=True, text=True, cwd=str(REPO_ROOT),
     )
-    # Flake8 exits 1 when it reports findings; only a >1 code is a real failure.
-    if proc.returncode not in (0, 1):
+    # Flake8 exits 1 for findings, but an interpreter-level crash can also use
+    # exit 1 and leave stdout empty. Never misread that as a clean scan.
+    crashed = proc.returncode == 1 and not proc.stdout.strip()
+    if proc.returncode not in (0, 1) or crashed:
         raise RuntimeError(
             "flake8 invocation failed (exit {}):\n{}{}".format(
                 proc.returncode, proc.stdout, proc.stderr

@@ -10,6 +10,8 @@ Q_Pansopy``) and compares it against ``tests/fixtures/flake8_baseline.txt``:
   fails, telling you to regenerate it (ratchet).
 """
 
+import subprocess
+
 import pytest
 
 from .flake8_compliance_helper import (
@@ -18,6 +20,7 @@ from .flake8_compliance_helper import (
     flake8_available,
     format_counts,
     load_baseline,
+    run_flake8,
 )
 
 pytestmark = pytest.mark.integration
@@ -61,3 +64,14 @@ def test_flake8_baseline_is_tight(counts):
         "  python tests/scripts/gen_flake8_baseline.py\n"
         "Expected new baseline body:\n{}"
     ).format(_delta_lines(resolved), format_counts(counts))
+
+
+def test_flake8_crash_is_not_treated_as_clean_scan(monkeypatch):
+    """An exit-1 traceback with no findings must fail the compliance check."""
+    failed = subprocess.CompletedProcess(
+        args=['flake8'], returncode=1, stdout='', stderr='Traceback: denied'
+    )
+    monkeypatch.setattr(subprocess, 'run', lambda *args, **kwargs: failed)
+
+    with pytest.raises(RuntimeError, match='flake8 invocation failed'):
+        run_flake8()
