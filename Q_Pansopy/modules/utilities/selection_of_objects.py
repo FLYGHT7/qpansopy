@@ -13,6 +13,7 @@ from typing import Sequence
 from qgis.core import (
     QgsProject,
     QgsFeature,
+    QgsFeatureRequest,
     QgsFeatureSink,
     QgsSpatialIndex,
     QgsCoordinateTransform,
@@ -30,8 +31,8 @@ from qgis.PyQt.QtGui import QColor
 from ...utils import fix_kml_altitude_mode
 
 
-def _prepare_surfaces(surface_layer):
-    """Index every surface feature and cache a prepared geometry engine for it.
+def _prepare_surfaces(surface_features):
+    """Index surface features and cache a prepared geometry engine for each.
 
     Geometries stay in the surface layer's own CRS (the working CRS for the
     intersection test), so nothing is transformed here. Preparing each geometry
@@ -42,20 +43,53 @@ def _prepare_surfaces(surface_layer):
     pointer into that geometry, so the geometry has to be kept alive for as
     long as the engine is used.
 
-    :return: (QgsSpatialIndex, {fid: (QgsGeometryEngine, QgsGeometry)})
+    :return: (index, {fid: (engine, geometry)}, combined bounding box)
     """
     index = QgsSpatialIndex()
     surfaces = {}
-    for feat in surface_layer.getFeatures():
+    surface_extent = None
+    for feat in surface_features:
         geom = feat.geometry()
         if not geom or geom.isEmpty():
             continue
         fid = feat.id()
-        index.addFeature(fid, geom.boundingBox())
+        bounding_box = geom.boundingBox()
+        index.addFeature(fid, bounding_box)
         engine = QgsGeometry.createGeometryEngine(geom.constGet())
         engine.prepareGeometry()
         surfaces[fid] = (engine, geom)
-    return index, surfaces
+        if surface_extent is None:
+            surface_extent = bounding_box
+        else:
+            surface_extent.combineExtentWith(bounding_box)
+    return index, surfaces, surface_extent
+
+
+def _candidate_point_request(point_layer, surface_layer, surface_extent):
+    """Build a provider-side bounding-box filter for obstacle candidates.
+
+    A failed extent transformation only disables this optimization; the exact
+    point transformation and intersection loop remain authoritative.
+    """
+    request = QgsFeatureRequest()
+    if surface_extent is None:
+        return request.setFilterFids([])
+
+    candidate_extent = surface_extent
+    if point_layer.crs() != surface_layer.crs():
+        try:
+            extent_transform = QgsCoordinateTransform(
+                surface_layer.crs(),
+                point_layer.crs(),
+                QgsProject.instance(),
+            )
+            candidate_extent = extent_transform.transformBoundingBox(
+                surface_extent
+            )
+        except Exception:
+            return request
+
+    return request.setFilterRect(candidate_extent)
 
 
 def _create_result_layer(
@@ -115,8 +149,8 @@ def extract_objects(iface, point_layer, surface_layer,
     :param surface_layer: QgsVectorLayer with assessment surfaces (polygon)
     :param export_kml: Whether to export the result to a KML file
     :param output_dir: Directory for the KML file (required when export_kml=True)
-    :param use_selection_only: Only process currently-selected features of
-        point_layer; every surface feature is always considered
+    :param use_selection_only: Only use currently-selected features of
+        surface_layer; every obstacle point inside those surfaces is considered
     :return: dict with 'count' and optionally 'kml_path'
     """
     work_crs = surface_layer.crs()
@@ -127,12 +161,18 @@ def extract_objects(iface, point_layer, surface_layer,
             point_layer.crs(), work_crs, QgsProject.instance()
         )
 
-    surface_index, surfaces = _prepare_surfaces(surface_layer)
-
-    point_features = (
-        point_layer.selectedFeatures() if use_selection_only
-        else point_layer.getFeatures()
+    surface_features = (
+        surface_layer.selectedFeatures()
+        if use_selection_only
+        else surface_layer.getFeatures()
     )
+    surface_index, surfaces, surface_extent = _prepare_surfaces(
+        surface_features
+    )
+    point_request = _candidate_point_request(
+        point_layer, surface_layer, surface_extent
+    )
+    point_features = point_layer.getFeatures(point_request)
 
     intersecting_features = []
     skipped_transforms = 0
@@ -140,8 +180,8 @@ def extract_objects(iface, point_layer, surface_layer,
         src_geom = pt.geometry()
         if not src_geom or src_geom.isEmpty():
             continue
-        test_geom = QgsGeometry(src_geom)
         if xform is not None:
+            test_geom = QgsGeometry(src_geom)
             try:
                 # 0 == Qgis.GeometryOperationResult.Success (flat int, Qt5/Qt6 safe)
                 failed = test_geom.transform(xform) != 0
@@ -151,6 +191,8 @@ def extract_objects(iface, point_layer, surface_layer,
             if failed:
                 skipped_transforms += 1
                 continue
+        else:
+            test_geom = src_geom
         abstract = test_geom.constGet()
         for fid in surface_index.intersects(test_geom.boundingBox()):
             if surfaces[fid][0].intersects(abstract):

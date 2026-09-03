@@ -211,11 +211,13 @@ try:
     Qt_SizeHorCursor = _cs.SizeHorCursor
     Qt_ArrowCursor = _cs.ArrowCursor
     Qt_PointingHandCursor = _cs.PointingHandCursor
+    Qt_WaitCursor = _cs.WaitCursor
 except AttributeError:
     Qt_SizeVerCursor = Qt.SizeVerCursor           # type: ignore[attr-defined]
     Qt_SizeHorCursor = Qt.SizeHorCursor           # type: ignore[attr-defined]
     Qt_ArrowCursor = Qt.ArrowCursor               # type: ignore[attr-defined]
     Qt_PointingHandCursor = Qt.PointingHandCursor  # type: ignore[attr-defined]
+    Qt_WaitCursor = Qt.WaitCursor                 # type: ignore[attr-defined]
 
 # ---------------------------------------------------------------------------
 # Qt5/Qt6 compatible Qt.MouseButton enum values
