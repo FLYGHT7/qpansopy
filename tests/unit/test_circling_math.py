@@ -114,6 +114,36 @@ def test_category_height_changes_altitude_and_radius():
     assert high['circling_radius_nm'] > low['circling_radius_nm']
 
 
+def test_manual_isa_provenance_contains_only_source():
+    mod = _mod()
+
+    assert mod._isa_provenance({}) == {'isa_source': 'manual'}
+    assert mod._isa_provenance({
+        'isa_calculation_metadata': {'method': 'manual'}
+    }) == {'isa_source': 'manual'}
+
+
+def test_calculated_isa_provenance_is_normalized_for_output():
+    mod = _mod()
+    params = {
+        'isa_calculation_metadata': {
+            'method': 'calculated',
+            'elevation_original': 1000,
+            'elevation_unit': 'm',
+            'temperature_reference': 14,
+            'isa_temperature': 8.5039368,
+        }
+    }
+
+    assert mod._isa_provenance(params) == {
+        'isa_source': 'calculated',
+        'isa_source_elevation': 1000,
+        'isa_source_elevation_unit': 'm',
+        'isa_source_temp_ref': 14,
+        'isa_temperature_c': 8.5039368,
+    }
+
+
 # --- run_circling selection-count guard (Issue #223) ---------------------
 
 class _RecordingMessageBar:
@@ -279,6 +309,13 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
             'delta_isa': 15,
             'ias_by_cat': {'A': 100, 'C': 180},
             'prot_height_ft_by_cat': {'A': 900, 'C': 1300},
+            'isa_calculation_metadata': {
+                'method': 'calculated',
+                'elevation_original': 28,
+                'elevation_unit': 'ft',
+                'temperature_reference': 20,
+                'isa_temperature': 14.94456,
+            },
         })
 
     assert result['summary']['A']['protected_height_ft'] == 900
@@ -297,3 +334,9 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
     assert attributes_by_cat['C'][2] == 1300
     assert json.loads(attributes_by_cat['A'][15])['protected_height_ft'] == 900
     assert json.loads(attributes_by_cat['C'][15])['protected_height_ft'] == 1300
+    stored = json.loads(attributes_by_cat['A'][15])
+    assert stored['isa_source'] == 'calculated'
+    assert stored['isa_source_elevation'] == 28
+    assert stored['isa_source_elevation_unit'] == 'ft'
+    assert stored['isa_source_temp_ref'] == 20
+    assert stored['isa_temperature_c'] == pytest.approx(14.94456)

@@ -15,7 +15,7 @@ import html
 import json
 import math
 import os
-from typing import Mapping, Tuple
+from typing import Dict, Mapping, Tuple
 
 from qgis.core import (
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeature, QgsField,
@@ -233,6 +233,27 @@ def _protected_height_for_category(
         ) from exc
 
 
+def _isa_provenance(params: Mapping[str, object]) -> Dict[str, object]:
+    """Normalize optional ISA calculator metadata for layer parameters."""
+    metadata = params.get('isa_calculation_metadata')
+    if not isinstance(metadata, Mapping):
+        return {'isa_source': 'manual'}
+    if metadata.get('method') != 'calculated':
+        return {'isa_source': 'manual'}
+
+    provenance = {'isa_source': 'calculated'}
+    output_keys = {
+        'elevation_original': 'isa_source_elevation',
+        'elevation_unit': 'isa_source_elevation_unit',
+        'temperature_reference': 'isa_source_temp_ref',
+        'isa_temperature': 'isa_temperature_c',
+    }
+    for source, destination in output_keys.items():
+        if source in metadata:
+            provenance[destination] = metadata[source]
+    return provenance
+
+
 def _threshold_points_map_crs(features, layer, map_crs, project):
     """Transform the selected threshold point features to the map CRS."""
     transform = QgsCoordinateTransform(layer.crs(), map_crs, project)
@@ -274,7 +295,9 @@ def run_circling(iface, threshold_layer, params=None):
         ``bank_deg``, ``delta_isa``, ``ias_by_cat`` (``{cat: ias_kt}`` for the
         categories to draw), ``prot_height_ft_by_cat``
         (``{cat: height_ft_agl}``), ``export_kml`` (bool), and ``output_dir``
-        (str). Legacy callers may supply one global ``prot_height_ft``.
+        (str). Optional ``isa_calculation_metadata`` records whether ΔT ISA
+        was entered manually or calculated. Legacy callers may supply one
+        global ``prot_height_ft``.
     :return: dict with ``layer``, ``summary`` (``{cat: params_dict}``) and
         ``kml_path`` on success, or ``False`` on failure.
     """
@@ -374,6 +397,7 @@ def run_circling(iface, threshold_layer, params=None):
             "straight_segment_nm": round(res["straight_segment_nm"], 4),
             "circling_radius_nm": round(res["circling_radius_nm"], 4),
         }
+        row.update(_isa_provenance(params))
         feat = QgsFeature()
         feat.setGeometry(area)
         feat.setAttributes([
