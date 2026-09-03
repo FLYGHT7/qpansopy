@@ -11,9 +11,11 @@ producing a stadium/racetrack polygon per aircraft category (CAT A-E).
 Reference: ICAO PANS-OPS Vol I, Part I, Section 4 (Visual Manoeuvring).
 """
 import datetime
+import html
 import json
 import math
 import os
+from typing import Mapping, Tuple
 
 from qgis.core import (
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeature, QgsField,
@@ -46,6 +48,94 @@ _CAT_COLORS = {
     "D": (227, 26, 28),
     "E": (106, 61, 154),
 }
+
+# Row schema copied from the web calculator's complete results table. A source
+# prefixed with ``params.`` comes from the input snapshot; all other sources
+# come from the per-category calculation summary.
+_COMPLETE_TABLE_ROWS = (
+    ("Bank Angle [°]", "params.bank_deg", 1),
+    ("ΔT ISA [°C]", "params.delta_isa", 1),
+    ("IAS [KT]", "ias_kt", 0),
+    ("Protected Height [ft AGL]", "params.prot_height_ft", 0),
+    ("Altitude (h1) [ft]", "h1_ft", 4),
+    ("K Factor", "k_factor", 4),
+    ("TAS + 25KT", "tas_plus_wind_kt", 4),
+    ("Rate of Turn (R) calculated [°/s]", "rate_turn_calc", 4),
+    ("Rate of Turn (R) used [°/s]", "rate_turn_used", 4),
+    ("Nominal Radius (r) [NM]", "nominal_radius_nm", 4),
+    ("Straight Segment (S) [NM]", "straight_segment_nm", 1),
+    ("Circling Radius = 2r + S [NM]", "circling_radius_nm", 4),
+)
+
+
+def _complete_table_value(
+        category_result: Mapping[str, float], params: Mapping[str, object],
+        source: str, decimals: int) -> str:
+    """Return one formatted value for the complete Circling table."""
+    try:
+        if source.startswith("params."):
+            value = params[source.split(".", 1)[1]]
+        else:
+            value = category_result[source]
+        return "{0:.{1}f}".format(float(value), decimals)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "Cannot format Circling table value for {0}".format(source)
+        ) from exc
+
+
+def format_circling_complete_table(
+        summary: Mapping[str, Mapping[str, float]],
+        params: Mapping[str, object]) -> Tuple[str, str]:
+    """Build the web-style CAT A-E results table for Word and plain text.
+
+    All five category columns are retained. A category absent from *summary*
+    was disabled for the calculation and is represented by an em dash.
+    """
+    headers = ("Parameters",) + tuple(
+        "CAT {0}".format(cat) for cat in CATEGORIES)
+    text_rows = ["\t".join(headers)]
+    rendered_rows = []
+
+    for label, source, decimals in _COMPLETE_TABLE_ROWS:
+        values = []
+        for cat in CATEGORIES:
+            result = summary.get(cat)
+            values.append(
+                _complete_table_value(result, params, source, decimals)
+                if result is not None else "—"
+            )
+        text_rows.append("\t".join((label,) + tuple(values)))
+        rendered_rows.append((label, values))
+
+    header_style = (
+        "background:#0c2240;color:#ffffff;padding:8px;"
+        "text-align:left;font-weight:bold"
+    )
+    cell_style = "padding:8px;text-align:left"
+    header_html = "".join(
+        '<th style="{0}">{1}</th>'.format(header_style, html.escape(value))
+        for value in headers
+    )
+    body_html = []
+    for label, values in rendered_rows:
+        cells = [
+            '<td style="{0}"><b>{1}</b></td>'.format(
+                cell_style, html.escape(label))
+        ]
+        cells.extend(
+            '<td style="{0}">{1}</td>'.format(
+                cell_style, html.escape(value))
+            for value in values
+        )
+        body_html.append("<tr>{0}</tr>".format("".join(cells)))
+
+    table_html = (
+        '<table border="1" style="border-collapse:collapse;width:100%;'
+        'font-family:Calibri,Arial,sans-serif;font-size:11pt">'
+        '<tr>{0}</tr>{1}</table>'.format(header_html, "".join(body_html))
+    )
+    return table_html, "\n".join(text_rows)
 
 
 def calc_density_ratio(h_ft, delta_isa):
