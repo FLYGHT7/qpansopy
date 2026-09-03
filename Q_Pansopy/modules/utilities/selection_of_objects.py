@@ -6,14 +6,19 @@ Provides extract_objects() to find obstacle points that fall inside
 obstacle assessment surfaces, called from the Object Selection dockwidget.
 """
 
-import os
 import datetime
+import os
+from typing import Sequence
+
 from qgis.core import (
     QgsProject,
+    QgsFeature,
+    QgsFeatureSink,
     QgsSpatialIndex,
     QgsCoordinateTransform,
     QgsCoordinateReferenceSystem,
     QgsVectorLayer,
+    QgsMemoryProviderUtils,
     QgsGeometry,
     QgsSymbol,
     QgsSimpleMarkerSymbolLayer,
@@ -51,6 +56,49 @@ def _prepare_surfaces(surface_layer):
         engine.prepareGeometry()
         surfaces[fid] = (engine, geom)
     return index, surfaces
+
+
+def _create_result_layer(
+        point_layer: QgsVectorLayer,
+        features: Sequence[QgsFeature]) -> QgsVectorLayer:
+    """Create a complete memory copy of the intersecting point features.
+
+    ``QgsMemoryProviderUtils`` preserves the source field order and exact WKB
+    type while converting field types unsupported by the memory provider. The
+    batch is atomic: a failed conversion must never leave a partial result
+    layer which looks like a successful extraction.
+    """
+    extracted_layer = QgsMemoryProviderUtils.createMemoryLayer(
+        "Extracted Objects",
+        point_layer.fields(),
+        point_layer.wkbType(),
+        point_layer.crs(),
+        False,
+    )
+    if not extracted_layer or not extracted_layer.isValid():
+        raise RuntimeError("Could not create the Extracted Objects memory layer")
+
+    provider = extracted_layer.dataProvider()
+    expected_count = len(features)
+    if expected_count:
+        flags = QgsFeatureSink.FastInsert | QgsFeatureSink.RollBackOnErrors
+        inserted, _ = provider.addFeatures(list(features), flags)
+    else:
+        inserted = True
+
+    actual_count = extracted_layer.featureCount()
+    if not inserted or actual_count != expected_count:
+        errors = [str(error) for error in provider.errors()]
+        last_error = provider.lastError()
+        if last_error and last_error not in errors:
+            errors.append(last_error)
+        details = "; ".join(errors) or "no provider error was reported"
+        raise RuntimeError(
+            f"Could not store all extracted objects: expected {expected_count}, "
+            f"stored {actual_count}. Provider details: {details}"
+        )
+
+    return extracted_layer
 
 
 def extract_objects(iface, point_layer, surface_layer,
@@ -118,13 +166,9 @@ def extract_objects(iface, point_layer, surface_layer,
         )
 
     # ----- Build result layer (original, untransformed geometries) -----
-    # setCrs() with the CRS object, not an authid string: a custom/unregistered
-    # point-layer CRS has an empty authid and would yield an invalid layer.
-    extracted_layer = QgsVectorLayer("Point", "Extracted Objects", "memory")
-    extracted_layer.setCrs(point_layer.crs())
-    extracted_layer.dataProvider().addAttributes(point_layer.fields())
-    extracted_layer.updateFields()
-    extracted_layer.dataProvider().addFeatures(intersecting_features)
+    extracted_layer = _create_result_layer(
+        point_layer, intersecting_features
+    )
 
     # Style: red dots, size 3, no stroke
     symbol = QgsSymbol.defaultSymbol(extracted_layer.geometryType())
@@ -139,7 +183,7 @@ def extract_objects(iface, point_layer, surface_layer,
     extracted_layer.updateExtents()
     QgsProject.instance().addMapLayer(extracted_layer)
 
-    result = {'count': len(intersecting_features)}
+    result = {'count': extracted_layer.featureCount()}
 
     # ----- Optional KML export -----
     if export_kml and output_dir:
