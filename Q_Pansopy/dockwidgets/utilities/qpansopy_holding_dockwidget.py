@@ -1,7 +1,7 @@
 import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import QgsMapLayerProxyModel, Qgis
+from qgis.core import Qgis
 from ...qt_compat import MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(

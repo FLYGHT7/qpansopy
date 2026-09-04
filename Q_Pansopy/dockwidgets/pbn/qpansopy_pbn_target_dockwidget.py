@@ -1,7 +1,6 @@
 import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import QgsMapLayerProxyModel
 from ...qt_compat import MLPM_PointLayer
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(

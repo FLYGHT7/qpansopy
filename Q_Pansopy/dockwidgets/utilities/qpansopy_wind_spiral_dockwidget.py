@@ -25,13 +25,14 @@ import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator, QColor
-from qgis.PyQt.QtWidgets import QMessageBox
-from ...qt_compat import Qt_AlignRight, Qt_AlignVCenter, Qt_AlignLeft, Qt_AlignTop, MLPM_PointLayer, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
-from qgis.core import (
-    QgsProject, QgsVectorLayer, QgsWkbTypes, QgsCoordinateReferenceSystem,
-    QgsMapLayerProxyModel, QgsCoordinateTransform, QgsPoint,
+from ...qt_compat import (
+    MLPM_LineLayer, MLPM_PointLayer, Qgis_GeomType_Line, Qt_AlignLeft,
+    Qt_AlignRight, Qt_AlignVCenter, preseed_active_layer,
 )
-from qgis.gui import QgsMapLayerComboBox, QgsRubberBand  # Importar QgsMapLayerComboBox
+from qgis.core import (
+    QgsCoordinateTransform, QgsPoint, QgsProject, QgsVectorLayer,
+)
+from qgis.gui import QgsRubberBand
 from qgis.core import Qgis
 import json
 import datetime
