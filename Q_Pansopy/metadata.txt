@@ -23,7 +23,8 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
-    - Add Circling (Visual Manoeuvring) Protection Area tool on the UTILITIES toolbar: per-category (CAT A-E) circling radius from the PANS-OPS web calculator, drawn as a convex-hull racetrack around the selected runway thresholds with optional KML export
+    - Add Circling (Visual Manoeuvring) Protection Area tool on the UTILITIES toolbar: per-category (CAT A-E) circling radius from the PANS-OPS web calculator, drawn as a convex-hull racetrack around the selected runway thresholds with optional KML export; CAT E remains available but is unchecked by default
+    - Clear the remaining unsuppressed Flake8 findings and reduce the QGIS Plugin Store compliance baseline to zero
     - Object Selection: "Use selection only" filters the surface features while every obstacle point remains eligible; intersections run in the surface CRS independently of the map canvas and obstacle candidates are spatially prefiltered for faster extraction; result layers preserve the source geometry/schema and reject partial batch inserts; visible busy feedback is shown during large extractions
     Version 0.5.1:
     - Qt6 reviews to reduce false positives

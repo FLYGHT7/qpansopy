@@ -27,9 +27,12 @@ import json
 import datetime
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt
-from qgis.core import QgsMapLayerProxyModel, Qgis
-from ...qt_compat import DOCK_FEATURES_DEFAULT, Qt_ALLOWED_DOCK_AREAS, MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
+from qgis.PyQt.QtCore import pyqtSignal
+from qgis.core import Qgis
+from ...qt_compat import (
+    DOCK_FEATURES_DEFAULT, MLPM_LineLayer, Qgis_GeomType_Line,
+    Qt_ALLOWED_DOCK_AREAS, preseed_active_layer,
+)
 
 
 # Load UI file
@@ -83,7 +86,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Setup layer combobox
         self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         preseed_active_layer(iface, self.runwayLayerComboBox, Qgis_GeomType_Line)
-        
+
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.directionButton.clicked.connect(self.toggle_direction)
