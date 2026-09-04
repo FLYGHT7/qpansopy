@@ -20,6 +20,7 @@ tests/results/
 .agents/
 .claude/
 .augment/
+.codex
 CLAUDE.md
 skills-lock.json
 .idea/
