@@ -139,29 +139,20 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def show_parameters_table(self):
         summary = self.last_summary
-        if not summary:
+        if not summary or not self.last_params:
             self.log("Error: No calculation available to show")
             return
 
-        sections = []
-        for cat in _CATEGORIES:
-            res = summary.get(cat)
-            if not res:
-                continue
-            sections.append(("CAT {0}".format(cat), {
-                'IAS_kt': "{0:.0f}".format(res['ias_kt']),
-                'Altitude_h1_ft': "{0:.1f}".format(res['h1_ft']),
-                'K_factor': "{0:.4f}".format(res['k_factor']),
-                'TAS_plus_25kt': "{0:.4f}".format(res['tas_plus_wind_kt']),
-                'Rate_of_turn_calc_deg_s': "{0:.4f}".format(res['rate_turn_calc']),
-                'Rate_of_turn_used_deg_s': "{0:.4f}".format(res['rate_turn_used']),
-                'Nominal_radius_r_NM': "{0:.4f}".format(res['nominal_radius_nm']),
-                'Straight_segment_S_NM': "{0:.1f}".format(res['straight_segment_nm']),
-                'Circling_radius_NM': "{0:.4f}".format(res['circling_radius_nm']),
-            }))
+        from ...modules.utilities.circling import format_circling_complete_table
+        from ...parameters_inspector_dialog import TableContent, show_web_popup
 
-        from ...parameters_inspector_dialog import show_web_popup
-        show_web_popup("Circling Protection Area - Parameters", sections)
+        table_html, table_text = format_circling_complete_table(
+            summary, self.last_params)
+        show_web_popup(
+            "Circling Protection Area - Parameters",
+            [],
+            table_content=TableContent(table_html, table_text),
+        )
         self.log("Circling parameters shown in Parameters Inspector.")
 
     def copy_complete_table(self):

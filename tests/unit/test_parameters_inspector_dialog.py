@@ -142,6 +142,22 @@ def test_build_page_html_escapes_values():
     assert '&lt;script&gt;' in page
 
 
+def test_build_page_html_uses_complete_table_content():
+    mod = _mod()
+    content = mod.TableContent(
+        '<table id="complete"><tr><th>Parameters</th><th>CAT A</th></tr></table>',
+        'Parameters\tCAT A',
+    )
+
+    page = mod._build_page_html(
+        "Circling", [("CAT A", {'IAS': 100})], table_content=content)
+
+    assert page.count('<table') == 1
+    assert 'id="complete"' in page
+    assert '<td><b>IAS</b></td>' not in page
+    assert 'complete-table-card' in page
+
+
 # ---------------------------------------------------------------------------
 # ClipboardBridge
 # ---------------------------------------------------------------------------
@@ -176,6 +192,45 @@ def test_clipboard_bridge_copies_word_table(monkeypatch):
     assert '205' in captured['html']
     assert '205' in captured['text']
     assert captured['mime'] is not None
+
+
+def test_clipboard_bridge_uses_custom_single_table_content(monkeypatch):
+    """A caller can override the generic one-table-per-section export."""
+    mod = _mod()
+    captured = {}
+
+    class _FakeMimeData:
+        def setHtml(self, value):
+            captured['html'] = value
+
+        def setText(self, value):
+            captured['text'] = value
+
+    class _FakeClipboard:
+        def setMimeData(self, mime):
+            captured['mime'] = mime
+
+    class _FakeQApplication:
+        @staticmethod
+        def clipboard():
+            return _FakeClipboard()
+
+    monkeypatch.setattr(mod, 'QMimeData', _FakeMimeData)
+    monkeypatch.setattr(mod, 'QApplication', _FakeQApplication)
+    content = mod.TableContent(
+        html='<table><tr><th>Parameters</th><th>CAT A</th></tr></table>',
+        text='Parameters\tCAT A',
+    )
+
+    bridge = mod.ClipboardBridge(
+        [('CAT A', {'IAS': 100}), ('CAT B', {'IAS': 135})],
+        table_content=content,
+    )
+    bridge.copyToClipboard()
+
+    assert captured['html'] == content.html
+    assert captured['text'] == content.text
+    assert captured['html'].count('<table') == 1
 
 
 # ---------------------------------------------------------------------------
@@ -239,6 +294,21 @@ def test_build_fallback_page_html_escapes_values():
     assert '&lt;script&gt;' in page
 
 
+def test_build_fallback_page_html_uses_complete_table_content():
+    mod = _mod()
+    content = mod.TableContent(
+        '<table id="complete"><tr><th>Parameters</th><th>CAT A</th></tr></table>',
+        'Parameters\tCAT A',
+    )
+
+    page = mod._build_fallback_page_html(
+        "Circling", [("CAT A", {'IAS': 100})], table_content=content)
+
+    assert page.count('<table') == 1
+    assert 'id="complete"' in page
+    assert '<b>IAS</b>' not in page
+
+
 def test_show_web_popup_falls_back_when_webengine_unavailable(monkeypatch):
     """
     Regression guard: on systems missing the optional QtWebEngine Qt
@@ -258,10 +328,55 @@ def test_show_web_popup_uses_webengine_when_available(monkeypatch):
     monkeypatch.setattr(mod, '_WEBENGINE_AVAILABLE', True)
 
     calls = []
-    monkeypatch.setattr(mod, '_show_webengine_popup', lambda title, sections: calls.append((title, sections)))
-    monkeypatch.setattr(mod, '_show_textbrowser_popup', lambda title, sections: (_ for _ in ()).throw(
+    monkeypatch.setattr(
+        mod, '_show_webengine_popup',
+        lambda title, sections, table_content: calls.append(
+            (title, sections, table_content)))
+    monkeypatch.setattr(mod, '_show_textbrowser_popup', lambda *args: (_ for _ in ()).throw(
         AssertionError('should not use the fallback when WebEngine is available')))
 
     mod.show_web_popup("Title", [("Section", {'a': 1})])
 
-    assert calls == [("Title", [("Section", {'a': 1})])]
+    assert calls == [("Title", [("Section", {'a': 1})], None)]
+
+
+def test_show_web_popup_forwards_custom_content_to_webengine(monkeypatch):
+    mod = _mod()
+    monkeypatch.setattr(mod, '_WEBENGINE_AVAILABLE', True)
+    content = mod.TableContent('<table>complete</table>', 'complete')
+    calls = []
+
+    monkeypatch.setattr(
+        mod,
+        '_show_webengine_popup',
+        lambda title, sections, table_content: calls.append(
+            (title, sections, table_content)),
+    )
+
+    mod.show_web_popup(
+        "Title", [("CAT A", {'IAS': 100})],
+        table_content=content,
+    )
+
+    assert calls == [("Title", [("CAT A", {'IAS': 100})], content)]
+
+
+def test_show_web_popup_forwards_custom_content_to_fallback(monkeypatch):
+    mod = _mod()
+    monkeypatch.setattr(mod, '_WEBENGINE_AVAILABLE', False)
+    content = mod.TableContent('<table>complete</table>', 'complete')
+    calls = []
+
+    monkeypatch.setattr(
+        mod,
+        '_show_textbrowser_popup',
+        lambda title, sections, table_content: calls.append(
+            (title, sections, table_content)),
+    )
+
+    mod.show_web_popup(
+        "Title", [("CAT A", {'IAS': 100})],
+        table_content=content,
+    )
+
+    assert calls == [("Title", [("CAT A", {'IAS': 100})], content)]
