@@ -71,7 +71,7 @@ class QPANSOPYILSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
        self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
        preseed_active_layer(iface, self.runwayLayerComboBox, Qgis_GeomType_Line)
-       
+
        # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
        self.setup_lineedits()
        self._setup_tooltips()

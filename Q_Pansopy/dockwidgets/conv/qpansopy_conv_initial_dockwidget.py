@@ -1,6 +1,5 @@
-﻿from qgis.PyQt import QtGui, QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal, Qt
-from qgis.core import QgsMapLayerProxyModel
+﻿from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import pyqtSignal
 from ...qt_compat import MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
 import os
 
