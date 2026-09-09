@@ -2,7 +2,7 @@
 """Dockwidget for the Visual Manoeuvring (Circling) Protection Area tool."""
 import os
 import traceback
-from typing import Dict, Tuple
+from typing import Dict, Mapping, Tuple
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import QMimeData, pyqtSignal
@@ -38,6 +38,8 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._configure_category_grid()
         self.last_summary = None
         self.last_params = None
+        self._isa_updating = False
+        self.isa_calculation_metadata = {'method': 'manual'}
 
         self.thresholdLayerComboBox.setFilters(MLPM_PointLayer)
         preseed_active_layer(iface, self.thresholdLayerComboBox, Qgis_GeomType_Point)
@@ -45,6 +47,11 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.outputFolderLineEdit.setText(self.get_desktop_path())
 
         self.calculateButton.clicked.connect(self.calculate)
+        self.isaCalculateButton.clicked.connect(self._calculate_isa)
+        self.isaSpinBox.valueChanged.connect(self._handle_isa_manual_change)
+        self.elevSpinBox.valueChanged.connect(self._handle_isa_context_change)
+        self.elevUnitCombo.currentTextChanged.connect(
+            self._handle_isa_context_change)
         self.browseButton.clicked.connect(self.browse_output_folder)
         self.showTableButton.clicked.connect(self.show_parameters_table)
         self.copyCompleteTableButton.clicked.connect(self.copy_complete_table)
@@ -67,6 +74,56 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self, "Select Output Folder", self.outputFolderLineEdit.text())
         if folder:
             self.outputFolderLineEdit.setText(folder)
+
+    def _handle_isa_manual_change(self, _value: float) -> None:
+        """Discard calculator provenance after a manual ISA value change."""
+        if not self._isa_updating:
+            self.isa_calculation_metadata = {'method': 'manual'}
+
+    def _handle_isa_context_change(self, _value: object) -> None:
+        """Invalidate ISA provenance when its source elevation changes."""
+        self._handle_isa_manual_change(0.0)
+
+    def _apply_calculated_isa(
+            self, isa_variation: float,
+            metadata: Mapping[str, object]) -> bool:
+        """Apply a calculator result without allowing silent spinbox clamps."""
+        minimum = self.isaSpinBox.minimum()
+        maximum = self.isaSpinBox.maximum()
+        if not minimum <= isa_variation <= maximum:
+            self.log(
+                'Error: Calculated ΔT ISA {0:.4f} °C is outside the allowed '
+                'range ({1:.4f} to {2:.4f} °C)'.format(
+                    isa_variation, minimum, maximum))
+            return False
+
+        self._isa_updating = True
+        try:
+            self.isaSpinBox.setValue(isa_variation)
+        finally:
+            self._isa_updating = False
+        self.isa_calculation_metadata = dict(metadata)
+        self.log(
+            'Calculated ΔT ISA: {0:.4f} °C'.format(isa_variation))
+        return True
+
+    def _calculate_isa(self) -> None:
+        """Calculate ISA deviation using this tool's aerodrome elevation."""
+        from ...isa_calculator_dialog import ISACalculatorDialog
+
+        dialog = ISACalculatorDialog(
+            self,
+            fixed_elevation=self.elevSpinBox.value(),
+            fixed_elevation_unit=self.elevUnitCombo.currentText(),
+        )
+        if not dialog.exec():
+            return
+
+        isa_variation = dialog.get_isa_variation()
+        if isa_variation is None:
+            return
+        self._apply_calculated_isa(
+            isa_variation, dialog.get_calculation_metadata())
 
     def log(self, message):
         self.logTextEdit.append(message)
@@ -105,6 +162,8 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'elev_unit': self.elevUnitCombo.currentText(),
             'bank_deg': self.bankSpinBox.value(),
             'delta_isa': self.isaSpinBox.value(),
+            'isa_calculation_metadata': dict(
+                self.isa_calculation_metadata),
             'ias_by_cat': ias_by_cat,
             'prot_height_ft_by_cat': prot_height_ft_by_cat,
             'export_kml': self.exportKmlCheckBox.isChecked(),
