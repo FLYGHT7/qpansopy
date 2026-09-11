@@ -39,6 +39,9 @@ try:
     from .dockwidgets.utilities.qpansopy_point_filter_dockwidget import QPANSOPYPointFilterDockWidget
     from .dockwidgets.utilities.qpansopy_holding_dockwidget import QPANSOPYHoldingDockWidget
     from .dockwidgets.utilities.qpansopy_circling_dockwidget import QPANSOPYCirclingDockWidget
+    from .dockwidgets.utilities.qpansopy_primary_area_assessment_dockwidget import (
+        QPANSOPYPrimaryAreaAssessmentDockWidget,
+    )
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.pbn.qpansopy_gnss_waypoint_dockwidget import QPANSOPYGNSSWaypointDockWidget
     from .dockwidgets.pbn.qpansopy_pbn_target_dockwidget import QPANSOPYPBNTargetDockWidget
@@ -254,6 +257,14 @@ class Qpansopy:
                     "TOOLTIP": "Extract objects intersecting with surfaces",
                     "ICON": "SOO.png",
                     "DOCK_WIDGET": QPANSOPYObjectSelectionDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "PrimaryAreaAssessment": {
+                    "TITLE": "Primary Area Assessment",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Evaluate terrain and obstacles in a primary area",
+                    "ICON": "primary_area_assessment.svg",
+                    "DOCK_WIDGET": QPANSOPYPrimaryAreaAssessmentDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "PointFilter": {

@@ -3,7 +3,7 @@ name=qPansopy
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 description=QPANSOPY Plugin for QGIS - Procedure Analysis and Obstacle Protection Surfaces (PANSOPS)
-version=0.5.2
+version=0.6.0
 author=FLYGHT7
 email=info@flyght7.com
 
@@ -22,6 +22,8 @@ experimental=True
 deprecated=False
 
 changelog=
+    Version 0.6.0:
+    - Add a generic Primary Area Obstacle Assessment tool that prepares masked terrain, normalizes surveyed obstacles, evaluates OCA, identifies all tied controlling obstacles, and groups annotated result layers in the project
     Version 0.5.2:
     - Circling ΔT ISA can be calculated from the current aerodrome elevation and a reference temperature, while preserving manual entry and recording the calculation source in output parameters
     - Circling protected height can be configured independently for each enabled aircraft category, with matching values in calculations, output attributes, and result tables
