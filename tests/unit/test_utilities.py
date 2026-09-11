@@ -13,6 +13,8 @@ _UTILITY_MODULES = [
     ('Q_Pansopy.modules.utilities.point_filter',         'filter_points_by_elevation'),
     ('Q_Pansopy.modules.utilities.feature_merge',        'merge_selected_layers'),
     ('Q_Pansopy.modules.utilities.selection_of_objects', 'extract_objects'),
+    ('Q_Pansopy.modules.utilities.primary_area_assessment',
+     'run_primary_area_assessment'),
     # conventional_holding_navaid.py executes iface calls at import time (legacy script);
     # it cannot be imported with stubs and is excluded from smoke tests.
 ]

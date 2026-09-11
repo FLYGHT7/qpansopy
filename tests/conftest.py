@@ -40,6 +40,7 @@ def _install_qgis_stubs():
         # Additional geometry/query classes
         'QgsRectangle', 'QgsFeatureRequest', 'QgsSpatialIndex',
         'QgsLayerTreeGroup', 'QgsLayerTreeLayer',
+        'QgsLayerNotesUtils',
         # Symbol layers
         'QgsSimpleMarkerSymbolLayer', 'QgsMarkerSymbol',
     ]:
