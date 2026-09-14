@@ -29,7 +29,54 @@ def test_evaluation_uses_each_records_tolerance():
 
     assert [item.oca_m for item in evaluated] == [178.0, 180.0]
     assert evaluated[0].oca_ft == round(178.0 / 0.3048, 3)
+    assert evaluated[0].oca_pub_ft == 600
     assert [item.identifier for item in controls] == ['B']
+
+
+@pytest.mark.parametrize(
+    'increment,expected',
+    [
+        (1, 8285),
+        (5, 8285),
+        (10, 8290),
+        (100, 8300),
+    ],
+)
+def test_published_oca_rounds_up_to_selected_increment(increment, expected):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
+
+    evaluated, _ = evaluate_records(
+        [_record('A', 8284.121 * 0.3048, 0.0)],
+        moc_m=0.0,
+        oca_rounding_ft=increment,
+    )
+
+    assert evaluated[0].oca_ft == 8284.121
+    assert evaluated[0].oca_pub_ft == expected
+
+
+def test_published_oca_keeps_exact_increment_boundary():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
+
+    evaluated, _ = evaluate_records(
+        [_record('A', 8300.0 * 0.3048, 0.0)],
+        moc_m=0.0,
+        oca_rounding_ft=100,
+    )
+
+    assert evaluated[0].oca_pub_ft == 8300
+
+
+@pytest.mark.parametrize('increment', [0, 2, 25, 1000, True, 1.0, '100'])
+def test_evaluation_rejects_invalid_oca_rounding_increment(increment):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
+
+    with pytest.raises(ValueError, match='OCA publication increment'):
+        evaluate_records(
+            [_record('A', 100.0, 0.0)],
+            moc_m=0.0,
+            oca_rounding_ft=increment,
+        )
 
 
 def test_override_replaces_tolerance_and_keeps_all_tied_controls():
@@ -95,6 +142,12 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
     assert property_text(
         'terrainToleranceDoubleSpinBox', 'value'
     ) == '50.000000000000000'
+    rounding_combo = root.find(".//widget[@name='ocaRoundingComboBox']")
+    assert [
+        item.find("./property[@name='text']/string").text
+        for item in rounding_combo.findall('./item')
+    ] == ['1', '5', '10', '100']
+    assert property_text('ocaRoundingComboBox', 'currentIndex') == '3'
 
 
 def test_dockwidget_scrolls_all_assessment_controls():
