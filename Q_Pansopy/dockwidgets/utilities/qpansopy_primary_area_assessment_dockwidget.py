@@ -138,13 +138,20 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
         except AttributeError:
             yes = QtWidgets.QMessageBox.Yes
             no = QtWidgets.QMessageBox.No
-        reply = QtWidgets.QMessageBox.question(
-            self,
-            "Incomplete obstacle data",
-            message,
-            yes | no,
-            no,
-        )
+        wait_cursor_active = QtWidgets.QApplication.overrideCursor() is not None
+        if wait_cursor_active:
+            QtWidgets.QApplication.restoreOverrideCursor()
+        try:
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "Incomplete obstacle data",
+                message,
+                yes | no,
+                no,
+            )
+        finally:
+            if wait_cursor_active:
+                QtWidgets.QApplication.setOverrideCursor(Qt_WaitCursor)
         return reply == yes
 
     def _validate_inputs(self):
