@@ -129,7 +129,7 @@ def test_control_obstacle_style_matches_provided_qml():
     )
 
     assert hashlib.sha256(style_path.read_bytes()).hexdigest() == (
-        'c0790eea5b4be976750e255df81bb1930e8cb1eedd1a90e8f796807df89798f8'
+        '392b22841a12f4d1bb29cfb2a90c0ff61bae78a31ef919f34ce7a14b0f4fe3cb'
     )
     root = ElementTree.parse(style_path).getroot()
     renderer = root.find('./renderer-v2')
@@ -142,6 +142,8 @@ def test_control_obstacle_style_matches_provided_qml():
         field in label.get('fieldName')
         for field in ('layer_type', 'elev', 'oca_ft')
     )
+    placement = root.find('./labeling/settings/placement')
+    assert placement.get('overlapHandling') == 'AllowOverlapIfRequired'
 
 
 class _StyleLayer:

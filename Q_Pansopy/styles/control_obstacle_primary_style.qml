@@ -374,12 +374,23 @@
         <substitutions/>
       </text-style>
       <text-format addDirectionSymbol="0" autoWrapLength="0" decimals="3" formatNumbers="0" leftDirectionSymbol="&lt;" multilineAlign="3" placeDirectionSymbol="0" plussign="0" reverseDirectionSymbol="0" rightDirectionSymbol=">" useMaxLineLengthForAutoWrap="1" wrapChar=""/>
-      <placement allowDegraded="0" centroidInside="0" centroidWhole="0" dist="0" distMapUnitScale="3x:0,0,0,0,0,0" distUnits="MM" fitInPolygonOnly="0" geometryGenerator="" geometryGeneratorEnabled="0" geometryGeneratorType="PointGeometry" labelOffsetMapUnitScale="3x:0,0,0,0,0,0" layerType="PointGeometry" lineAnchorClipping="0" lineAnchorPercent="0.5" lineAnchorTextPoint="FollowPlacement" lineAnchorType="0" maxCurvedCharAngleIn="25" maxCurvedCharAngleOut="-25" maximumDistance="0" maximumDistanceMapUnitScale="3x:0,0,0,0,0,0" maximumDistanceUnit="MM" multipartBehavior="LabelLargestPartOnly" offsetType="1" offsetUnits="MM" overlapHandling="PreventOverlap" overrunDistance="0" overrunDistanceMapUnitScale="3x:0,0,0,0,0,0" overrunDistanceUnit="MM" placement="1" placementFlags="10" polygonPlacementFlags="2" predefinedPositionOrder="TR,TL,BR,BL,R,L,TSR,BSR" preserveRotation="1" prioritization="PreferCloser" priority="5" quadOffset="4" repeatDistance="0" repeatDistanceMapUnitScale="3x:0,0,0,0,0,0" repeatDistanceUnits="MM" rotationAngle="0" rotationUnit="AngleDegrees" xOffset="15" yOffset="-15"/>
+      <placement allowDegraded="0" centroidInside="0" centroidWhole="0" dist="0" distMapUnitScale="3x:0,0,0,0,0,0" distUnits="MM" fitInPolygonOnly="0" geometryGenerator="" geometryGeneratorEnabled="0" geometryGeneratorType="PointGeometry" labelOffsetMapUnitScale="3x:0,0,0,0,0,0" layerType="PointGeometry" lineAnchorClipping="0" lineAnchorPercent="0.5" lineAnchorTextPoint="FollowPlacement" lineAnchorType="0" maxCurvedCharAngleIn="25" maxCurvedCharAngleOut="-25" maximumDistance="0" maximumDistanceMapUnitScale="3x:0,0,0,0,0,0" maximumDistanceUnit="MM" multipartBehavior="LabelLargestPartOnly" offsetType="1" offsetUnits="MM" overlapHandling="AllowOverlapIfRequired" overrunDistance="0" overrunDistanceMapUnitScale="3x:0,0,0,0,0,0" overrunDistanceUnit="MM" placement="1" placementFlags="10" polygonPlacementFlags="2" predefinedPositionOrder="TR,TL,BR,BL,R,L,TSR,BSR" preserveRotation="1" prioritization="PreferCloser" priority="5" quadOffset="4" repeatDistance="0" repeatDistanceMapUnitScale="3x:0,0,0,0,0,0" repeatDistanceUnits="MM" rotationAngle="0" rotationUnit="AngleDegrees" xOffset="15" yOffset="-15"/>
       <rendering drawLabels="1" fontLimitPixelSize="0" fontMaxPixelSize="10000" fontMinPixelSize="3" limitNumLabels="0" maxNumLabels="2000" mergeLines="0" minFeatureSize="0" obstacle="1" obstacleFactor="1" obstacleType="1" scaleMax="0" scaleMin="0" scaleVisibility="0" unplacedVisibility="0" upsidedownLabels="0" zIndex="0"/>
       <dd_properties>
         <Option type="Map">
           <Option name="name" type="QString" value=""/>
-          <Option name="properties"/>
+          <Option name="properties" type="Map">
+            <Option name="PositionX" type="Map">
+              <Option name="active" type="bool" value="true"/>
+              <Option name="field" type="QString" value="auxiliary_storage_labeling_positionx"/>
+              <Option name="type" type="int" value="2"/>
+            </Option>
+            <Option name="PositionY" type="Map">
+              <Option name="active" type="bool" value="true"/>
+              <Option name="field" type="QString" value="auxiliary_storage_labeling_positiony"/>
+              <Option name="type" type="int" value="2"/>
+            </Option>
+          </Option>
           <Option name="type" type="QString" value="collection"/>
         </Option>
       </dd_properties>
@@ -413,6 +424,10 @@
     <Option type="Map">
       <Option name="dualview/previewExpressions" type="List">
         <Option type="QString" value="COALESCE( &quot;id&quot;, '&lt;NULL>' )"/>
+        <Option type="QString" value=""/>
+        <Option type="QString" value="COALESCE( &quot;id&quot;, '&lt;NULL>' )"/>
+        <Option type="QString" value="COALESCE( &quot;id&quot;, '&lt;NULL>' )"/>
+        <Option type="invalid"/>
       </Option>
       <Option name="embeddedWidgets/count" type="int" value="0"/>
       <Option name="userNotes" type="QString" value="&lt;h3>Primary area obstacle assessment&lt;/h3>&lt;p>MOC: 300 m&lt;br>Tolerance override: disabled&lt;br>Data warnings: No obstacle data was evaluated inside the mask&lt;/p>"/>
