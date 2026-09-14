@@ -93,6 +93,17 @@ def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
         'No terrain data was evaluated inside the mask',
     )
     assert QgsLayerNotesUtils.layerHasNotes(result.assessment_layer)
+    assert QgsLayerNotesUtils.layerHasNotes(result.control_layer)
+    assert 'MOC: 75 m' in QgsLayerNotesUtils.layerNotes(result.control_layer)
+    assert result.control_layer.labelsEnabled()
+    assert [
+        layer.layerType()
+        for layer in result.control_layer.renderer().symbol().symbolLayers()
+    ] == ['GeometryGenerator', 'SvgMarker']
+    assert all(
+        layer.layerType() not in ('GeometryGenerator', 'SvgMarker')
+        for layer in result.assessment_layer.renderer().symbol().symbolLayers()
+    )
     group = QgsProject.instance().layerTreeRoot().children()[0]
     assert group.name() == 'Obstacle assessment'
     assert [node.layer().name() for node in group.children()] == [

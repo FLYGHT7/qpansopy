@@ -1,5 +1,7 @@
+import hashlib
 import math
 from pathlib import Path
+from types import SimpleNamespace
 import xml.etree.ElementTree as ElementTree
 
 import pytest
@@ -118,3 +120,111 @@ def test_dockwidget_scrolls_all_assessment_controls():
     ).text == 'Qt::ScrollBarAsNeeded'
     assert scroll_area.find(".//widget[@name='calculateButton']") is not None
     assert scroll_area.find(".//widget[@name='logTextEdit']") is not None
+
+
+def test_control_obstacle_style_matches_provided_qml():
+    style_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/styles/control_obstacle_primary_style.qml'
+    )
+
+    assert hashlib.sha256(style_path.read_bytes()).hexdigest() == (
+        'c0790eea5b4be976750e255df81bb1930e8cb1eedd1a90e8f796807df89798f8'
+    )
+    root = ElementTree.parse(style_path).getroot()
+    renderer = root.find('./renderer-v2')
+    assert renderer.get('type') == 'singleSymbol'
+    assert renderer.find(".//layer[@class='GeometryGenerator']") is not None
+    assert renderer.find(".//layer[@class='SvgMarker']") is not None
+    label = root.find("./labeling/settings/text-style")
+    assert label is not None
+    assert all(
+        field in label.get('fieldName')
+        for field in ('layer_type', 'elev', 'oca_ft')
+    )
+
+
+class _StyleLayer:
+    StyleCategory = SimpleNamespace(AllVisualStyleCategories='visual')
+
+    def __init__(self, style_loaded=True):
+        self.style_loaded = style_loaded
+        self.load_calls = []
+        self.repaint_count = 0
+        self.symbols = []
+        self._renderer = SimpleNamespace(setSymbol=self.symbols.append)
+
+    def renderer(self):
+        return self._renderer
+
+    def loadNamedStyle(self, *args, **kwargs):
+        self.load_calls.append((args, kwargs))
+        return '', self.style_loaded
+
+    def triggerRepaint(self):
+        self.repaint_count += 1
+
+
+class _LegacyStyleLayer(_StyleLayer):
+    AllVisualStyleCategories = 'visual'
+
+    @property
+    def StyleCategory(self):
+        raise AttributeError
+
+
+def test_control_style_loads_visual_categories_only(monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    monkeypatch.setattr(
+        module,
+        'QgsMarkerSymbol',
+        SimpleNamespace(createSimple=lambda properties: properties),
+    )
+
+    assessment = _StyleLayer()
+    control = _StyleLayer()
+
+    module._style_results(assessment, control)
+
+    assert len(assessment.symbols) == 1
+    assert control.symbols == []
+    assert control.load_calls[0][0][0].endswith(
+        'styles/control_obstacle_primary_style.qml'
+    )
+    assert control.load_calls[0][1] == {'categories': 'visual'}
+    assert control.repaint_count == 1
+
+
+def test_control_style_falls_back_when_qml_cannot_load(monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    monkeypatch.setattr(
+        module,
+        'QgsMarkerSymbol',
+        SimpleNamespace(createSimple=lambda properties: properties),
+    )
+
+    assessment = _StyleLayer()
+    control = _StyleLayer(style_loaded=False)
+
+    module._style_results(assessment, control)
+
+    assert len(control.symbols) == 1
+    assert control.repaint_count == 1
+
+
+def test_control_style_supports_unscoped_qgis3_category(monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    monkeypatch.setattr(
+        module,
+        'QgsMarkerSymbol',
+        SimpleNamespace(createSimple=lambda properties: properties),
+    )
+    assessment = _StyleLayer()
+    control = _LegacyStyleLayer()
+
+    module._style_results(assessment, control)
+
+    assert control.load_calls[0][1] == {'categories': 'visual'}

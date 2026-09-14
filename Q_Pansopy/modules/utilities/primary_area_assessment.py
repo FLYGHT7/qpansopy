@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 import math
+import os
 from typing import Callable, List, Optional, Sequence, Tuple
 
 try:
@@ -398,13 +399,32 @@ def _style_results(assessment_layer, control_layer):
         "outline_style": "no",
         "size": "1.0",
     }))
-    control_layer.renderer().setSymbol(QgsMarkerSymbol.createSimple({
-        "name": "triangle",
-        "color": "220,0,0,255",
-        "outline_color": "120,0,0,255",
-        "outline_width": "0.3",
-        "size": "4.5",
-    }))
+    style_path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "styles",
+        "control_obstacle_primary_style.qml",
+    )
+    try:
+        visual_categories = (
+            control_layer.StyleCategory.AllVisualStyleCategories
+        )
+    except AttributeError:
+        visual_categories = control_layer.AllVisualStyleCategories
+    _, loaded = control_layer.loadNamedStyle(
+        style_path,
+        categories=visual_categories,
+    )
+    if not loaded:
+        control_layer.renderer().setSymbol(QgsMarkerSymbol.createSimple({
+            "name": "triangle",
+            "color": "220,0,0,255",
+            "outline_color": "120,0,0,255",
+            "outline_width": "0.3",
+            "size": "4.5",
+        }))
+    control_layer.triggerRepaint()
 
 
 def _add_results_to_tree(assessment_layer, control_layer):
