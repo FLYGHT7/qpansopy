@@ -5,6 +5,30 @@ import xml.etree.ElementTree as ElementTree
 import pytest
 
 
+class _Crs:
+    def __init__(self, identifier, valid=True, geographic=False):
+        self.identifier = identifier
+        self.valid = valid
+        self.geographic = geographic
+
+    def isValid(self):
+        return self.valid
+
+    def isGeographic(self):
+        return self.geographic
+
+    def __eq__(self, other):
+        return self.identifier == other.identifier
+
+
+class _Layer:
+    def __init__(self, crs):
+        self._crs = crs
+
+    def crs(self):
+        return self._crs
+
+
 def _record(identifier, elevation, tolerance):
     from Q_Pansopy.modules.utilities.primary_area_assessment import SourceRecord
 
@@ -75,6 +99,74 @@ def test_empty_evaluation_has_no_control_obstacle():
     from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
 
     assert evaluate_records([], moc_m=75.0) == ([], [])
+
+
+@pytest.mark.parametrize(
+    'role,valid,geographic',
+    [
+        ('assessment area', False, False),
+        ('terrain', False, False),
+        ('survey', False, False),
+        ('assessment area', True, True),
+        ('terrain', True, True),
+        ('survey', True, True),
+    ],
+)
+def test_crs_validation_requires_projected_inputs(role, valid, geographic):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        CrsValidationError,
+        _validate_crs,
+    )
+
+    projected = _Crs('EPSG:32616')
+    invalid = _Crs('EPSG:4326', valid=valid, geographic=geographic)
+    layers = {
+        'assessment area': _Layer(invalid),
+        'terrain': _Layer(invalid),
+        'survey': _Layer(invalid),
+    }
+
+    with pytest.raises(CrsValidationError, match=role):
+        _validate_crs(
+            layers['assessment area'] if role == 'assessment area'
+            else _Layer(projected),
+            layers['terrain'] if role == 'terrain' else None,
+            layers['survey'] if role == 'survey' else None,
+        )
+
+
+def test_crs_validation_rejects_different_projected_crs():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        CrsValidationError,
+        _validate_crs,
+    )
+
+    with pytest.raises(CrsValidationError, match='same CRS'):
+        _validate_crs(
+            _Layer(_Crs('EPSG:32616')),
+            _Layer(_Crs('EPSG:32617')),
+            None,
+        )
+
+
+def test_geographic_input_stops_before_mask_processing(monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    mask_called = []
+    monkeypatch.setattr(
+        module,
+        '_build_mask_geometry',
+        lambda *args: mask_called.append(True),
+    )
+
+    with pytest.raises(module.CrsValidationError):
+        module.run_primary_area_assessment(
+            None,
+            _Layer(_Crs('EPSG:32616')),
+            obstacle_layer=_Layer(_Crs('EPSG:4326', geographic=True)),
+        )
+
+    assert not mask_called
 
 
 def test_dockwidget_defaults_match_generic_assessment_contract():

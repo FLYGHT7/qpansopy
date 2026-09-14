@@ -4,6 +4,28 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.qgis_runtime]
 
 
+class _RecordingMessageBar:
+    def __init__(self):
+        self.messages = []
+
+    def pushMessage(self, *args, **kwargs):
+        self.messages.append((args, kwargs))
+
+
+class _DockIface:
+    def __init__(self):
+        self.message_bar = _RecordingMessageBar()
+
+    def mainWindow(self):
+        return None
+
+    def messageBar(self):
+        return self.message_bar
+
+    def activeLayer(self):
+        return None
+
+
 @pytest.fixture(scope='module')
 def qgis_app():
     try:
@@ -158,6 +180,81 @@ def test_declining_missing_sources_creates_no_result_group(qgis_app):
         node.name() != 'Obstacle assessment'
         for node in QgsProject.instance().layerTreeRoot().children()
     )
+
+
+@pytest.mark.parametrize('source', ['terrain', 'survey'])
+def test_geographic_optional_input_creates_no_results(
+        qgis_app, tmp_path, source):
+    from qgis.core import (
+        QgsCoordinateReferenceSystem,
+        QgsProject,
+        QgsRasterLayer,
+    )
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        CrsValidationError,
+        run_primary_area_assessment,
+    )
+
+    kwargs = {}
+    if source == 'terrain':
+        raster_path = tmp_path / 'geographic-terrain.asc'
+        raster_path.write_text(
+            'ncols 1\n'
+            'nrows 1\n'
+            'xllcorner 0\n'
+            'yllcorner 0\n'
+            'cellsize 1\n'
+            'NODATA_value -9999\n'
+            '100\n',
+            encoding='ascii',
+        )
+        layer = QgsRasterLayer(str(raster_path), 'terrain')
+        assert layer.isValid()
+        layer.setCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
+        kwargs['terrain_layer'] = layer
+    else:
+        layer = _obstacle_layer()
+        layer.setCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
+        kwargs['obstacle_layer'] = layer
+
+    with pytest.raises(CrsValidationError):
+        run_primary_area_assessment(None, _area_layer(), **kwargs)
+
+    assert all(
+        node.name() != 'Obstacle assessment'
+        for node in QgsProject.instance().layerTreeRoot().children()
+    )
+
+
+def test_dockwidget_reports_geographic_input_as_yellow_warning(qgis_app):
+    from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsProject
+    from Q_Pansopy.dockwidgets.utilities \
+        .qpansopy_primary_area_assessment_dockwidget import (
+            QPANSOPYPrimaryAreaAssessmentDockWidget,
+        )
+
+    area = _area_layer()
+    survey = _obstacle_layer()
+    survey.setCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
+    iface = _DockIface()
+    widget = QPANSOPYPrimaryAreaAssessmentDockWidget(iface)
+    widget.areaLayerComboBox.setLayer(area)
+    widget.obstacleLayerComboBox.setLayer(survey)
+    widget.overrideToleranceCheckBox.setChecked(True)
+
+    widget.calculate()
+
+    assert any(
+        kwargs.get('level') == Qgis.Warning
+        and 'survey layer' in args[1]
+        and 'projected CRS' in args[1]
+        for args, kwargs in iface.message_bar.messages
+    )
+    assert all(
+        node.name() != 'Obstacle assessment'
+        for node in QgsProject.instance().layerTreeRoot().children()
+    )
+    widget.close()
 
 
 def test_accepting_empty_sources_creates_annotated_empty_layers(qgis_app):
