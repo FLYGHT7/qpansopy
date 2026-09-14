@@ -118,3 +118,36 @@ def test_dockwidget_scrolls_all_assessment_controls():
     ).text == 'Qt::ScrollBarAsNeeded'
     assert scroll_area.find(".//widget[@name='calculateButton']") is not None
     assert scroll_area.find(".//widget[@name='logTextEdit']") is not None
+
+
+def test_dockwidget_labels_the_optional_point_source_as_survey():
+    root = ElementTree.parse(
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    ).getroot()
+    assessment_source = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/modules/utilities/'
+        / 'primary_area_assessment.py'
+    ).read_text(encoding='utf-8')
+    dock_source = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/dockwidgets/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.py'
+    ).read_text(encoding='utf-8')
+
+    def widget_text(widget_name):
+        widget = root.find(f".//widget[@name='{widget_name}']")
+        return widget.find("./property[@name='text']/string").text
+
+    assert widget_text('obstacleLabel') == 'Survey (optional):'
+    assert root.find(
+        ".//widget[@name='fieldMappingGroup']"
+        "/property[@name='title']/string"
+    ).text == 'Survey field mapping'
+    assert widget_text('typeFieldLabel') == 'Obstacle type:'
+    assert 'No survey data was evaluated inside the mask' in assessment_source
+    assert 'No obstacle data was evaluated inside the mask' not in assessment_source
+    assert 'Survey field mapping is required' in assessment_source
+    assert 'Incomplete assessment data' in dock_source
