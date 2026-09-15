@@ -191,6 +191,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
 
             from ...modules.utilities.primary_area_assessment import (
                 AssessmentCancelled,
+                area_buffer_to_metres,
                 run_primary_area_assessment,
             )
 
@@ -216,6 +217,10 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                         self.useSelectedAreaCheckBox.isChecked()
                     ),
                     confirm_missing=self._confirm_missing,
+                    area_buffer_m=area_buffer_to_metres(
+                        self.areaBufferDoubleSpinBox.value(),
+                        self.areaBufferUnitComboBox.currentText(),
+                    ),
                 )
             except AssessmentCancelled:
                 self.log("Assessment cancelled.")

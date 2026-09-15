@@ -1,4 +1,5 @@
 import math
+import inspect
 from pathlib import Path
 import xml.etree.ElementTree as ElementTree
 
@@ -77,6 +78,54 @@ def test_empty_evaluation_has_no_control_obstacle():
     assert evaluate_records([], moc_m=75.0) == ([], [])
 
 
+@pytest.mark.parametrize(
+    'value,unit,expected',
+    [
+        (0.0, 'NM', 0.0),
+        (1.0, 'NM', 1852.0),
+        (2.5, 'm', 2.5),
+    ],
+)
+def test_area_buffer_units_are_converted_to_metres(value, unit, expected):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        area_buffer_to_metres,
+    )
+
+    assert area_buffer_to_metres(value, unit) == expected
+
+
+@pytest.mark.parametrize('value', [-1.0, math.inf, -math.inf, math.nan])
+def test_area_buffer_conversion_rejects_invalid_values(value):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        area_buffer_to_metres,
+    )
+
+    with pytest.raises(ValueError, match='Area buffer'):
+        area_buffer_to_metres(value, 'NM')
+
+
+def test_area_buffer_conversion_rejects_unknown_units():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        area_buffer_to_metres,
+    )
+
+    with pytest.raises(ValueError, match='Unsupported area buffer unit'):
+        area_buffer_to_metres(1.0, 'ft')
+
+
+def test_area_buffer_is_last_backward_compatible_run_parameter():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        run_primary_area_assessment,
+    )
+
+    parameters = list(
+        inspect.signature(run_primary_area_assessment).parameters.values()
+    )
+
+    assert parameters[-1].name == 'area_buffer_m'
+    assert parameters[-1].default == 0.0
+
+
 def test_dockwidget_defaults_match_generic_assessment_contract():
     ui_path = (
         Path(__file__).parents[2]
@@ -91,10 +140,50 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
         return list(prop)[0].text
 
     assert property_text('useSelectedAreaCheckBox', 'checked') == 'true'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'minimum'
+    ) == '0.000000000000000'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'maximum'
+    ) == '99999.000000000000000'
+    assert property_text('areaBufferDoubleSpinBox', 'decimals') == '3'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'singleStep'
+    ) == '0.100000000000000'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'value'
+    ) == '0.000000000000000'
     assert property_text('mocDoubleSpinBox', 'value') == '75.000000000000000'
     assert property_text(
         'terrainToleranceDoubleSpinBox', 'value'
     ) == '50.000000000000000'
+
+
+def test_area_buffer_ui_is_before_terrain_and_defaults_to_nm():
+    ui_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    )
+    root = ElementTree.parse(ui_path).getroot()
+    form = root.find(".//layout[@name='inputFormLayout']")
+
+    rows = {}
+    for item in form.findall('./item'):
+        widget = item.find('.//widget')
+        if widget is not None:
+            rows[widget.get('name')] = int(item.get('row'))
+
+    unit_combo = root.find(".//widget[@name='areaBufferUnitComboBox']")
+    units = [
+        item.find('./property/string').text
+        for item in unit_combo.findall('./item')
+    ]
+
+    assert rows['areaBufferLabel'] == 2
+    assert rows['terrainLabel'] == 3
+    assert rows['obstacleLabel'] == 4
+    assert units == ['NM', 'm']
 
 
 def test_dockwidget_scrolls_all_assessment_controls():

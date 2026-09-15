@@ -13,6 +13,7 @@ except (ImportError, AttributeError):
     _TYPE_DOUBLE = QVariant.Double
     _TYPE_STRING = QVariant.String
 from qgis.core import (
+    Qgis,
     QgsFeature,
     QgsField,
     QgsFields,
@@ -25,6 +26,11 @@ from qgis.core import (
     QgsRectangle,
     QgsWkbTypes,
 )
+
+from ..constants import NM_TO_M
+
+
+_BUFFER_SEGMENTS = 36
 
 
 @dataclass(frozen=True)
@@ -89,6 +95,47 @@ def _valid_nonnegative(value: float, label: str) -> float:
     return number
 
 
+def area_buffer_to_metres(value: float, unit: str) -> float:
+    """Return an area-buffer UI value normalized to metres."""
+    distance = _valid_nonnegative(value, "Area buffer")
+    if unit == "NM":
+        return distance * NM_TO_M
+    if unit == "m":
+        return distance
+    raise ValueError(f"Unsupported area buffer unit: {unit}")
+
+
+def _metres_to_map_units(distance_m: float, crs) -> float:
+    """Convert metres to the linear units used by a projected CRS."""
+    from qgis.core import QgsUnitTypes
+
+    distance = _valid_nonnegative(distance_m, "Area buffer")
+    if distance == 0:
+        return 0.0
+    try:
+        metres = Qgis.DistanceUnit.Meters
+    except AttributeError:
+        metres = QgsUnitTypes.DistanceMeters
+    factor = QgsUnitTypes.fromUnitToUnitFactor(metres, crs.mapUnits())
+    if not math.isfinite(factor) or factor <= 0:
+        raise ValueError(
+            "The assessment area CRS must use supported linear units"
+        )
+    return distance * factor
+
+
+def _buffer_mask_geometry(mask_geometry, area_buffer_m: float, crs):
+    """Apply the optional metre buffer in the assessment CRS units."""
+    distance = _valid_nonnegative(area_buffer_m, "Area buffer")
+    if distance == 0:
+        return mask_geometry
+    map_distance = _metres_to_map_units(distance, crs)
+    buffered = mask_geometry.buffer(map_distance, _BUFFER_SEGMENTS)
+    if buffered.isNull() or buffered.isEmpty():
+        raise ValueError("The assessment-area buffer could not be created")
+    return buffered
+
+
 def evaluate_records(
     records: Sequence[SourceRecord],
     moc_m: float,
@@ -151,7 +198,8 @@ def _selected_mask_features(area_layer, use_selected_area: bool):
     return list(area_layer.getFeatures())
 
 
-def _build_mask_geometry(area_layer, use_selected_area: bool):
+def _build_mask_geometry(
+        area_layer, use_selected_area: bool, area_buffer_m: float = 0.0):
     features = _selected_mask_features(area_layer, use_selected_area)
     if not features:
         raise ValueError("The area layer contains no features")
@@ -168,7 +216,9 @@ def _build_mask_geometry(area_layer, use_selected_area: bool):
     if mask_geometry.isEmpty():
         raise ValueError("The assessment-area mask could not be created")
 
-    return mask_geometry
+    return _buffer_mask_geometry(
+        mask_geometry, area_buffer_m, area_layer.crs()
+    )
 
 
 def _point_from_geometry(geometry, identifier: str):
@@ -415,7 +465,7 @@ def _add_results_to_tree(assessment_layer, control_layer):
     group.addLayer(assessment_layer).setItemVisibilityChecked(False)
 
 
-def _notes(moc_m, override_tolerance_m, warnings):
+def _notes(moc_m, override_tolerance_m, warnings, area_buffer_m):
     override = (
         "disabled" if override_tolerance_m is None
         else f"{override_tolerance_m:g} m"
@@ -424,6 +474,7 @@ def _notes(moc_m, override_tolerance_m, warnings):
     return (
         "<h3>Primary area obstacle assessment</h3>"
         f"<p>MOC: {moc_m:g} m<br>"
+        f"Area buffer: {area_buffer_m:g} m<br>"
         f"Tolerance override: {override}<br>"
         f"Data warnings: {warning_text}</p>"
     )
@@ -455,6 +506,7 @@ def run_primary_area_assessment(
     terrain_band: int = 1,
     use_selected_area: bool = True,
     confirm_missing: Optional[Callable[[Tuple[str, ...]], bool]] = None,
+    area_buffer_m: float = 0.0,
 ) -> AssessmentResult:
     """Run a complete generic primary-area obstacle assessment."""
     del iface  # Kept in the public signature for consistency with plugin modules.
@@ -468,10 +520,11 @@ def run_primary_area_assessment(
     _valid_nonnegative(moc_m, "MOC")
     if override_tolerance_m is not None:
         _valid_nonnegative(override_tolerance_m, "Tolerance override")
+    area_buffer = _valid_nonnegative(area_buffer_m, "Area buffer")
     _validate_crs(area_layer, terrain_layer, obstacle_layer)
 
     mask_geometry = _build_mask_geometry(
-        area_layer, use_selected_area
+        area_layer, use_selected_area, area_buffer
     )
     terrain_records = _terrain_records(
         terrain_layer, mask_geometry, terrain_tolerance, terrain_band
@@ -506,7 +559,9 @@ def run_primary_area_assessment(
     )
     _style_results(assessment_layer, control_layer)
 
-    layer_notes = _notes(moc_m, override_tolerance_m, warning_tuple)
+    layer_notes = _notes(
+        moc_m, override_tolerance_m, warning_tuple, area_buffer
+    )
     QgsLayerNotesUtils.setLayerNotes(assessment_layer, layer_notes)
     QgsLayerNotesUtils.setLayerNotes(control_layer, layer_notes)
     _add_results_to_tree(assessment_layer, control_layer)
