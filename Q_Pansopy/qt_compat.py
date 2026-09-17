@@ -116,11 +116,15 @@ try:
     DOCK_FEATURES_DEFAULT = (
         _dw.DockWidgetMovable | _dw.DockWidgetFloatable | _dw.DockWidgetClosable
     )
+    QDockWidget_VerticalTitleBar = _dw.DockWidgetVerticalTitleBar
 except AttributeError:
     DOCK_FEATURES_DEFAULT = (           # type: ignore[assignment]
         QDockWidget.DockWidgetMovable   # type: ignore[attr-defined]
         | QDockWidget.DockWidgetFloatable   # type: ignore[attr-defined]
         | QDockWidget.DockWidgetClosable    # type: ignore[attr-defined]
+    )
+    QDockWidget_VerticalTitleBar = (    # type: ignore[attr-defined]
+        QDockWidget.DockWidgetVerticalTitleBar
     )
 
 # ---------------------------------------------------------------------------

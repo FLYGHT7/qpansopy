@@ -15,7 +15,7 @@ from .qt_compat import (
     Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop,
     Qt_ScrollBarAsNeeded, Qt_SizeVerCursor, Qt_LeftButton,
     QEvent_MouseButtonPress, QEvent_MouseMove, QEvent_MouseButtonRelease,
-    QFrame_NoFrame,
+    QFrame_NoFrame, QDockWidget_VerticalTitleBar,
     QSizePolicy_Fixed, QSizePolicy_Minimum, QSizePolicy_Preferred,
     QSizePolicy_Expanding,
     QFormLayout_AllNonFixedFieldsGrow,
@@ -942,6 +942,38 @@ class Qpansopy:
             # Better to have the dock work (even with resize issue) than to crash
             pass
 
+    def _dock_screen(self):
+        """Return the screen that currently contains the QGIS main window."""
+        main_window = self.iface.mainWindow()
+        try:
+            screen = QGuiApplication.screenAt(
+                main_window.frameGeometry().center()
+            )
+        except Exception:
+            screen = None
+        if screen is not None:
+            return screen
+
+        try:
+            window_handle = main_window.windowHandle()
+            screen = window_handle.screen() if window_handle else None
+        except Exception:
+            screen = None
+        return screen or QGuiApplication.primaryScreen()
+
+    def _available_dock_height(self):
+        """Return a safe dock height for the visible QGIS window area."""
+        main_window = self.iface.mainWindow()
+        heights = [main_window.contentsRect().height()]
+        screen = self._dock_screen()
+        if screen is not None:
+            visible_window = main_window.frameGeometry().intersected(
+                screen.availableGeometry()
+            )
+            heights.append(visible_window.height())
+        heights = [height for height in heights if height > 0]
+        return max(min(heights) if heights else 350, 350)
+
     def _force_initial_small_size(self, dock_instance):
         """
         Force dock to start with a small conservative size before Qt calculations.
@@ -962,20 +994,12 @@ class Qpansopy:
         larger than available space. This "pre-seeds" Qt's cache with a safe size.
         """
         try:
-            # Get screen info for calculations
-            screen = QGuiApplication.primaryScreen()
-            if screen:
-                screen_geometry = screen.availableGeometry()
-                screen_height = screen_geometry.height()
-
-                # Force a conservative initial size (50% of available height)
-                # This is much smaller than what large docks would request
-                initial_height = min(int((screen_height - 400) * 0.5), 400)
-                initial_width = 300
-            else:
-                # Fallback to very conservative size
-                initial_height = 350
-                initial_width = 300
+            # Pre-seed a conservative size relative to the actual QGIS window,
+            # not a fixed desktop-height reservation.
+            initial_height = min(
+                max(int(self._available_dock_height() * 0.5), 350), 400
+            )
+            initial_width = 300
 
             # CRITICAL: Force this size on both dock and content widget
             # This makes Qt cache this size instead of calculating from sizeHint
@@ -1001,14 +1025,8 @@ class Qpansopy:
         keeping the issue #39 fix (no QGIS window resize) intact.
         """
         try:
-            screen = QGuiApplication.primaryScreen()
-            available_height = (
-                screen.availableGeometry().height() - 400
-                if screen else 600
-            )
-            available_height = max(available_height, 350)
             self.iface.mainWindow().resizeDocks(
-                [dock_instance], [available_height], Qt_Vertical
+                [dock_instance], [self._available_dock_height()], Qt_Vertical
             )
         except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
@@ -1115,26 +1133,17 @@ class Qpansopy:
             # CRITICAL: Disable the feature that allows dock to resize the main window
             # This is the key fix - prevents dock from requesting main window resize
             dock_instance.setFeatures(
-                dock_instance.features() & ~QtWidgets.QDockWidget.DockWidgetVerticalTitleBar
+                dock_instance.features() & ~QDockWidget_VerticalTitleBar
             )
 
-            # Get the primary screen geometry for size calculations
-            screen = QGuiApplication.primaryScreen()
+            # Match the height cap to the screen containing the QGIS window.
+            screen = self._dock_screen()
             if screen:
                 screen_geometry = screen.availableGeometry()
-                screen_height = screen_geometry.height()
                 screen_width = screen_geometry.width()
 
-                # Reserve space for QGIS UI elements
-                # Top: toolbars, menus, navigation (~120px)
-                # Bottom: statusbar (~30px)
-                # Safety margin: ~250px for various UI elements and borders
-                # Very conservative for large docks (LNAV, GNSS, SID Initial, OMNI, Holding)
-                reserved_height = 400
-
                 # Calculate maximum available dimensions
-                # Use very aggressive constraint to prevent any overflow
-                max_dock_height = max(screen_height - reserved_height, 350)
+                max_dock_height = self._available_dock_height()
                 max_dock_width = int(screen_width * 0.8)
 
                 # CRITICAL: Apply constraint to BOTH dock AND its content widget

@@ -95,3 +95,26 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
     assert property_text(
         'terrainToleranceDoubleSpinBox', 'value'
     ) == '50.000000000000000'
+
+
+def test_dockwidget_scrolls_all_assessment_controls():
+    ui_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    )
+    root = ElementTree.parse(ui_path).getroot()
+    scroll_area = root.find(".//widget[@name='scrollArea']")
+
+    assert scroll_area is not None
+    assert scroll_area.find(
+        "./property[@name='widgetResizable']/bool"
+    ).text == 'true'
+    assert scroll_area.find(
+        "./property[@name='horizontalScrollBarPolicy']/enum"
+    ).text == 'Qt::ScrollBarAsNeeded'
+    assert scroll_area.find(
+        "./property[@name='verticalScrollBarPolicy']/enum"
+    ).text == 'Qt::ScrollBarAsNeeded'
+    assert scroll_area.find(".//widget[@name='calculateButton']") is not None
+    assert scroll_area.find(".//widget[@name='logTextEdit']") is not None
