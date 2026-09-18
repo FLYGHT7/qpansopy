@@ -1,5 +1,7 @@
+import hashlib
 import math
 from pathlib import Path
+from types import SimpleNamespace
 import xml.etree.ElementTree as ElementTree
 
 import pytest
