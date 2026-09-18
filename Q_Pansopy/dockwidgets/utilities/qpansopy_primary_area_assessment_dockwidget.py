@@ -140,7 +140,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             no = QtWidgets.QMessageBox.No
         reply = QtWidgets.QMessageBox.question(
             self,
-            "Incomplete obstacle data",
+            "Incomplete assessment data",
             message,
             yes | no,
             no,
@@ -174,6 +174,13 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                 )
         return area_layer, obstacle_layer, mapping
 
+    def _report_crs_warning(self, error):
+        message = f"Assessment not run: {error}"
+        self.log(message)
+        self.iface.messageBar().pushMessage(
+            "QPANSOPY", message, level=Qgis.Warning
+        )
+
     def calculate(self):
         """Execute the assessment while keeping the dock state consistent."""
         if self._assessing:
@@ -191,6 +198,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
 
             from ...modules.utilities.primary_area_assessment import (
                 AssessmentCancelled,
+                CrsValidationError,
                 run_primary_area_assessment,
             )
 
@@ -211,14 +219,20 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                         self.terrainToleranceDoubleSpinBox.value()
                     ),
                     override_tolerance_m=override,
-                    terrain_band=self.terrainBandSpinBox.value(),
+                    terrain_band=1,
                     use_selected_area=(
                         self.useSelectedAreaCheckBox.isChecked()
                     ),
                     confirm_missing=self._confirm_missing,
+                    oca_rounding_ft=int(
+                        self.ocaRoundingComboBox.currentText()
+                    ),
                 )
             except AssessmentCancelled:
                 self.log("Assessment cancelled.")
+                return
+            except CrsValidationError as error:
+                self._report_crs_warning(error)
                 return
 
             message = (

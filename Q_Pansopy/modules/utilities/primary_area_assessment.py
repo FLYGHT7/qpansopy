@@ -8,10 +8,12 @@ from typing import Callable, List, Optional, Sequence, Tuple
 try:
     from qgis.PyQt.QtCore import QMetaType
     _TYPE_DOUBLE = QMetaType.Type.Double
+    _TYPE_INT = QMetaType.Type.Int
     _TYPE_STRING = QMetaType.Type.QString
 except (ImportError, AttributeError):
     from qgis.PyQt.QtCore import QVariant
     _TYPE_DOUBLE = QVariant.Double
+    _TYPE_INT = QVariant.Int
     _TYPE_STRING = QVariant.String
 from qgis.core import (
     QgsFeature,
@@ -30,7 +32,7 @@ from qgis.core import (
 
 @dataclass(frozen=True)
 class FieldMapping:
-    """Fields used to normalize an obstacle layer."""
+    """Fields used to normalize a survey layer."""
 
     identifier: str
     obstacle_type: str
@@ -65,6 +67,7 @@ class EvaluatedRecord:
     moc_m: float
     oca_m: float
     oca_ft: float
+    oca_pub_ft: int
     geometry: object
 
 
@@ -83,6 +86,10 @@ class AssessmentCancelled(Exception):
     """Raised when the user declines an incomplete-data assessment."""
 
 
+class CrsValidationError(ValueError):
+    """Raised when an assessment input lacks the required projected CRS."""
+
+
 def _valid_nonnegative(value: float, label: str) -> float:
     number = float(value)
     if not math.isfinite(number) or number < 0:
@@ -90,10 +97,23 @@ def _valid_nonnegative(value: float, label: str) -> float:
     return number
 
 
+def _valid_oca_rounding(value: int) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(
+            "OCA publication increment must be 1, 5, 10, or 100 ft"
+        )
+    if value not in (1, 5, 10, 100):
+        raise ValueError(
+            "OCA publication increment must be 1, 5, 10, or 100 ft"
+        )
+    return value
+
+
 def evaluate_records(
     records: Sequence[SourceRecord],
     moc_m: float,
     override_tolerance_m: Optional[float] = None,
+    oca_rounding_ft: int = 100,
 ) -> Tuple[List[EvaluatedRecord], List[EvaluatedRecord]]:
     """Evaluate normalized points and return all tied controlling obstacles."""
     moc = _valid_nonnegative(moc_m, "MOC")
@@ -102,6 +122,7 @@ def evaluate_records(
         if override_tolerance_m is None
         else _valid_nonnegative(override_tolerance_m, "Tolerance override")
     )
+    rounding = _valid_oca_rounding(oca_rounding_ft)
     evaluated: List[EvaluatedRecord] = []
 
     for record in records:
@@ -116,6 +137,7 @@ def evaluate_records(
         )
         applied_tolerance = source_tolerance if override is None else override
         oca_m = elevation + applied_tolerance + moc
+        oca_ft = round(oca_m / 0.3048, 3)
         evaluated.append(EvaluatedRecord(
             identifier=record.identifier,
             layer_type=record.layer_type,
@@ -126,7 +148,8 @@ def evaluate_records(
             applied_tolerance_m=applied_tolerance,
             moc_m=moc,
             oca_m=oca_m,
-            oca_ft=round(oca_m / 0.3048, 3),
+            oca_ft=oca_ft,
+            oca_pub_ft=math.ceil(oca_ft / rounding) * rounding,
             geometry=record.geometry,
         ))
 
@@ -209,7 +232,7 @@ def _survey_records(obstacle_layer, mask_geometry, mapping, has_override):
     if obstacle_layer is None:
         return []
     if mapping is None:
-        raise ValueError("Obstacle field mapping is required")
+        raise ValueError("Survey field mapping is required")
 
     available = set(obstacle_layer.fields().names())
     required = {
@@ -224,7 +247,7 @@ def _survey_records(obstacle_layer, mask_geometry, mapping, has_override):
         if not name or name not in available
     ]
     if missing:
-        raise ValueError("Missing obstacle field mapping: " + ", ".join(missing))
+        raise ValueError("Missing survey field mapping: " + ", ".join(missing))
 
     records = []
     for feature in obstacle_layer.getFeatures():
@@ -352,6 +375,7 @@ def _output_fields():
         QgsField("moc_m", _TYPE_DOUBLE, len=20, prec=3),
         QgsField("oca_m", _TYPE_DOUBLE, len=20, prec=3),
         QgsField("oca_ft", _TYPE_DOUBLE, len=20, prec=3),
+        QgsField("oca_pub_ft", _TYPE_INT, len=20),
     ]:
         fields.append(field)
     return fields
@@ -378,6 +402,7 @@ def _result_layer(name: str, crs, records):
             record.moc_m,
             record.oca_m,
             record.oca_ft,
+            record.oca_pub_ft,
         ])
         features.append(feature)
         if len(features) == 5000:
@@ -435,7 +460,7 @@ def _add_results_to_tree(assessment_layer, control_layer):
     group.addLayer(assessment_layer).setItemVisibilityChecked(False)
 
 
-def _notes(moc_m, override_tolerance_m, warnings):
+def _notes(moc_m, override_tolerance_m, oca_rounding_ft, warnings):
     override = (
         "disabled" if override_tolerance_m is None
         else f"{override_tolerance_m:g} m"
@@ -445,20 +470,33 @@ def _notes(moc_m, override_tolerance_m, warnings):
         "<h3>Primary area obstacle assessment</h3>"
         f"<p>MOC: {moc_m:g} m<br>"
         f"Tolerance override: {override}<br>"
+        f"OCA publication increment: {oca_rounding_ft} ft<br>"
         f"Data warnings: {warning_text}</p>"
     )
 
 
 def _validate_crs(area_layer, terrain_layer, obstacle_layer):
+    layers = (
+        ("assessment area", area_layer),
+        ("terrain", terrain_layer),
+        ("survey", obstacle_layer),
+    )
+    for label, layer in layers:
+        if layer is None:
+            continue
+        crs = layer.crs()
+        if not crs.isValid() or crs.isGeographic():
+            raise CrsValidationError(
+                f"The {label} layer must use a valid projected CRS"
+            )
+
     area_crs = area_layer.crs()
-    if not area_crs.isValid() or area_crs.isGeographic():
-        raise ValueError("The assessment area must use a valid projected CRS")
     for label, layer in (
         ("terrain", terrain_layer),
-        ("obstacle", obstacle_layer),
+        ("survey", obstacle_layer),
     ):
         if layer is not None and layer.crs() != area_crs:
-            raise ValueError(
+            raise CrsValidationError(
                 f"The {label} layer must use the same CRS as the assessment area"
             )
 
@@ -475,6 +513,7 @@ def run_primary_area_assessment(
     terrain_band: int = 1,
     use_selected_area: bool = True,
     confirm_missing: Optional[Callable[[Tuple[str, ...]], bool]] = None,
+    oca_rounding_ft: int = 100,
 ) -> AssessmentResult:
     """Run a complete generic primary-area obstacle assessment."""
     del iface  # Kept in the public signature for consistency with plugin modules.
@@ -488,6 +527,7 @@ def run_primary_area_assessment(
     _valid_nonnegative(moc_m, "MOC")
     if override_tolerance_m is not None:
         _valid_nonnegative(override_tolerance_m, "Tolerance override")
+    _valid_oca_rounding(oca_rounding_ft)
     _validate_crs(area_layer, terrain_layer, obstacle_layer)
 
     mask_geometry = _build_mask_geometry(
@@ -507,7 +547,7 @@ def run_primary_area_assessment(
     if not terrain_records:
         warnings.append("No terrain data was evaluated inside the mask")
     if not survey_records:
-        warnings.append("No obstacle data was evaluated inside the mask")
+        warnings.append("No survey data was evaluated inside the mask")
     warning_tuple = tuple(warnings)
     if warning_tuple and confirm_missing is not None:
         if not confirm_missing(warning_tuple):
@@ -517,6 +557,7 @@ def run_primary_area_assessment(
         terrain_records + survey_records,
         moc_m=moc_m,
         override_tolerance_m=override_tolerance_m,
+        oca_rounding_ft=oca_rounding_ft,
     )
     assessment_layer = _result_layer(
         "Primary assessment", area_layer.crs(), evaluated
@@ -526,7 +567,9 @@ def run_primary_area_assessment(
     )
     _style_results(assessment_layer, control_layer)
 
-    layer_notes = _notes(moc_m, override_tolerance_m, warning_tuple)
+    layer_notes = _notes(
+        moc_m, override_tolerance_m, oca_rounding_ft, warning_tuple
+    )
     QgsLayerNotesUtils.setLayerNotes(assessment_layer, layer_notes)
     QgsLayerNotesUtils.setLayerNotes(control_layer, layer_notes)
     _add_results_to_tree(assessment_layer, control_layer)
