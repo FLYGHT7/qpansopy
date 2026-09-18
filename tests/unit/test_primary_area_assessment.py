@@ -97,6 +97,28 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
     ) == '50.000000000000000'
 
 
+def test_dockwidget_uses_flat_bold_sections_without_redundant_wrappers():
+    ui_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    )
+    root = ElementTree.parse(ui_path).getroot()
+
+    for group_name in ('inputGroup', 'fieldMappingGroup', 'paramsGroup'):
+        group = root.find(f".//widget[@name='{group_name}']")
+        assert group.find("./property[@name='flat']/bool").text == 'true'
+        assert group.find(
+            "./property[@name='alignment']/set"
+        ).text == 'Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter'
+        stylesheet = group.find("./property[@name='styleSheet']/string")
+        assert 'font-weight: bold' in stylesheet.text
+
+    assert root.find(".//widget[@name='outputGroup']") is None
+    assert root.find(".//widget[@name='outputDescriptionLabel']") is None
+    assert root.find(".//widget[@name='actionGroup']") is None
+
+
 def test_dockwidget_scrolls_all_assessment_controls():
     ui_path = (
         Path(__file__).parents[2]

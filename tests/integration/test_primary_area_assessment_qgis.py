@@ -66,6 +66,69 @@ def _obstacle_layer():
     return layer
 
 
+class _DockIface:
+    def __init__(self):
+        from qgis.PyQt.QtWidgets import QMainWindow
+
+        self._main_window = QMainWindow()
+
+    def mainWindow(self):
+        return self._main_window
+
+    def activeLayer(self):
+        return None
+
+
+def test_primary_area_assessment_ui_is_flat_and_aligned(qgis_app):
+    from qgis.PyQt.QtCore import QPoint, Qt
+
+    from Q_Pansopy.dockwidgets.utilities.qpansopy_primary_area_assessment_dockwidget import (
+        QPANSOPYPrimaryAreaAssessmentDockWidget,
+    )
+
+    iface = _DockIface()
+    widget = QPANSOPYPrimaryAreaAssessmentDockWidget(iface)
+    try:
+        try:
+            dock_area = Qt.DockWidgetArea.RightDockWidgetArea
+        except AttributeError:
+            dock_area = Qt.RightDockWidgetArea
+        iface.mainWindow().addDockWidget(dock_area, widget)
+        iface.mainWindow().show()
+        qgis_app.processEvents()
+
+        assert widget.inputGroup.isFlat()
+        assert widget.fieldMappingGroup.isFlat()
+        assert widget.paramsGroup.isFlat()
+        assert not hasattr(widget, 'outputGroup')
+        assert not hasattr(widget, 'actionGroup')
+        assert not hasattr(widget, 'outputDescriptionLabel')
+        assert widget.calculateButton.isVisible()
+        assert widget.logTextEdit.isVisible()
+
+        controls = [
+            widget.areaLayerComboBox,
+            widget.idFieldComboBox,
+            widget.mocDoubleSpinBox,
+        ]
+        left_edges = [
+            control.mapTo(widget, QPoint(0, 0)).x()
+            for control in controls
+        ]
+        assert max(left_edges) - min(left_edges) <= 1
+
+        label_widths = [
+            widget.areaLabel.minimumWidth(),
+            widget.idFieldLabel.minimumWidth(),
+            widget.mocLabel.minimumWidth(),
+            widget.terrainToleranceLabel.minimumWidth(),
+        ]
+        assert len(set(label_widths)) == 1
+    finally:
+        widget.close()
+        iface.mainWindow().close()
+
+
 def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
     from qgis.core import QgsLayerNotesUtils, QgsProject
     from Q_Pansopy.modules.utilities.primary_area_assessment import (
