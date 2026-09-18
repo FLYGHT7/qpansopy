@@ -51,6 +51,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
         self.setupUi(self)
         self.iface = iface
         self._assessing = False
+        self._align_form_fields()
 
         self.areaLayerComboBox.setFilters(MLPM_PolygonLayer)
         self.terrainLayerComboBox.setFilters(MLPM_RasterLayer)
@@ -80,6 +81,24 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
     def log(self, message):
         self.logTextEdit.append(message)
         self.logTextEdit.ensureCursorVisible()
+
+    def _align_form_fields(self):
+        """Give every form the same label-column width."""
+        labels = [
+            self.areaLabel,
+            self.terrainLabel,
+            self.obstacleLabel,
+            self.idFieldLabel,
+            self.typeFieldLabel,
+            self.elevationFieldLabel,
+            self.toleranceFieldLabel,
+            self.mocLabel,
+            self.terrainToleranceLabel,
+            self.overrideToleranceCheckBox,
+        ]
+        label_width = max(label.sizeHint().width() for label in labels)
+        for label in labels:
+            label.setMinimumWidth(label_width)
 
     @staticmethod
     def _select_candidate(combo, candidates):
