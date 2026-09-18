@@ -126,7 +126,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                 combo.addItem("Not mapped", "")
             for name in names:
                 combo.addItem(name, name)
-        self.fieldMappingGroup.setEnabled(layer is not None)
+        self.fieldMappingGroup.setVisible(layer is not None)
         for object_name, candidates in self._FIELD_CANDIDATES.items():
             self._select_candidate(getattr(self, object_name), candidates)
         self._update_tolerance_controls(
@@ -159,7 +159,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             no = QtWidgets.QMessageBox.No
         reply = QtWidgets.QMessageBox.question(
             self,
-            "Incomplete obstacle data",
+            "Incomplete assessment data",
             message,
             yes | no,
             no,
@@ -193,6 +193,13 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                 )
         return area_layer, obstacle_layer, mapping
 
+    def _report_crs_warning(self, error):
+        message = f"Assessment not run: {error}"
+        self.log(message)
+        self.iface.messageBar().pushMessage(
+            "QPANSOPY", message, level=Qgis.Warning
+        )
+
     def calculate(self):
         """Execute the assessment while keeping the dock state consistent."""
         if self._assessing:
@@ -210,6 +217,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
 
             from ...modules.utilities.primary_area_assessment import (
                 AssessmentCancelled,
+                CrsValidationError,
                 run_primary_area_assessment,
             )
 
@@ -235,9 +243,15 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                         self.useSelectedAreaCheckBox.isChecked()
                     ),
                     confirm_missing=self._confirm_missing,
+                    oca_rounding_ft=int(
+                        self.ocaRoundingComboBox.currentText()
+                    ),
                 )
             except AssessmentCancelled:
                 self.log("Assessment cancelled.")
+                return
+            except CrsValidationError as error:
+                self._report_crs_warning(error)
                 return
 
             message = (
