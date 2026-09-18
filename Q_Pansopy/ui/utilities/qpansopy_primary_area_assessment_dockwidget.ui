@@ -66,7 +66,23 @@
       </layout>
      </widget>
     </item>
-    <item><widget class="QPushButton" name="calculateButton"><property name="text"><string>Evaluate primary area</string></property><property name="default"><bool>true</bool></property></widget></item>
+    <item>
+     <widget class="QGroupBox" name="outputGroup">
+      <property name="title"><string>Output</string></property>
+      <layout class="QVBoxLayout" name="outputLayout">
+       <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>The control obstacle layer will be added to the project.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+       <item><widget class="QCheckBox" name="loadAllPointsCheckBox"><property name="text"><string>Load all analyzed points</string></property><property name="checked"><bool>false</bool></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="actionGroup">
+      <property name="title"><string>Action</string></property>
+      <layout class="QVBoxLayout" name="actionLayout">
+       <item><widget class="QPushButton" name="calculateButton"><property name="text"><string>Evaluate primary area</string></property><property name="default"><bool>true</bool></property></widget></item>
+      </layout>
+     </widget>
+    </item>
     <item>
      <widget class="QGroupBox" name="logGroup">
       <property name="title"><string>Log</string></property>

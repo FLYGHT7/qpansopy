@@ -470,3 +470,57 @@ def test_accepting_empty_sources_creates_annotated_empty_layers(qgis_app):
     notes = QgsLayerNotesUtils.layerNotes(result.assessment_layer)
     assert 'No terrain data' in notes
     assert 'No survey data' in notes
+
+
+def test_control_only_assessment_loads_only_controls(qgis_app):
+    from qgis.core import QgsProject
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        FieldMapping,
+        run_primary_area_assessment,
+    )
+
+    result = run_primary_area_assessment(
+        None,
+        _area_layer(),
+        obstacle_layer=_obstacle_layer(),
+        field_mapping=FieldMapping(
+            identifier='survey_id',
+            obstacle_type='kind',
+            elevation='elevation',
+            tolerance='accuracy',
+        ),
+        moc_m=75.0,
+        load_all_points=False,
+        confirm_missing=lambda warnings: True,
+    )
+
+    assert result.assessment_layer is None
+    assert result.assessed_count == 2
+    assert result.control_count == 2
+    group = QgsProject.instance().layerTreeRoot().children()[0]
+    assert [node.layer().name() for node in group.children()] == [
+        'Control obstacle'
+    ]
+
+
+def test_control_only_empty_sources_keep_warning_and_empty_control_layer(
+        qgis_app):
+    from qgis.core import QgsLayerNotesUtils
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        run_primary_area_assessment,
+    )
+
+    result = run_primary_area_assessment(
+        None,
+        _area_layer(),
+        load_all_points=False,
+        confirm_missing=lambda warnings: True,
+    )
+
+    assert result.assessment_layer is None
+    assert result.assessed_count == 0
+    assert result.control_count == 0
+    assert result.control_layer.featureCount() == 0
+    notes = QgsLayerNotesUtils.layerNotes(result.control_layer)
+    assert 'No terrain data' in notes
+    assert 'No survey data' in notes

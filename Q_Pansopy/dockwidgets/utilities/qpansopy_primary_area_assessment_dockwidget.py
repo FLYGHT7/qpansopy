@@ -248,6 +248,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                     oca_rounding_ft=int(
                         self.ocaRoundingComboBox.currentText()
                     ),
+                    load_all_points=self.loadAllPointsCheckBox.isChecked(),
                 )
             except AssessmentCancelled:
                 self.log("Assessment cancelled.")
