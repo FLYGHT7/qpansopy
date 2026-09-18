@@ -51,6 +51,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
         self.setupUi(self)
         self.iface = iface
         self._assessing = False
+        self._processing_message = None
 
         self.areaLayerComboBox.setFilters(MLPM_PolygonLayer)
         self.terrainLayerComboBox.setFilters(MLPM_RasterLayer)
@@ -80,6 +81,31 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
     def log(self, message):
         self.logTextEdit.append(message)
         self.logTextEdit.ensureCursorVisible()
+
+    def _show_processing_message(self):
+        message_bar = self.iface.messageBar()
+        message_bar.pushMessage(
+            "QPANSOPY",
+            "Primary area assessment is in progress. "
+            "This may take several minutes.",
+            level=Qgis.Info,
+            duration=30,
+        )
+        self._processing_message = message_bar.currentItem()
+
+    def _clear_processing_message(self):
+        item = self._processing_message
+        self._processing_message = None
+        if item is None:
+            return
+
+        message_bar = self.iface.messageBar()
+        try:
+            if item in message_bar.items():
+                message_bar.popWidget(item)
+        except (AttributeError, RuntimeError):
+            # Keep assessment cleanup from masking the original result/error.
+            pass
 
     @staticmethod
     def _select_candidate(combo, candidates):
@@ -188,6 +214,8 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             cursor_set = True
             QtWidgets.QApplication.processEvents()
             self.log("Starting primary-area obstacle assessment...")
+            self._show_processing_message()
+            QtWidgets.QApplication.processEvents()
 
             from ...modules.utilities.primary_area_assessment import (
                 AssessmentCancelled,
@@ -239,6 +267,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                 "QPANSOPY", message, level=Qgis.Critical
             )
         finally:
+            self._clear_processing_message()
             if cursor_set:
                 QtWidgets.QApplication.restoreOverrideCursor()
             if self._assessing:
