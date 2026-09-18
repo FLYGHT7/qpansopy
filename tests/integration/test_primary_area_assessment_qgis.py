@@ -150,6 +150,16 @@ def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
     assert [node.layer().name() for node in group.children()] == [
         'Control obstacle', 'Primary assessment'
     ]
+    for layer in (result.assessment_layer, result.control_layer):
+        assert 'oca_pub_ft' in layer.fields().names()
+        assert all(
+            isinstance(feature['oca_pub_ft'], int)
+            for feature in layer.getFeatures()
+        )
+    assert {
+        feature['oca_pub_ft']
+        for feature in result.control_layer.getFeatures()
+    } == {600}
     assert group.children()[0].itemVisibilityChecked()
     assert not group.children()[1].itemVisibilityChecked()
 
@@ -182,6 +192,7 @@ def test_terrain_pixels_are_evaluated_without_processing_provider(
         terrain_layer=terrain,
         moc_m=75.0,
         terrain_tolerance_m=50.0,
+        oca_rounding_ft=5,
         confirm_missing=lambda warnings: True,
     )
 
@@ -190,6 +201,7 @@ def test_terrain_pixels_are_evaluated_without_processing_provider(
     control = next(result.control_layer.getFeatures())
     assert control['elev'] == 9.0
     assert control['oca_m'] == 134.0
+    assert control['oca_pub_ft'] == 440
 
 
 def test_declining_missing_sources_creates_no_result_group(qgis_app):

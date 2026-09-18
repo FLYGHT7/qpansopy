@@ -216,6 +216,9 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                         self.useSelectedAreaCheckBox.isChecked()
                     ),
                     confirm_missing=self._confirm_missing,
+                    oca_rounding_ft=int(
+                        self.ocaRoundingComboBox.currentText()
+                    ),
                 )
             except AssessmentCancelled:
                 self.log("Assessment cancelled.")
