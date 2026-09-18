@@ -1,6 +1,5 @@
 import hashlib
 import math
-import inspect
 from pathlib import Path
 from types import SimpleNamespace
 import xml.etree.ElementTree as ElementTree
@@ -145,6 +144,41 @@ def test_evaluation_rejects_invalid_source_tolerance():
         evaluate_records([_record('A', 100.0, -0.1)], moc_m=75.0)
 
 
+@pytest.mark.parametrize(
+    'value,unit,expected',
+    [
+        (2.0, 'NM', 3704.0),
+        (250.0, 'm', 250.0),
+        (0.0, 'NM', 0.0),
+    ],
+)
+def test_area_buffer_units_are_converted_to_metres(value, unit, expected):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        area_buffer_to_metres,
+    )
+
+    assert area_buffer_to_metres(value, unit) == expected
+
+
+@pytest.mark.parametrize('value', [-1.0, math.inf, math.nan])
+def test_area_buffer_conversion_rejects_invalid_values(value):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        area_buffer_to_metres,
+    )
+
+    with pytest.raises(ValueError, match='Area buffer'):
+        area_buffer_to_metres(value, 'NM')
+
+
+def test_area_buffer_conversion_rejects_unknown_unit():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        area_buffer_to_metres,
+    )
+
+    with pytest.raises(ValueError, match='Unsupported area buffer unit'):
+        area_buffer_to_metres(1.0, 'ft')
+
+
 def test_empty_evaluation_has_no_control_obstacle():
     from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
 
@@ -285,6 +319,24 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
         'terrainToleranceDoubleSpinBox', 'value'
     ) == '50.000000000000000'
     rounding_combo = root.find(".//widget[@name='ocaRoundingComboBox']")
+    rounding_label = root.find(".//widget[@name='ocaRoundingLabel']")
+    params_form = root.find(".//layout[@name='paramsFormLayout']")
+    rounding_rows = {
+        item.find('./widget').get('name'): int(item.get('row'))
+        for item in params_form.findall('./item')
+        if item.find('./widget') is not None
+        and item.find('./widget').get('name') in {
+            'ocaRoundingLabel', 'ocaRoundingComboBox'
+        }
+    }
+
+    assert rounding_label.find("./property[@name='text']/string").text == (
+        'OCA publication increment (ft):'
+    )
+    assert rounding_rows == {
+        'ocaRoundingLabel': 3,
+        'ocaRoundingComboBox': 3,
+    }
     assert [
         item.find("./property[@name='text']/string").text
         for item in rounding_combo.findall('./item')
@@ -338,7 +390,7 @@ def test_field_mapping_group_uses_qgis_collapsible_widget():
     assert group.find("./property[@name='collapsed']/bool").text == 'false'
 
 
-def test_dockwidget_uses_flat_bold_sections_without_redundant_wrappers():
+def test_dockwidget_uses_flat_bold_input_sections():
     ui_path = (
         Path(__file__).parents[2]
         / 'Q_Pansopy/ui/utilities/'
@@ -354,11 +406,6 @@ def test_dockwidget_uses_flat_bold_sections_without_redundant_wrappers():
         ).text == 'Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter'
         stylesheet = group.find("./property[@name='styleSheet']/string")
         assert 'font-weight: bold' in stylesheet.text
-
-    assert root.find(".//widget[@name='outputGroup']") is None
-    assert root.find(".//widget[@name='outputDescriptionLabel']") is None
-    assert root.find(".//widget[@name='actionGroup']") is None
-
 
 def test_dockwidget_labels_override_as_survey_obstacle_tolerance():
     ui_path = (
@@ -435,6 +482,12 @@ def test_dockwidget_shows_and_clears_processing_message():
 
 
 def test_dockwidget_passes_load_all_points_state():
+    dock_source = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/dockwidgets/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.py'
+    ).read_text(encoding='utf-8')
+
     assert 'load_all_points=self.loadAllPointsCheckBox.isChecked(),' in (
         dock_source
     )

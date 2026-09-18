@@ -134,6 +134,16 @@ def _valid_nonnegative(value: float, label: str) -> float:
     return number
 
 
+def area_buffer_to_metres(value: float, unit: str) -> float:
+    """Return an area-buffer UI value normalized to metres."""
+    distance = _valid_nonnegative(value, "Area buffer")
+    if unit == "NM":
+        return distance * NM_TO_M
+    if unit == "m":
+        return distance
+    raise ValueError(f"Unsupported area buffer unit: {unit}")
+
+
 def _valid_oca_rounding(value: int) -> int:
     if not isinstance(value, int) or isinstance(value, bool):
         raise ValueError(
