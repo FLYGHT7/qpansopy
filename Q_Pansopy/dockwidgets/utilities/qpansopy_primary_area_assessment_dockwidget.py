@@ -107,7 +107,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                 combo.addItem("Not mapped", "")
             for name in names:
                 combo.addItem(name, name)
-        self.fieldMappingGroup.setEnabled(layer is not None)
+        self.fieldMappingGroup.setVisible(layer is not None)
         for object_name, candidates in self._FIELD_CANDIDATES.items():
             self._select_candidate(getattr(self, object_name), candidates)
         self._update_tolerance_controls(

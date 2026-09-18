@@ -66,6 +66,52 @@ def _obstacle_layer():
     return layer
 
 
+class _DockIface:
+    def __init__(self):
+        from qgis.PyQt.QtWidgets import QMainWindow
+
+        self._main_window = QMainWindow()
+
+    def mainWindow(self):
+        return self._main_window
+
+    def activeLayer(self):
+        return None
+
+
+def test_survey_field_mapping_visibility_tracks_survey_layer(qgis_app):
+    from qgis.core import QgsProject
+
+    from Q_Pansopy.dockwidgets.utilities.qpansopy_primary_area_assessment_dockwidget import (
+        QPANSOPYPrimaryAreaAssessmentDockWidget,
+    )
+
+    iface = _DockIface()
+    widget = QPANSOPYPrimaryAreaAssessmentDockWidget(iface)
+    try:
+        assert widget.fieldMappingGroup.isHidden()
+
+        survey = _obstacle_layer()
+        QgsProject.instance().addMapLayer(survey)
+        widget.obstacleLayerComboBox.setLayer(survey)
+        qgis_app.processEvents()
+
+        assert not widget.fieldMappingGroup.isHidden()
+        assert not widget.fieldMappingGroup.isCollapsed()
+        assert widget.idFieldComboBox.findData('survey_id') >= 0
+        assert widget.typeFieldComboBox.findData('kind') >= 0
+        assert widget.elevationFieldComboBox.findData('elevation') >= 0
+
+        widget.fieldMappingGroup.setCollapsed(True)
+        assert widget.fieldMappingGroup.isCollapsed()
+
+        widget.obstacleLayerComboBox.setLayer(None)
+        qgis_app.processEvents()
+        assert widget.fieldMappingGroup.isHidden()
+    finally:
+        widget.close()
+
+
 def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
     from qgis.core import QgsLayerNotesUtils, QgsProject
     from Q_Pansopy.modules.utilities.primary_area_assessment import (
