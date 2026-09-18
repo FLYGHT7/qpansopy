@@ -97,6 +97,21 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
     ) == '50.000000000000000'
 
 
+def test_dockwidget_labels_override_as_survey_obstacle_tolerance():
+    ui_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    )
+    root = ElementTree.parse(ui_path).getroot()
+    widget = root.find(
+        ".//widget[@name='overrideToleranceCheckBox']"
+    )
+    text = widget.find("./property[@name='text']/string").text
+
+    assert text == 'Override survey obstacle tolerance'
+
+
 def test_dockwidget_scrolls_all_assessment_controls():
     ui_path = (
         Path(__file__).parents[2]
