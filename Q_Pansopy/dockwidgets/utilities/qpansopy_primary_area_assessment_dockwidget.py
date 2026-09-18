@@ -140,7 +140,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             no = QtWidgets.QMessageBox.No
         reply = QtWidgets.QMessageBox.question(
             self,
-            "Incomplete obstacle data",
+            "Incomplete assessment data",
             message,
             yes | no,
             no,

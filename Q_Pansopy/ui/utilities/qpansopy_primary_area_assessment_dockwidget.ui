@@ -27,14 +27,14 @@
        <item row="1" column="1"><widget class="QCheckBox" name="useSelectedAreaCheckBox"><property name="text"><string>Use selected areas</string></property><property name="checked"><bool>true</bool></property></widget></item>
        <item row="2" column="0"><widget class="QLabel" name="terrainLabel"><property name="text"><string>Terrain (optional):</string></property></widget></item>
        <item row="2" column="1"><widget class="QgsMapLayerComboBox" name="terrainLayerComboBox"/></item>
-       <item row="3" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Obstacles (optional):</string></property></widget></item>
+       <item row="3" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Survey (optional):</string></property></widget></item>
        <item row="3" column="1"><widget class="QgsMapLayerComboBox" name="obstacleLayerComboBox"/></item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QGroupBox" name="fieldMappingGroup">
-      <property name="title"><string>Obstacle field mapping</string></property>
+      <property name="title"><string>Survey field mapping</string></property>
       <layout class="QFormLayout" name="fieldFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="idFieldLabel"><property name="text"><string>ID:</string></property></widget></item>
        <item row="0" column="1"><widget class="QComboBox" name="idFieldComboBox"/></item>

@@ -177,4 +177,4 @@ def test_accepting_empty_sources_creates_annotated_empty_layers(qgis_app):
     assert len(result.warnings) == 2
     notes = QgsLayerNotesUtils.layerNotes(result.assessment_layer)
     assert 'No terrain data' in notes
-    assert 'No obstacle data' in notes
+    assert 'No survey data' in notes
