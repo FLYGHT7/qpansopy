@@ -171,3 +171,21 @@ def test_dockwidget_scrolls_all_assessment_controls():
     ).text == 'Qt::ScrollBarAsNeeded'
     assert scroll_area.find(".//widget[@name='calculateButton']") is not None
     assert scroll_area.find(".//widget[@name='logTextEdit']") is not None
+
+
+def test_dockwidget_hides_the_fixed_terrain_band():
+    root = ElementTree.parse(
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    ).getroot()
+    dock_source = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/dockwidgets/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.py'
+    ).read_text(encoding='utf-8')
+
+    assert root.find(".//widget[@name='terrainBandLabel']") is None
+    assert root.find(".//widget[@name='terrainBandSpinBox']") is None
+    assert 'terrain_band=1,' in dock_source
+    assert 'terrainBandSpinBox' not in dock_source

@@ -31,7 +31,7 @@ from qgis.core import (
 
 @dataclass(frozen=True)
 class FieldMapping:
-    """Fields used to normalize an obstacle layer."""
+    """Fields used to normalize a survey layer."""
 
     identifier: str
     obstacle_type: str
@@ -227,7 +227,7 @@ def _survey_records(obstacle_layer, mask_geometry, mapping, has_override):
     if obstacle_layer is None:
         return []
     if mapping is None:
-        raise ValueError("Obstacle field mapping is required")
+        raise ValueError("Survey field mapping is required")
 
     available = set(obstacle_layer.fields().names())
     required = {
@@ -242,7 +242,7 @@ def _survey_records(obstacle_layer, mask_geometry, mapping, has_override):
         if not name or name not in available
     ]
     if missing:
-        raise ValueError("Missing obstacle field mapping: " + ", ".join(missing))
+        raise ValueError("Missing survey field mapping: " + ", ".join(missing))
 
     records = []
     for feature in obstacle_layer.getFeatures():
@@ -457,7 +457,7 @@ def _validate_crs(area_layer, terrain_layer, obstacle_layer):
         raise ValueError("The assessment area must use a valid projected CRS")
     for label, layer in (
         ("terrain", terrain_layer),
-        ("obstacle", obstacle_layer),
+        ("survey", obstacle_layer),
     ):
         if layer is not None and layer.crs() != area_crs:
             raise ValueError(
@@ -511,7 +511,7 @@ def run_primary_area_assessment(
     if not terrain_records:
         warnings.append("No terrain data was evaluated inside the mask")
     if not survey_records:
-        warnings.append("No obstacle data was evaluated inside the mask")
+        warnings.append("No survey data was evaluated inside the mask")
     warning_tuple = tuple(warnings)
     if warning_tuple and confirm_missing is not None:
         if not confirm_missing(warning_tuple):

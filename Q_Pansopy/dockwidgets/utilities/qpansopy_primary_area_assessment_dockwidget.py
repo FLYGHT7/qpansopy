@@ -140,7 +140,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             no = QtWidgets.QMessageBox.No
         reply = QtWidgets.QMessageBox.question(
             self,
-            "Incomplete obstacle data",
+            "Incomplete assessment data",
             message,
             yes | no,
             no,
@@ -211,7 +211,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                         self.terrainToleranceDoubleSpinBox.value()
                     ),
                     override_tolerance_m=override,
-                    terrain_band=self.terrainBandSpinBox.value(),
+                    terrain_band=1,
                     use_selected_area=(
                         self.useSelectedAreaCheckBox.isChecked()
                     ),

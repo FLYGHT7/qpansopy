@@ -27,14 +27,14 @@
        <item row="1" column="1"><widget class="QCheckBox" name="useSelectedAreaCheckBox"><property name="text"><string>Use selected areas</string></property><property name="checked"><bool>true</bool></property></widget></item>
        <item row="2" column="0"><widget class="QLabel" name="terrainLabel"><property name="text"><string>Terrain (optional):</string></property></widget></item>
        <item row="2" column="1"><widget class="QgsMapLayerComboBox" name="terrainLayerComboBox"/></item>
-       <item row="3" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Obstacles (optional):</string></property></widget></item>
+       <item row="3" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Survey (optional):</string></property></widget></item>
        <item row="3" column="1"><widget class="QgsMapLayerComboBox" name="obstacleLayerComboBox"/></item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QGroupBox" name="fieldMappingGroup">
-      <property name="title"><string>Obstacle field mapping</string></property>
+      <property name="title"><string>Survey field mapping</string></property>
       <layout class="QFormLayout" name="fieldFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="idFieldLabel"><property name="text"><string>ID:</string></property></widget></item>
        <item row="0" column="1"><widget class="QComboBox" name="idFieldComboBox"/></item>
@@ -53,22 +53,10 @@
       <layout class="QFormLayout" name="paramsFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="mocLabel"><property name="text"><string>MOC (m):</string></property></widget></item>
        <item row="0" column="1"><widget class="QDoubleSpinBox" name="mocDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>75.000000000000000</double></property></widget></item>
-       <item row="1" column="0"><widget class="QLabel" name="terrainBandLabel"><property name="text"><string>Terrain band:</string></property></widget></item>
-       <item row="1" column="1"><widget class="QSpinBox" name="terrainBandSpinBox"><property name="minimum"><number>1</number></property><property name="maximum"><number>99</number></property><property name="value"><number>1</number></property></widget></item>
-       <item row="2" column="0"><widget class="QLabel" name="terrainToleranceLabel"><property name="text"><string>Terrain tolerance (m):</string></property></widget></item>
-       <item row="2" column="1"><widget class="QDoubleSpinBox" name="terrainToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>50.000000000000000</double></property></widget></item>
-       <item row="3" column="0"><widget class="QCheckBox" name="overrideToleranceCheckBox"><property name="text"><string>Override tolerance</string></property></widget></item>
-       <item row="3" column="1"><widget class="QDoubleSpinBox" name="overrideToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property></widget></item>
-       <item row="4" column="0"><widget class="QLabel" name="ocaRoundingLabel"><property name="text"><string>OCA publication increment (ft):</string></property></widget></item>
-       <item row="4" column="1">
-        <widget class="QComboBox" name="ocaRoundingComboBox">
-         <property name="currentIndex"><number>3</number></property>
-         <item><property name="text"><string>1</string></property></item>
-         <item><property name="text"><string>5</string></property></item>
-         <item><property name="text"><string>10</string></property></item>
-         <item><property name="text"><string>100</string></property></item>
-        </widget>
-       </item>
+       <item row="1" column="0"><widget class="QLabel" name="terrainToleranceLabel"><property name="text"><string>Terrain tolerance (m):</string></property></widget></item>
+       <item row="1" column="1"><widget class="QDoubleSpinBox" name="terrainToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>50.000000000000000</double></property></widget></item>
+       <item row="2" column="0"><widget class="QCheckBox" name="overrideToleranceCheckBox"><property name="text"><string>Override tolerance</string></property></widget></item>
+       <item row="2" column="1"><widget class="QDoubleSpinBox" name="overrideToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property></widget></item>
       </layout>
      </widget>
     </item>

@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 
 
@@ -64,6 +66,56 @@ def _obstacle_layer():
         feature.setGeometry(QgsGeometry.fromWkt(wkt))
         assert layer.dataProvider().addFeature(feature)
     return layer
+
+
+def test_missing_data_confirmation_releases_wait_cursor(
+        qgis_app, monkeypatch):
+    from Q_Pansopy.dockwidgets.utilities import (
+        qpansopy_primary_area_assessment_dockwidget as dock_module,
+    )
+
+    state = {'cursor': object(), 'restored': 0, 'set': []}
+
+    class _Application:
+        @staticmethod
+        def overrideCursor():
+            return state['cursor']
+
+        @staticmethod
+        def restoreOverrideCursor():
+            state['cursor'] = None
+            state['restored'] += 1
+
+        @staticmethod
+        def setOverrideCursor(cursor):
+            state['cursor'] = cursor
+            state['set'].append(cursor)
+
+    class _MessageBox:
+        class StandardButton:
+            Yes = 1
+            No = 2
+
+        @staticmethod
+        def question(parent, title, message, buttons, default):
+            assert state['cursor'] is None
+            return _MessageBox.StandardButton.No
+
+    monkeypatch.setattr(
+        dock_module,
+        'QtWidgets',
+        SimpleNamespace(QApplication=_Application, QMessageBox=_MessageBox),
+    )
+
+    accepted = (
+        dock_module.QPANSOPYPrimaryAreaAssessmentDockWidget._confirm_missing(
+            object(), ('No terrain data was evaluated inside the mask',)
+        )
+    )
+
+    assert not accepted
+    assert state['restored'] == 1
+    assert state['set'] == [dock_module.Qt_WaitCursor]
 
 
 def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
@@ -189,4 +241,4 @@ def test_accepting_empty_sources_creates_annotated_empty_layers(qgis_app):
     assert len(result.warnings) == 2
     notes = QgsLayerNotesUtils.layerNotes(result.assessment_layer)
     assert 'No terrain data' in notes
-    assert 'No obstacle data' in notes
+    assert 'No survey data' in notes
