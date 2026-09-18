@@ -138,20 +138,13 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
         except AttributeError:
             yes = QtWidgets.QMessageBox.Yes
             no = QtWidgets.QMessageBox.No
-        wait_cursor_active = QtWidgets.QApplication.overrideCursor() is not None
-        if wait_cursor_active:
-            QtWidgets.QApplication.restoreOverrideCursor()
-        try:
-            reply = QtWidgets.QMessageBox.question(
-                self,
-                "Incomplete obstacle data",
-                message,
-                yes | no,
-                no,
-            )
-        finally:
-            if wait_cursor_active:
-                QtWidgets.QApplication.setOverrideCursor(Qt_WaitCursor)
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "Incomplete assessment data",
+            message,
+            yes | no,
+            no,
+        )
         return reply == yes
 
     def _validate_inputs(self):
@@ -218,7 +211,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                         self.terrainToleranceDoubleSpinBox.value()
                     ),
                     override_tolerance_m=override,
-                    terrain_band=self.terrainBandSpinBox.value(),
+                    terrain_band=1,
                     use_selected_area=(
                         self.useSelectedAreaCheckBox.isChecked()
                     ),
