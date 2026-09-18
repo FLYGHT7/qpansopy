@@ -25,40 +25,16 @@
        <item row="0" column="0"><widget class="QLabel" name="areaLabel"><property name="text"><string>Primary area:</string></property></widget></item>
        <item row="0" column="1"><widget class="QgsMapLayerComboBox" name="areaLayerComboBox"/></item>
        <item row="1" column="1"><widget class="QCheckBox" name="useSelectedAreaCheckBox"><property name="text"><string>Use selected areas</string></property><property name="checked"><bool>true</bool></property></widget></item>
-       <item row="2" column="0"><widget class="QLabel" name="areaBufferLabel"><property name="text"><string>Buffer:</string></property></widget></item>
-       <item row="2" column="1">
-        <widget class="QWidget" name="areaBufferWidget" native="true">
-         <layout class="QHBoxLayout" name="areaBufferLayout">
-          <property name="spacing"><number>4</number></property>
-          <property name="margin"><number>0</number></property>
-          <item>
-           <widget class="QDoubleSpinBox" name="areaBufferDoubleSpinBox">
-            <property name="decimals"><number>3</number></property>
-            <property name="minimum"><double>0.000000000000000</double></property>
-            <property name="maximum"><double>99999.000000000000000</double></property>
-            <property name="singleStep"><double>0.100000000000000</double></property>
-            <property name="value"><double>0.000000000000000</double></property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="areaBufferUnitComboBox">
-            <item><property name="text"><string>NM</string></property></item>
-            <item><property name="text"><string>m</string></property></item>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="0"><widget class="QLabel" name="terrainLabel"><property name="text"><string>Terrain (optional):</string></property></widget></item>
-       <item row="3" column="1"><widget class="QgsMapLayerComboBox" name="terrainLayerComboBox"/></item>
-       <item row="4" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Obstacles (optional):</string></property></widget></item>
-       <item row="4" column="1"><widget class="QgsMapLayerComboBox" name="obstacleLayerComboBox"/></item>
+       <item row="2" column="0"><widget class="QLabel" name="terrainLabel"><property name="text"><string>Terrain (optional):</string></property></widget></item>
+       <item row="2" column="1"><widget class="QgsMapLayerComboBox" name="terrainLayerComboBox"/></item>
+       <item row="3" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Survey (optional):</string></property></widget></item>
+       <item row="3" column="1"><widget class="QgsMapLayerComboBox" name="obstacleLayerComboBox"/></item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QGroupBox" name="fieldMappingGroup">
-      <property name="title"><string>Obstacle field mapping</string></property>
+      <property name="title"><string>Survey field mapping</string></property>
       <layout class="QFormLayout" name="fieldFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="idFieldLabel"><property name="text"><string>ID:</string></property></widget></item>
        <item row="0" column="1"><widget class="QComboBox" name="idFieldComboBox"/></item>
@@ -77,12 +53,10 @@
       <layout class="QFormLayout" name="paramsFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="mocLabel"><property name="text"><string>MOC (m):</string></property></widget></item>
        <item row="0" column="1"><widget class="QDoubleSpinBox" name="mocDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>75.000000000000000</double></property></widget></item>
-       <item row="1" column="0"><widget class="QLabel" name="terrainBandLabel"><property name="text"><string>Terrain band:</string></property></widget></item>
-       <item row="1" column="1"><widget class="QSpinBox" name="terrainBandSpinBox"><property name="minimum"><number>1</number></property><property name="maximum"><number>99</number></property><property name="value"><number>1</number></property></widget></item>
-       <item row="2" column="0"><widget class="QLabel" name="terrainToleranceLabel"><property name="text"><string>Terrain tolerance (m):</string></property></widget></item>
-       <item row="2" column="1"><widget class="QDoubleSpinBox" name="terrainToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>50.000000000000000</double></property></widget></item>
-       <item row="3" column="0"><widget class="QCheckBox" name="overrideToleranceCheckBox"><property name="text"><string>Override tolerance</string></property></widget></item>
-       <item row="3" column="1"><widget class="QDoubleSpinBox" name="overrideToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property></widget></item>
+       <item row="1" column="0"><widget class="QLabel" name="terrainToleranceLabel"><property name="text"><string>Terrain tolerance (m):</string></property></widget></item>
+       <item row="1" column="1"><widget class="QDoubleSpinBox" name="terrainToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>50.000000000000000</double></property></widget></item>
+       <item row="2" column="0"><widget class="QCheckBox" name="overrideToleranceCheckBox"><property name="text"><string>Override tolerance</string></property></widget></item>
+       <item row="2" column="1"><widget class="QDoubleSpinBox" name="overrideToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property></widget></item>
       </layout>
      </widget>
     </item>

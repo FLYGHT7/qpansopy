@@ -1,9 +1,35 @@
+import hashlib
 import math
 import inspect
 from pathlib import Path
+from types import SimpleNamespace
 import xml.etree.ElementTree as ElementTree
 
 import pytest
+
+
+class _Crs:
+    def __init__(self, identifier, valid=True, geographic=False):
+        self.identifier = identifier
+        self.valid = valid
+        self.geographic = geographic
+
+    def isValid(self):
+        return self.valid
+
+    def isGeographic(self):
+        return self.geographic
+
+    def __eq__(self, other):
+        return self.identifier == other.identifier
+
+
+class _Layer:
+    def __init__(self, crs):
+        self._crs = crs
+
+    def crs(self):
+        return self._crs
 
 
 def _record(identifier, elevation, tolerance):
@@ -30,7 +56,54 @@ def test_evaluation_uses_each_records_tolerance():
 
     assert [item.oca_m for item in evaluated] == [178.0, 180.0]
     assert evaluated[0].oca_ft == round(178.0 / 0.3048, 3)
+    assert evaluated[0].oca_pub_ft == 600
     assert [item.identifier for item in controls] == ['B']
+
+
+@pytest.mark.parametrize(
+    'increment,expected',
+    [
+        (1, 8285),
+        (5, 8285),
+        (10, 8290),
+        (100, 8300),
+    ],
+)
+def test_published_oca_rounds_up_to_selected_increment(increment, expected):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
+
+    evaluated, _ = evaluate_records(
+        [_record('A', 8284.121 * 0.3048, 0.0)],
+        moc_m=0.0,
+        oca_rounding_ft=increment,
+    )
+
+    assert evaluated[0].oca_ft == 8284.121
+    assert evaluated[0].oca_pub_ft == expected
+
+
+def test_published_oca_keeps_exact_increment_boundary():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
+
+    evaluated, _ = evaluate_records(
+        [_record('A', 8300.0 * 0.3048, 0.0)],
+        moc_m=0.0,
+        oca_rounding_ft=100,
+    )
+
+    assert evaluated[0].oca_pub_ft == 8300
+
+
+@pytest.mark.parametrize('increment', [0, 2, 25, 1000, True, 1.0, '100'])
+def test_evaluation_rejects_invalid_oca_rounding_increment(increment):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
+
+    with pytest.raises(ValueError, match='OCA publication increment'):
+        evaluate_records(
+            [_record('A', 100.0, 0.0)],
+            moc_m=0.0,
+            oca_rounding_ft=increment,
+        )
 
 
 def test_override_replaces_tolerance_and_keeps_all_tied_controls():
@@ -79,51 +152,71 @@ def test_empty_evaluation_has_no_control_obstacle():
 
 
 @pytest.mark.parametrize(
-    'value,unit,expected',
+    'role,valid,geographic',
     [
-        (0.0, 'NM', 0.0),
-        (1.0, 'NM', 1852.0),
-        (2.5, 'm', 2.5),
+        ('assessment area', False, False),
+        ('terrain', False, False),
+        ('survey', False, False),
+        ('assessment area', True, True),
+        ('terrain', True, True),
+        ('survey', True, True),
     ],
 )
-def test_area_buffer_units_are_converted_to_metres(value, unit, expected):
+def test_crs_validation_requires_projected_inputs(role, valid, geographic):
     from Q_Pansopy.modules.utilities.primary_area_assessment import (
-        area_buffer_to_metres,
+        CrsValidationError,
+        _validate_crs,
     )
 
-    assert area_buffer_to_metres(value, unit) == expected
+    projected = _Crs('EPSG:32616')
+    invalid = _Crs('EPSG:4326', valid=valid, geographic=geographic)
+    layers = {
+        'assessment area': _Layer(invalid),
+        'terrain': _Layer(invalid),
+        'survey': _Layer(invalid),
+    }
+
+    with pytest.raises(CrsValidationError, match=role):
+        _validate_crs(
+            layers['assessment area'] if role == 'assessment area'
+            else _Layer(projected),
+            layers['terrain'] if role == 'terrain' else None,
+            layers['survey'] if role == 'survey' else None,
+        )
 
 
-@pytest.mark.parametrize('value', [-1.0, math.inf, -math.inf, math.nan])
-def test_area_buffer_conversion_rejects_invalid_values(value):
+def test_crs_validation_rejects_different_projected_crs():
     from Q_Pansopy.modules.utilities.primary_area_assessment import (
-        area_buffer_to_metres,
+        CrsValidationError,
+        _validate_crs,
     )
 
-    with pytest.raises(ValueError, match='Area buffer'):
-        area_buffer_to_metres(value, 'NM')
+    with pytest.raises(CrsValidationError, match='same CRS'):
+        _validate_crs(
+            _Layer(_Crs('EPSG:32616')),
+            _Layer(_Crs('EPSG:32617')),
+            None,
+        )
 
 
-def test_area_buffer_conversion_rejects_unknown_units():
-    from Q_Pansopy.modules.utilities.primary_area_assessment import (
-        area_buffer_to_metres,
+def test_geographic_input_stops_before_mask_processing(monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    mask_called = []
+    monkeypatch.setattr(
+        module,
+        '_build_mask_geometry',
+        lambda *args: mask_called.append(True),
     )
 
-    with pytest.raises(ValueError, match='Unsupported area buffer unit'):
-        area_buffer_to_metres(1.0, 'ft')
+    with pytest.raises(module.CrsValidationError):
+        module.run_primary_area_assessment(
+            None,
+            _Layer(_Crs('EPSG:32616')),
+            obstacle_layer=_Layer(_Crs('EPSG:4326', geographic=True)),
+        )
 
-
-def test_area_buffer_is_last_backward_compatible_run_parameter():
-    from Q_Pansopy.modules.utilities.primary_area_assessment import (
-        run_primary_area_assessment,
-    )
-
-    parameters = list(
-        inspect.signature(run_primary_area_assessment).parameters.values()
-    )
-
-    assert parameters[-1].name == 'area_buffer_m'
-    assert parameters[-1].default == 0.0
+    assert not mask_called
 
 
 def test_dockwidget_defaults_match_generic_assessment_contract():
@@ -157,6 +250,12 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
     assert property_text(
         'terrainToleranceDoubleSpinBox', 'value'
     ) == '50.000000000000000'
+    rounding_combo = root.find(".//widget[@name='ocaRoundingComboBox']")
+    assert [
+        item.find("./property[@name='text']/string").text
+        for item in rounding_combo.findall('./item')
+    ] == ['1', '5', '10', '100']
+    assert property_text('ocaRoundingComboBox', 'currentIndex') == '3'
 
 
 def test_area_buffer_ui_is_before_terrain_and_defaults_to_nm():
@@ -207,3 +306,21 @@ def test_dockwidget_scrolls_all_assessment_controls():
     ).text == 'Qt::ScrollBarAsNeeded'
     assert scroll_area.find(".//widget[@name='calculateButton']") is not None
     assert scroll_area.find(".//widget[@name='logTextEdit']") is not None
+
+
+def test_dockwidget_hides_the_fixed_terrain_band():
+    root = ElementTree.parse(
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    ).getroot()
+    dock_source = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/dockwidgets/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.py'
+    ).read_text(encoding='utf-8')
+
+    assert root.find(".//widget[@name='terrainBandLabel']") is None
+    assert root.find(".//widget[@name='terrainBandSpinBox']") is None
+    assert 'terrain_band=1,' in dock_source
+    assert 'terrainBandSpinBox' not in dock_source
