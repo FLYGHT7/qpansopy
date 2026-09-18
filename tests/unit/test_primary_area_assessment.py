@@ -285,6 +285,25 @@ def test_area_buffer_ui_is_before_terrain_and_defaults_to_nm():
     assert units == ['NM', 'm']
 
 
+def test_field_mapping_group_uses_qgis_collapsible_widget():
+    ui_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    )
+    root = ElementTree.parse(ui_path).getroot()
+    group = root.find(".//widget[@name='fieldMappingGroup']")
+    custom_widget = root.find(
+        ".//customwidget/class[.='QgsCollapsibleGroupBoxBasic']/.."
+    )
+
+    assert group.get('class') == 'QgsCollapsibleGroupBoxBasic'
+    assert custom_widget.find('./extends').text == 'QGroupBox'
+    assert custom_widget.find('./header').text == 'qgis.gui'
+    assert custom_widget.find('./container').text == '1'
+    assert group.find("./property[@name='collapsed']/bool").text == 'false'
+
+
 def test_dockwidget_scrolls_all_assessment_controls():
     ui_path = (
         Path(__file__).parents[2]
