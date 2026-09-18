@@ -9,9 +9,20 @@ pytestmark = [pytest.mark.integration, pytest.mark.qgis_runtime]
 class _RecordingMessageBar:
     def __init__(self):
         self.messages = []
+        self._items = []
 
     def pushMessage(self, *args, **kwargs):
         self.messages.append((args, kwargs))
+        self._items.append(object())
+
+    def currentItem(self):
+        return self._items[-1] if self._items else None
+
+    def items(self):
+        return list(self._items)
+
+    def popWidget(self, item):
+        self._items.remove(item)
 
 
 class _DockIface:
@@ -88,6 +99,70 @@ def _obstacle_layer(crs='EPSG:32616', records=None):
         feature.setGeometry(QgsGeometry.fromWkt(wkt))
         assert layer.dataProvider().addFeature(feature)
     return layer
+
+
+def test_dockwidget_exposes_restored_assessment_controls(qgis_app):
+    from Q_Pansopy.dockwidgets.utilities \
+        .qpansopy_primary_area_assessment_dockwidget import (
+            QPANSOPYPrimaryAreaAssessmentDockWidget,
+        )
+
+    widget = QPANSOPYPrimaryAreaAssessmentDockWidget(_DockIface())
+
+    assert [
+        widget.ocaRoundingComboBox.itemText(index)
+        for index in range(widget.ocaRoundingComboBox.count())
+    ] == ['1', '5', '10', '100']
+    assert widget.ocaRoundingComboBox.currentText() == '100'
+    assert widget.areaBufferDoubleSpinBox.value() == 0.0
+    assert [
+        widget.areaBufferUnitComboBox.itemText(index)
+        for index in range(widget.areaBufferUnitComboBox.count())
+    ] == ['NM', 'm']
+    assert widget.areaBufferUnitComboBox.currentText() == 'NM'
+    widget.close()
+
+
+def test_dockwidget_passes_restored_assessment_options(
+        qgis_app, monkeypatch):
+    from qgis.core import QgsProject
+    from Q_Pansopy.dockwidgets.utilities \
+        .qpansopy_primary_area_assessment_dockwidget import (
+            QPANSOPYPrimaryAreaAssessmentDockWidget,
+        )
+    from Q_Pansopy.modules.utilities import primary_area_assessment
+
+    captured = {}
+
+    def fake_assessment(*args, **kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(
+            assessed_count=0,
+            control_count=0,
+            warnings=(),
+        )
+
+    monkeypatch.setattr(
+        primary_area_assessment,
+        'run_primary_area_assessment',
+        fake_assessment,
+    )
+    area = _area_layer()
+    QgsProject.instance().addMapLayer(area)
+    iface = _DockIface()
+    widget = QPANSOPYPrimaryAreaAssessmentDockWidget(iface)
+    widget.areaLayerComboBox.setLayer(area)
+    widget.areaBufferDoubleSpinBox.setValue(2.0)
+    widget.areaBufferUnitComboBox.setCurrentText('NM')
+    widget.ocaRoundingComboBox.setCurrentText('10')
+    widget.loadAllPointsCheckBox.setChecked(True)
+
+    widget.calculate()
+
+    assert captured['area_buffer_m'] == 3704.0
+    assert captured['oca_rounding_ft'] == 10
+    assert captured['load_all_points'] is True
+    widget.close()
 
 
 def test_missing_data_confirmation_releases_wait_cursor(

@@ -112,6 +112,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
         """Give every form the same label-column width."""
         labels = [
             self.areaLabel,
+            self.areaBufferLabel,
             self.terrainLabel,
             self.obstacleLabel,
             self.idFieldLabel,
@@ -121,6 +122,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             self.mocLabel,
             self.terrainToleranceLabel,
             self.overrideToleranceCheckBox,
+            self.ocaRoundingLabel,
         ]
         label_width = max(label.sizeHint().width() for label in labels)
         for label in labels:
@@ -183,13 +185,20 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
         except AttributeError:
             yes = QtWidgets.QMessageBox.Yes
             no = QtWidgets.QMessageBox.No
-        reply = QtWidgets.QMessageBox.question(
-            self,
-            "Incomplete assessment data",
-            message,
-            yes | no,
-            no,
-        )
+        wait_cursor_active = QtWidgets.QApplication.overrideCursor() is not None
+        if wait_cursor_active:
+            QtWidgets.QApplication.restoreOverrideCursor()
+        try:
+            reply = QtWidgets.QMessageBox.question(
+                self,
+                "Incomplete assessment data",
+                message,
+                yes | no,
+                no,
+            )
+        finally:
+            if wait_cursor_active:
+                QtWidgets.QApplication.setOverrideCursor(Qt_WaitCursor)
         return reply == yes
 
     def _validate_inputs(self):
@@ -246,6 +255,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             from ...modules.utilities.primary_area_assessment import (
                 AssessmentCancelled,
                 CrsValidationError,
+                area_buffer_to_metres,
                 run_primary_area_assessment,
             )
 
@@ -271,6 +281,10 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                         self.useSelectedAreaCheckBox.isChecked()
                     ),
                     confirm_missing=self._confirm_missing,
+                    area_buffer_m=area_buffer_to_metres(
+                        self.areaBufferDoubleSpinBox.value(),
+                        self.areaBufferUnitComboBox.currentText(),
+                    ),
                     oca_rounding_ft=int(
                         self.ocaRoundingComboBox.currentText()
                     ),
