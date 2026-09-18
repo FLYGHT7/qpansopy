@@ -85,6 +85,10 @@ class AssessmentCancelled(Exception):
     """Raised when the user declines an incomplete-data assessment."""
 
 
+class CrsValidationError(ValueError):
+    """Raised when an assessment input lacks the required projected CRS."""
+
+
 def _valid_nonnegative(value: float, label: str) -> float:
     number = float(value)
     if not math.isfinite(number) or number < 0:
@@ -452,15 +456,27 @@ def _notes(moc_m, override_tolerance_m, oca_rounding_ft, warnings):
 
 
 def _validate_crs(area_layer, terrain_layer, obstacle_layer):
+    layers = (
+        ("assessment area", area_layer),
+        ("terrain", terrain_layer),
+        ("survey", obstacle_layer),
+    )
+    for label, layer in layers:
+        if layer is None:
+            continue
+        crs = layer.crs()
+        if not crs.isValid() or crs.isGeographic():
+            raise CrsValidationError(
+                f"The {label} layer must use a valid projected CRS"
+            )
+
     area_crs = area_layer.crs()
-    if not area_crs.isValid() or area_crs.isGeographic():
-        raise ValueError("The assessment area must use a valid projected CRS")
     for label, layer in (
         ("terrain", terrain_layer),
         ("survey", obstacle_layer),
     ):
         if layer is not None and layer.crs() != area_crs:
-            raise ValueError(
+            raise CrsValidationError(
                 f"The {label} layer must use the same CRS as the assessment area"
             )
 
