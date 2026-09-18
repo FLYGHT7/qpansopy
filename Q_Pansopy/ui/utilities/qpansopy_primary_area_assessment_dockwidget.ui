@@ -21,20 +21,23 @@
         <item>
      <widget class="QGroupBox" name="inputGroup">
       <property name="title"><string>Input layers</string></property>
+      <property name="flat"><bool>true</bool></property>
+      <property name="alignment"><set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set></property>
+      <property name="styleSheet"><string notr="true">QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 7px; font-weight: bold; }</string></property>
       <layout class="QFormLayout" name="inputFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="areaLabel"><property name="text"><string>Primary area:</string></property></widget></item>
        <item row="0" column="1"><widget class="QgsMapLayerComboBox" name="areaLayerComboBox"/></item>
        <item row="1" column="1"><widget class="QCheckBox" name="useSelectedAreaCheckBox"><property name="text"><string>Use selected areas</string></property><property name="checked"><bool>true</bool></property></widget></item>
        <item row="2" column="0"><widget class="QLabel" name="terrainLabel"><property name="text"><string>Terrain (optional):</string></property></widget></item>
        <item row="2" column="1"><widget class="QgsMapLayerComboBox" name="terrainLayerComboBox"/></item>
-       <item row="3" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Obstacles (optional):</string></property></widget></item>
+       <item row="3" column="0"><widget class="QLabel" name="obstacleLabel"><property name="text"><string>Survey (optional):</string></property></widget></item>
        <item row="3" column="1"><widget class="QgsMapLayerComboBox" name="obstacleLayerComboBox"/></item>
       </layout>
      </widget>
     </item>
     <item>
      <widget class="QGroupBox" name="fieldMappingGroup">
-      <property name="title"><string>Obstacle field mapping</string></property>
+      <property name="title"><string>Survey field mapping</string></property>
       <layout class="QFormLayout" name="fieldFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="idFieldLabel"><property name="text"><string>ID:</string></property></widget></item>
        <item row="0" column="1"><widget class="QComboBox" name="idFieldComboBox"/></item>
@@ -50,32 +53,20 @@
     <item>
      <widget class="QGroupBox" name="paramsGroup">
       <property name="title"><string>Assessment parameters</string></property>
+      <property name="flat"><bool>true</bool></property>
+      <property name="alignment"><set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set></property>
+      <property name="styleSheet"><string notr="true">QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 7px; font-weight: bold; }</string></property>
       <layout class="QFormLayout" name="paramsFormLayout">
        <item row="0" column="0"><widget class="QLabel" name="mocLabel"><property name="text"><string>MOC (m):</string></property></widget></item>
        <item row="0" column="1"><widget class="QDoubleSpinBox" name="mocDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>75.000000000000000</double></property></widget></item>
        <item row="1" column="0"><widget class="QLabel" name="terrainToleranceLabel"><property name="text"><string>Terrain tolerance (m):</string></property></widget></item>
        <item row="1" column="1"><widget class="QDoubleSpinBox" name="terrainToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property><property name="value"><double>50.000000000000000</double></property></widget></item>
-       <item row="2" column="0"><widget class="QCheckBox" name="overrideToleranceCheckBox"><property name="text"><string>Override tolerance</string></property></widget></item>
+       <item row="2" column="0"><widget class="QCheckBox" name="overrideToleranceCheckBox"><property name="text"><string>Override survey obstacle tolerance</string></property></widget></item>
        <item row="2" column="1"><widget class="QDoubleSpinBox" name="overrideToleranceDoubleSpinBox"><property name="decimals"><number>3</number></property><property name="maximum"><double>99999.000000000000000</double></property></widget></item>
       </layout>
      </widget>
     </item>
-    <item>
-     <widget class="QGroupBox" name="outputGroup">
-      <property name="title"><string>Output</string></property>
-      <layout class="QVBoxLayout" name="outputLayout">
-       <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Temporary assessment and control layers will be added to the project.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
-      </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QGroupBox" name="actionGroup">
-      <property name="title"><string>Action</string></property>
-      <layout class="QVBoxLayout" name="actionLayout">
-       <item><widget class="QPushButton" name="calculateButton"><property name="text"><string>Evaluate primary area</string></property><property name="default"><bool>true</bool></property></widget></item>
-      </layout>
-     </widget>
-    </item>
+    <item><widget class="QPushButton" name="calculateButton"><property name="text"><string>Evaluate primary area</string></property><property name="default"><bool>true</bool></property></widget></item>
     <item>
      <widget class="QGroupBox" name="logGroup">
       <property name="title"><string>Log</string></property>
@@ -94,6 +85,7 @@
  </widget>
  <customwidgets>
   <customwidget><class>QgsMapLayerComboBox</class><extends>QComboBox</extends><header>qgsmaplayercombobox.h</header></customwidget>
+  <customwidget><class>QgsCollapsibleGroupBoxBasic</class><extends>QGroupBox</extends><header>qgis.gui</header><container>1</container></customwidget>
  </customwidgets>
  <resources/>
  <connections/>
