@@ -1,5 +1,6 @@
 import hashlib
 import math
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 import xml.etree.ElementTree as ElementTree
@@ -232,6 +233,19 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
         return list(prop)[0].text
 
     assert property_text('useSelectedAreaCheckBox', 'checked') == 'true'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'minimum'
+    ) == '0.000000000000000'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'maximum'
+    ) == '99999.000000000000000'
+    assert property_text('areaBufferDoubleSpinBox', 'decimals') == '3'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'singleStep'
+    ) == '0.100000000000000'
+    assert property_text(
+        'areaBufferDoubleSpinBox', 'value'
+    ) == '0.000000000000000'
     assert property_text('mocDoubleSpinBox', 'value') == '75.000000000000000'
     assert property_text(
         'terrainToleranceDoubleSpinBox', 'value'
@@ -242,6 +256,33 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
         for item in rounding_combo.findall('./item')
     ] == ['1', '5', '10', '100']
     assert property_text('ocaRoundingComboBox', 'currentIndex') == '3'
+
+
+def test_area_buffer_ui_is_before_terrain_and_defaults_to_nm():
+    ui_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/ui/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.ui'
+    )
+    root = ElementTree.parse(ui_path).getroot()
+    form = root.find(".//layout[@name='inputFormLayout']")
+
+    rows = {}
+    for item in form.findall('./item'):
+        widget = item.find('.//widget')
+        if widget is not None:
+            rows[widget.get('name')] = int(item.get('row'))
+
+    unit_combo = root.find(".//widget[@name='areaBufferUnitComboBox']")
+    units = [
+        item.find('./property/string').text
+        for item in unit_combo.findall('./item')
+    ]
+
+    assert rows['areaBufferLabel'] == 2
+    assert rows['terrainLabel'] == 3
+    assert rows['obstacleLabel'] == 4
+    assert units == ['NM', 'm']
 
 
 def test_dockwidget_scrolls_all_assessment_controls():

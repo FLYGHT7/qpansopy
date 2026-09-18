@@ -16,6 +16,7 @@ except (ImportError, AttributeError):
     _TYPE_INT = QVariant.Int
     _TYPE_STRING = QVariant.String
 from qgis.core import (
+    Qgis,
     QgsFeature,
     QgsField,
     QgsFields,
@@ -28,6 +29,11 @@ from qgis.core import (
     QgsRectangle,
     QgsWkbTypes,
 )
+
+from ..constants import NM_TO_M
+
+
+_BUFFER_SEGMENTS = 36
 
 
 @dataclass(frozen=True)
@@ -175,7 +181,8 @@ def _selected_mask_features(area_layer, use_selected_area: bool):
     return list(area_layer.getFeatures())
 
 
-def _build_mask_geometry(area_layer, use_selected_area: bool):
+def _build_mask_geometry(
+        area_layer, use_selected_area: bool, area_buffer_m: float = 0.0):
     features = _selected_mask_features(area_layer, use_selected_area)
     if not features:
         raise ValueError("The area layer contains no features")
@@ -192,7 +199,9 @@ def _build_mask_geometry(area_layer, use_selected_area: bool):
     if mask_geometry.isEmpty():
         raise ValueError("The assessment-area mask could not be created")
 
-    return mask_geometry
+    return _buffer_mask_geometry(
+        mask_geometry, area_buffer_m, area_layer.crs()
+    )
 
 
 def _point_from_geometry(geometry, identifier: str):
@@ -469,6 +478,7 @@ def _notes(moc_m, override_tolerance_m, oca_rounding_ft, warnings):
     return (
         "<h3>Primary area obstacle assessment</h3>"
         f"<p>MOC: {moc_m:g} m<br>"
+        f"Area buffer: {area_buffer_m:g} m<br>"
         f"Tolerance override: {override}<br>"
         f"OCA publication increment: {oca_rounding_ft} ft<br>"
         f"Data warnings: {warning_text}</p>"
@@ -531,7 +541,7 @@ def run_primary_area_assessment(
     _validate_crs(area_layer, terrain_layer, obstacle_layer)
 
     mask_geometry = _build_mask_geometry(
-        area_layer, use_selected_area
+        area_layer, use_selected_area, area_buffer
     )
     terrain_records = _terrain_records(
         terrain_layer, mask_geometry, terrain_tolerance, terrain_band
