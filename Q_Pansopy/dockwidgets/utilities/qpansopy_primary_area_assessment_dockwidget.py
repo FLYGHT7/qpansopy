@@ -214,6 +214,8 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
             cursor_set = True
             QtWidgets.QApplication.processEvents()
             self.log("Starting primary-area obstacle assessment...")
+            self._show_processing_message()
+            QtWidgets.QApplication.processEvents()
 
             from ...modules.utilities.primary_area_assessment import (
                 AssessmentCancelled,
@@ -272,6 +274,7 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                 "QPANSOPY", message, level=Qgis.Critical
             )
         finally:
+            self._clear_processing_message()
             if cursor_set:
                 QtWidgets.QApplication.restoreOverrideCursor()
             if self._assessing:

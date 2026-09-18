@@ -380,3 +380,21 @@ def test_dockwidget_hides_the_fixed_terrain_band():
     assert root.find(".//widget[@name='terrainBandSpinBox']") is None
     assert 'terrain_band=1,' in dock_source
     assert 'terrainBandSpinBox' not in dock_source
+
+
+def test_dockwidget_shows_and_clears_processing_message():
+    dock_source = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/dockwidgets/utilities/'
+        / 'qpansopy_primary_area_assessment_dockwidget.py'
+    ).read_text(encoding='utf-8')
+
+    assert 'self._show_processing_message()' in dock_source
+    assert 'level=Qgis.Info' in dock_source
+    assert 'duration=30' in dock_source
+    assert 'Primary area assessment is in progress.' in dock_source
+    assert 'This may take several minutes.' in dock_source
+    assert 'self._processing_message = message_bar.currentItem()' in dock_source
+    assert 'message_bar.popWidget(item)' in dock_source
+    assert 'self._clear_processing_message()' in dock_source
+    assert 'level=Qgis.Success' in dock_source
