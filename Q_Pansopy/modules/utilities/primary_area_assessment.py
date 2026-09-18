@@ -81,7 +81,7 @@ class EvaluatedRecord:
 class AssessmentResult:
     """Layers and counts produced by one assessment run."""
 
-    assessment_layer: object
+    assessment_layer: Optional[object]
     control_layer: object
     assessed_count: int
     control_count: int
@@ -94,6 +94,37 @@ class AssessmentCancelled(Exception):
 
 class CrsValidationError(ValueError):
     """Raised when an assessment input lacks the required projected CRS."""
+
+
+def _metres_to_map_units(distance_m: float, crs) -> float:
+    """Convert metres to the linear units used by a projected CRS."""
+    from qgis.core import QgsUnitTypes
+
+    distance = _valid_nonnegative(distance_m, "Area buffer")
+    if distance == 0:
+        return 0.0
+    try:
+        metres = Qgis.DistanceUnit.Meters
+    except AttributeError:
+        metres = QgsUnitTypes.DistanceMeters
+    factor = QgsUnitTypes.fromUnitToUnitFactor(metres, crs.mapUnits())
+    if not math.isfinite(factor) or factor <= 0:
+        raise ValueError(
+            "The assessment area CRS must use supported linear units"
+        )
+    return distance * factor
+
+
+def _buffer_mask_geometry(mask_geometry, area_buffer_m: float, crs):
+    """Apply the optional metre buffer in the assessment CRS units."""
+    distance = _valid_nonnegative(area_buffer_m, "Area buffer")
+    if distance == 0:
+        return mask_geometry
+    map_distance = _metres_to_map_units(distance, crs)
+    buffered = mask_geometry.buffer(map_distance, _BUFFER_SEGMENTS)
+    if buffered.isNull() or buffered.isEmpty():
+        raise ValueError("The assessment-area buffer could not be created")
+    return buffered
 
 
 def _valid_nonnegative(value: float, label: str) -> float:
@@ -168,6 +199,90 @@ def evaluate_records(
         if math.isclose(item.oca_m, maximum, rel_tol=0.0, abs_tol=1e-9)
     ]
     return evaluated, controls
+
+
+def _evaluation_values(record, moc, override):
+    elevation = float(record.elevation_m)
+    if not math.isfinite(elevation):
+        raise ValueError(
+            f"Elevation for obstacle '{record.identifier}' must be finite"
+        )
+    source_tolerance = _valid_nonnegative(
+        record.tolerance_m,
+        f"Vertical tolerance for obstacle '{record.identifier}'",
+    )
+    applied_tolerance = source_tolerance if override is None else override
+    return (
+        elevation,
+        source_tolerance,
+        applied_tolerance,
+        elevation + applied_tolerance + moc,
+    )
+
+
+def _make_evaluated_record(record, moc, values, oca_rounding_ft):
+    elevation, source_tolerance, applied_tolerance, oca_m = values
+    oca_ft = round(oca_m / 0.3048, 3)
+    return EvaluatedRecord(
+        identifier=record.identifier,
+        layer_type=record.layer_type,
+        obstacle_type=record.obstacle_type,
+        coordinates=record.coordinates,
+        elevation_m=elevation,
+        tolerance_m=source_tolerance,
+        applied_tolerance_m=applied_tolerance,
+        moc_m=moc,
+        oca_m=oca_m,
+        oca_ft=oca_ft,
+        oca_pub_ft=math.ceil(oca_ft / oca_rounding_ft) * oca_rounding_ft,
+        geometry=record.geometry,
+    )
+
+
+def _evaluate_control_records(
+    records: Sequence[SourceRecord],
+    moc_m: float,
+    override_tolerance_m: Optional[float] = None,
+    oca_rounding_ft: int = 100,
+) -> Tuple[int, List[EvaluatedRecord]]:
+    """Validate all records while materializing only controlling records."""
+    moc = _valid_nonnegative(moc_m, "MOC")
+    override = (
+        None
+        if override_tolerance_m is None
+        else _valid_nonnegative(override_tolerance_m, "Tolerance override")
+    )
+    rounding = _valid_oca_rounding(oca_rounding_ft)
+    assessed_count = 0
+    maximum = None
+    controls: List[EvaluatedRecord] = []
+
+    for record in records:
+        values = _evaluation_values(record, moc, override)
+        oca_m = values[3]
+        assessed_count += 1
+        if maximum is None:
+            maximum = oca_m
+            controls = [_make_evaluated_record(
+                record, moc, values, rounding
+            )]
+        elif oca_m > maximum:
+            if math.isclose(oca_m, maximum, rel_tol=0.0, abs_tol=1e-9):
+                controls.append(_make_evaluated_record(
+                    record, moc, values, rounding
+                ))
+            else:
+                maximum = oca_m
+                controls = [_make_evaluated_record(
+                    record, moc, values, rounding
+                )]
+        elif math.isclose(
+                oca_m, maximum, rel_tol=0.0, abs_tol=1e-9):
+            controls.append(_make_evaluated_record(
+                record, moc, values, rounding
+            ))
+
+    return assessed_count, controls
 
 
 def _selected_mask_features(area_layer, use_selected_area: bool):
@@ -427,12 +542,13 @@ def _result_layer(name: str, crs, records):
 
 
 def _style_results(assessment_layer, control_layer):
-    assessment_layer.renderer().setSymbol(QgsMarkerSymbol.createSimple({
-        "name": "circle",
-        "color": "220,0,0,255",
-        "outline_style": "no",
-        "size": "1.0",
-    }))
+    if assessment_layer is not None:
+        assessment_layer.renderer().setSymbol(QgsMarkerSymbol.createSimple({
+            "name": "circle",
+            "color": "220,0,0,255",
+            "outline_style": "no",
+            "size": "1.0",
+        }))
     style_path = os.path.join(
         os.path.dirname(__file__),
         "..",
@@ -463,13 +579,18 @@ def _style_results(assessment_layer, control_layer):
 
 def _add_results_to_tree(assessment_layer, control_layer):
     project = QgsProject.instance()
-    project.addMapLayers([control_layer, assessment_layer], False)
+    layers = [control_layer]
+    if assessment_layer is not None:
+        layers.append(assessment_layer)
+    project.addMapLayers(layers, False)
     group = project.layerTreeRoot().insertGroup(0, "Obstacle assessment")
     group.addLayer(control_layer).setItemVisibilityChecked(True)
-    group.addLayer(assessment_layer).setItemVisibilityChecked(False)
+    if assessment_layer is not None:
+        group.addLayer(assessment_layer).setItemVisibilityChecked(False)
 
 
-def _notes(moc_m, override_tolerance_m, oca_rounding_ft, warnings):
+def _notes(
+        moc_m, area_buffer_m, override_tolerance_m, oca_rounding_ft, warnings):
     override = (
         "disabled" if override_tolerance_m is None
         else f"{override_tolerance_m:g} m"
@@ -523,7 +644,9 @@ def run_primary_area_assessment(
     terrain_band: int = 1,
     use_selected_area: bool = True,
     confirm_missing: Optional[Callable[[Tuple[str, ...]], bool]] = None,
+    area_buffer_m: float = 0.0,
     oca_rounding_ft: int = 100,
+    load_all_points: bool = True,
 ) -> AssessmentResult:
     """Run a complete generic primary-area obstacle assessment."""
     del iface  # Kept in the public signature for consistency with plugin modules.
@@ -537,11 +660,12 @@ def run_primary_area_assessment(
     _valid_nonnegative(moc_m, "MOC")
     if override_tolerance_m is not None:
         _valid_nonnegative(override_tolerance_m, "Tolerance override")
+    area_buffer_m = _valid_nonnegative(area_buffer_m, "Area buffer")
     _valid_oca_rounding(oca_rounding_ft)
     _validate_crs(area_layer, terrain_layer, obstacle_layer)
 
     mask_geometry = _build_mask_geometry(
-        area_layer, use_selected_area, area_buffer
+        area_layer, use_selected_area, area_buffer_m
     )
     terrain_records = _terrain_records(
         terrain_layer, mask_geometry, terrain_tolerance, terrain_band
@@ -563,31 +687,44 @@ def run_primary_area_assessment(
         if not confirm_missing(warning_tuple):
             raise AssessmentCancelled("Assessment cancelled by the user")
 
-    evaluated, controls = evaluate_records(
-        terrain_records + survey_records,
-        moc_m=moc_m,
-        override_tolerance_m=override_tolerance_m,
-        oca_rounding_ft=oca_rounding_ft,
-    )
-    assessment_layer = _result_layer(
-        "Primary assessment", area_layer.crs(), evaluated
-    )
+    records = terrain_records + survey_records
+    if load_all_points:
+        evaluated, controls = evaluate_records(
+            records,
+            moc_m=moc_m,
+            override_tolerance_m=override_tolerance_m,
+            oca_rounding_ft=oca_rounding_ft,
+        )
+        assessed_count = len(evaluated)
+        assessment_layer = _result_layer(
+            "Primary assessment", area_layer.crs(), evaluated
+        )
+    else:
+        assessed_count, controls = _evaluate_control_records(
+            records,
+            moc_m=moc_m,
+            override_tolerance_m=override_tolerance_m,
+            oca_rounding_ft=oca_rounding_ft,
+        )
+        assessment_layer = None
     control_layer = _result_layer(
         "Control obstacle", area_layer.crs(), controls
     )
     _style_results(assessment_layer, control_layer)
 
     layer_notes = _notes(
-        moc_m, override_tolerance_m, oca_rounding_ft, warning_tuple
+        moc_m, area_buffer_m, override_tolerance_m,
+        oca_rounding_ft, warning_tuple
     )
-    QgsLayerNotesUtils.setLayerNotes(assessment_layer, layer_notes)
+    if assessment_layer is not None:
+        QgsLayerNotesUtils.setLayerNotes(assessment_layer, layer_notes)
     QgsLayerNotesUtils.setLayerNotes(control_layer, layer_notes)
     _add_results_to_tree(assessment_layer, control_layer)
 
     return AssessmentResult(
         assessment_layer=assessment_layer,
         control_layer=control_layer,
-        assessed_count=len(evaluated),
+        assessed_count=assessed_count,
         control_count=len(controls),
         warnings=warning_tuple,
     )

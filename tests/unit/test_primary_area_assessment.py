@@ -151,6 +151,33 @@ def test_empty_evaluation_has_no_control_obstacle():
     assert evaluate_records([], moc_m=75.0) == ([], [])
 
 
+def test_control_only_evaluation_matches_full_evaluation():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        _evaluate_control_records,
+        evaluate_records,
+    )
+
+    records = [
+        _record('lower', 100.0, 0.0),
+        _record('tie-a', 125.0, 0.0),
+        _record('tie-b', 125.0 + 5e-10, 0.0),
+    ]
+    evaluated, expected_controls = evaluate_records(
+        records, moc_m=10.0, override_tolerance_m=0.0
+    )
+    assessed_count, controls = _evaluate_control_records(
+        records, moc_m=10.0, override_tolerance_m=0.0
+    )
+
+    assert assessed_count == len(evaluated)
+    assert [item.identifier for item in controls] == [
+        item.identifier for item in expected_controls
+    ]
+    assert [item.oca_m for item in controls] == [
+        item.oca_m for item in expected_controls
+    ]
+
+
 @pytest.mark.parametrize(
     'role,valid,geographic',
     [
@@ -233,6 +260,13 @@ def test_dockwidget_defaults_match_generic_assessment_contract():
         return list(prop)[0].text
 
     assert property_text('useSelectedAreaCheckBox', 'checked') == 'true'
+    assert property_text('loadAllPointsCheckBox', 'checked') == 'false'
+    assert property_text(
+        'loadAllPointsCheckBox', 'text'
+    ) == 'Load all analyzed points'
+    assert property_text(
+        'outputDescriptionLabel', 'text'
+    ) == 'The control obstacle layer will be added to the project.'
     assert property_text(
         'areaBufferDoubleSpinBox', 'minimum'
     ) == '0.000000000000000'
@@ -398,3 +432,9 @@ def test_dockwidget_shows_and_clears_processing_message():
     assert 'message_bar.popWidget(item)' in dock_source
     assert 'self._clear_processing_message()' in dock_source
     assert 'level=Qgis.Success' in dock_source
+
+
+def test_dockwidget_passes_load_all_points_state():
+    assert 'load_all_points=self.loadAllPointsCheckBox.isChecked(),' in (
+        dock_source
+    )
