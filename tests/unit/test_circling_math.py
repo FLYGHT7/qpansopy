@@ -8,6 +8,7 @@ protected height 1000 ft AGL, default per-category IAS.
 """
 import importlib
 import json
+import sys
 
 import pytest
 
@@ -98,6 +99,53 @@ def test_invalid_category_height_identifies_the_category():
     with pytest.raises(ValueError, match='Invalid protected height for CAT B'):
         mod._protected_height_for_category(
             {'prot_height_ft_by_cat': {'B': 'not-a-height'}}, 'B')
+
+
+def test_categorized_style_only_registers_created_categories(monkeypatch):
+    mod = _mod()
+    core = sys.modules['qgis.core']
+
+    class _FillSymbol:
+        @staticmethod
+        def createSimple(properties):
+            return properties
+
+    class _RendererCategory:
+        def __init__(self, value, symbol, label):
+            self.value = value
+            self.symbol = symbol
+            self.label = label
+
+    class _CategorizedRenderer:
+        def __init__(self, field, categories):
+            self.field = field
+            self.categories = categories
+
+    class _Layer:
+        def __init__(self):
+            self.renderer = None
+            self.repainted = False
+
+        def setRenderer(self, renderer):
+            self.renderer = renderer
+
+        def triggerRepaint(self):
+            self.repainted = True
+
+    monkeypatch.setattr(core, 'QgsFillSymbol', _FillSymbol)
+    monkeypatch.setattr(core, 'QgsRendererCategory', _RendererCategory)
+    monkeypatch.setattr(
+        core, 'QgsCategorizedSymbolRenderer', _CategorizedRenderer)
+    layer = _Layer()
+
+    mod._apply_categorized_style(layer, ('C', 'A'))
+
+    assert layer.renderer.field == 'category'
+    assert [category.value for category in layer.renderer.categories] == [
+        'A', 'C']
+    assert [category.label for category in layer.renderer.categories] == [
+        'CAT A', 'CAT C']
+    assert layer.repainted is True
 
 
 def test_category_height_changes_altitude_and_radius():
@@ -193,6 +241,7 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
     mod = _mod()
     message_bar = _RecordingMessageBar()
     built_radii = []
+    styled_categories = []
 
     class _MapCrs:
         @staticmethod
@@ -298,7 +347,9 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
     monkeypatch.setattr(
         mod, '_threshold_points_map_crs', lambda *args: [object(), object()])
     monkeypatch.setattr(mod, 'build_circling_area', _build_area)
-    monkeypatch.setattr(mod, '_apply_categorized_style', lambda layer: None)
+    monkeypatch.setattr(
+        mod, '_apply_categorized_style',
+        lambda layer, categories: styled_categories.extend(categories))
     monkeypatch.setattr(mod, 'register_parameters_action', lambda layer: None)
 
     result = mod.run_circling(
@@ -326,6 +377,7 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
         result['summary']['C']['circling_radius_nm'] * mod.NM2M,
         result['summary']['A']['circling_radius_nm'] * mod.NM2M,
     ])
+    assert styled_categories == ['C', 'A']
 
     features = result['layer'].provider.features
     attributes_by_cat = {feature.attributes[0]: feature.attributes

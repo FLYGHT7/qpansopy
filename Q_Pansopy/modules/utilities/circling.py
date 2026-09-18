@@ -269,14 +269,19 @@ def _threshold_points_map_crs(features, layer, map_crs, project):
     return points
 
 
-def _apply_categorized_style(v_layer):
-    """Style the layer with one semi-transparent fill colour per category."""
+def _apply_categorized_style(v_layer, created_categories=None):
+    """Style the layer with one fill colour per created category."""
     from qgis.core import (
         QgsCategorizedSymbolRenderer, QgsFillSymbol, QgsRendererCategory,
     )
 
+    if created_categories is None:
+        created_categories = CATEGORIES
+    created_categories = set(created_categories)
     categories = []
     for cat in CATEGORIES:
+        if cat not in created_categories:
+            continue
         r, g, b = _CAT_COLORS[cat]
         symbol = QgsFillSymbol.createSimple({
             "color": "{0},{1},{2},50".format(r, g, b),
@@ -365,6 +370,7 @@ def run_circling(iface, threshold_layer, params=None):
 
     summary = {}
     features = []
+    created_categories = []
     # Draw the largest categories first so the smaller ones stay visible on top.
     for cat in reversed(CATEGORIES):
         if cat not in ias_by_cat:
@@ -413,6 +419,7 @@ def run_circling(iface, threshold_layer, params=None):
             row["circling_radius_nm"], json.dumps(row),
         ])
         features.append(feat)
+        created_categories.append(cat)
 
     if not features:
         iface.messageBar().pushMessage(
@@ -424,7 +431,7 @@ def run_circling(iface, threshold_layer, params=None):
     v_layer.updateExtents()
 
     try:
-        _apply_categorized_style(v_layer)
+        _apply_categorized_style(v_layer, created_categories)
     except Exception:  # nosec B110 - cosmetic styling must not abort a good calc
         pass
 
