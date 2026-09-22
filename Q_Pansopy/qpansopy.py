@@ -42,6 +42,9 @@ try:
     from .dockwidgets.utilities.qpansopy_primary_area_assessment_dockwidget import (
         QPANSOPYPrimaryAreaAssessmentDockWidget,
     )
+    from .dockwidgets.utilities.qpansopy_ama_grid_dockwidget import (
+        QPANSOPYAMAGridDockWidget,
+    )
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.pbn.qpansopy_gnss_waypoint_dockwidget import QPANSOPYGNSSWaypointDockWidget
     from .dockwidgets.pbn.qpansopy_pbn_target_dockwidget import QPANSOPYPBNTargetDockWidget
@@ -265,6 +268,14 @@ class Qpansopy:
                     "TOOLTIP": "Evaluate terrain and obstacles in a primary area",
                     "ICON": "primary_area_assessment.svg",
                     "DOCK_WIDGET": QPANSOPYPrimaryAreaAssessmentDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "AMAGrid": {
+                    "TITLE": "Area Minimum Altitude (AMA)",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Create 1 degree or 30 minute AMA reference grid polygons",
+                    "ICON": "ama_grid.svg",
+                    "DOCK_WIDGET": QPANSOPYAMAGridDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "PointFilter": {
