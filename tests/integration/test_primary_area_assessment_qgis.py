@@ -1,3 +1,4 @@
+import math
 from types import SimpleNamespace
 
 import pytest
@@ -99,6 +100,17 @@ def _obstacle_layer(crs='EPSG:32616', records=None):
         feature.setGeometry(QgsGeometry.fromWkt(wkt))
         assert layer.dataProvider().addFeature(feature)
     return layer
+
+
+def _mapping():
+    from Q_Pansopy.modules.utilities.primary_area_assessment import FieldMapping
+
+    return FieldMapping(
+        identifier='survey_id',
+        obstacle_type='kind',
+        elevation='elevation',
+        tolerance='accuracy',
+    )
 
 
 def test_dockwidget_exposes_restored_assessment_controls(qgis_app):
@@ -267,6 +279,7 @@ def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
 
 
 def test_zero_buffer_preserves_original_survey_mask(qgis_app):
+    from qgis.core import QgsProject
     from Q_Pansopy.modules.utilities.primary_area_assessment import (
         run_primary_area_assessment,
     )
@@ -285,10 +298,14 @@ def test_zero_buffer_preserves_original_survey_mask(qgis_app):
         feature['id'] for feature in result.assessment_layer.getFeatures()
     }
     assert identifiers == {'A', 'B'}
+    group = QgsProject.instance().layerTreeRoot().children()[0]
+    assert [node.layer().name() for node in group.children()] == [
+        'Control obstacle', 'Primary assessment'
+    ]
 
 
 def test_buffer_includes_survey_point_outside_original_area(qgis_app):
-    from qgis.core import QgsLayerNotesUtils
+    from qgis.core import QgsLayerNotesUtils, QgsProject
     from Q_Pansopy.modules.utilities.primary_area_assessment import (
         run_primary_area_assessment,
     )
@@ -309,6 +326,49 @@ def test_buffer_includes_survey_point_outside_original_area(qgis_app):
     assert identifiers == {'A', 'B', 'OUT'}
     notes = QgsLayerNotesUtils.layerNotes(result.assessment_layer)
     assert 'Area buffer: 150 m' in notes
+    group = QgsProject.instance().layerTreeRoot().children()[0]
+    assert [node.layer().name() for node in group.children()] == [
+        'Control obstacle', 'Primary assessment', 'Primary area buffer'
+    ]
+    assert group.children()[2].itemVisibilityChecked()
+
+
+def test_positive_buffer_adds_visible_control_only_layer(qgis_app):
+    from qgis.core import QgsLayerNotesUtils, QgsProject
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        _build_mask_geometry,
+        run_primary_area_assessment,
+    )
+
+    area = _area_layer()
+    result = run_primary_area_assessment(
+        None,
+        area,
+        obstacle_layer=_obstacle_layer(),
+        field_mapping=_mapping(),
+        area_buffer_m=150.0,
+        load_all_points=False,
+        confirm_missing=lambda warnings: True,
+    )
+
+    assert result.assessment_layer is None
+    group = QgsProject.instance().layerTreeRoot().children()[0]
+    assert [node.layer().name() for node in group.children()] == [
+        'Control obstacle', 'Primary area buffer'
+    ]
+    buffer_node = group.children()[1]
+    buffer_layer = buffer_node.layer()
+    assert buffer_node.itemVisibilityChecked()
+    assert buffer_layer.crs() == area.crs()
+    assert buffer_layer.featureCount() == 1
+    buffered_feature = next(buffer_layer.getFeatures())
+    assert buffered_feature.geometry().asWkb() == (
+        _build_mask_geometry(area, True, 150.0).asWkb()
+    )
+    symbol_layer = buffer_layer.renderer().symbol().symbolLayer(0)
+    assert 0 < symbol_layer.fillColor().alpha() < 255
+    assert symbol_layer.strokeColor().alpha() == 255
+    assert 'Area buffer: 150 m' in QgsLayerNotesUtils.layerNotes(buffer_layer)
 
 
 def test_terrain_pixels_are_evaluated_without_processing_provider(
@@ -443,6 +503,7 @@ def test_declining_missing_sources_creates_no_result_group(qgis_app):
         run_primary_area_assessment(
             None,
             _area_layer(),
+            area_buffer_m=100.0,
             confirm_missing=lambda warnings: False,
         )
 
@@ -506,10 +567,13 @@ def test_dockwidget_reports_geographic_input_as_yellow_warning(qgis_app):
     area = _area_layer()
     survey = _obstacle_layer()
     survey.setCrs(QgsCoordinateReferenceSystem('EPSG:4326'))
+    QgsProject.instance().addMapLayers([area, survey])
     iface = _DockIface()
     widget = QPANSOPYPrimaryAreaAssessmentDockWidget(iface)
     widget.areaLayerComboBox.setLayer(area)
     widget.obstacleLayerComboBox.setLayer(survey)
+    widget.idFieldComboBox.setCurrentText('survey_id')
+    widget.typeFieldComboBox.setCurrentText('kind')
     widget.overrideToleranceCheckBox.setChecked(True)
 
     widget.calculate()

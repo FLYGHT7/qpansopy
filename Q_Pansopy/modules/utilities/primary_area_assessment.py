@@ -20,6 +20,7 @@ from qgis.core import (
     QgsFeature,
     QgsField,
     QgsFields,
+    QgsFillSymbol,
     QgsGeometry,
     QgsLayerNotesUtils,
     QgsMarkerSymbol,
@@ -551,6 +552,27 @@ def _result_layer(name: str, crs, records):
     return layer
 
 
+def _buffer_result_layer(mask_geometry, crs):
+    """Create the visible polygon showing the exact assessment mask."""
+    layer = QgsMemoryProviderUtils.createMemoryLayer(
+        "Primary area buffer",
+        QgsFields(),
+        mask_geometry.wkbType(),
+        crs,
+    )
+    feature = QgsFeature(layer.fields())
+    feature.setGeometry(QgsGeometry(mask_geometry))
+    if not layer.dataProvider().addFeatures([feature])[0]:
+        raise RuntimeError("Could not populate the Primary area buffer layer")
+    layer.updateExtents()
+    layer.renderer().setSymbol(QgsFillSymbol.createSimple({
+        "color": "128,0,255,45",
+        "outline_color": "128,0,255,255",
+        "outline_width": "0.8",
+    }))
+    return layer
+
+
 def _style_results(assessment_layer, control_layer):
     if assessment_layer is not None:
         assessment_layer.renderer().setSymbol(QgsMarkerSymbol.createSimple({
@@ -587,16 +609,21 @@ def _style_results(assessment_layer, control_layer):
     control_layer.triggerRepaint()
 
 
-def _add_results_to_tree(assessment_layer, control_layer):
+def _add_results_to_tree(
+        assessment_layer, control_layer, buffer_layer=None):
     project = QgsProject.instance()
     layers = [control_layer]
     if assessment_layer is not None:
         layers.append(assessment_layer)
+    if buffer_layer is not None:
+        layers.append(buffer_layer)
     project.addMapLayers(layers, False)
     group = project.layerTreeRoot().insertGroup(0, "Obstacle assessment")
     group.addLayer(control_layer).setItemVisibilityChecked(True)
     if assessment_layer is not None:
         group.addLayer(assessment_layer).setItemVisibilityChecked(False)
+    if buffer_layer is not None:
+        group.addLayer(buffer_layer).setItemVisibilityChecked(True)
 
 
 def _notes(
@@ -721,6 +748,11 @@ def run_primary_area_assessment(
         "Control obstacle", area_layer.crs(), controls
     )
     _style_results(assessment_layer, control_layer)
+    buffer_layer = (
+        _buffer_result_layer(mask_geometry, area_layer.crs())
+        if area_buffer_m > 0
+        else None
+    )
 
     layer_notes = _notes(
         moc_m, area_buffer_m, override_tolerance_m,
@@ -729,7 +761,9 @@ def run_primary_area_assessment(
     if assessment_layer is not None:
         QgsLayerNotesUtils.setLayerNotes(assessment_layer, layer_notes)
     QgsLayerNotesUtils.setLayerNotes(control_layer, layer_notes)
-    _add_results_to_tree(assessment_layer, control_layer)
+    if buffer_layer is not None:
+        QgsLayerNotesUtils.setLayerNotes(buffer_layer, layer_notes)
+    _add_results_to_tree(assessment_layer, control_layer, buffer_layer)
 
     return AssessmentResult(
         assessment_layer=assessment_layer,
