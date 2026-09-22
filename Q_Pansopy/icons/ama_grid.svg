@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" fill="#263238"/>
+  <path d="M8 8h48v48H8z" fill="none" stroke="#90caf9" stroke-width="3"/>
+  <path d="M24 8v48M40 8v48M8 24h48M8 40h48" fill="none" stroke="#42a5f5" stroke-width="2"/>
+  <path d="M8 8l48 48M56 8L8 56" stroke="#fff" stroke-width="1" opacity=".7"/>
+  <text x="32" y="36" text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="bold" fill="#fff">AMA</text>
+</svg>
