@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QPANSOPYOverheadToleranceDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYOverheadToleranceDockWidget">
+  <property name="windowTitle"><string>Overhead Facility Tolerance</string></property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item><widget class="QGroupBox" name="inputGroup">
+     <property name="title"><string>Input layers — select one feature in each</string></property>
+     <layout class="QFormLayout" name="inputLayout">
+      <item row="0" column="0"><widget class="QLabel" name="navaidLabel"><property name="text"><string>VOR/NDB point</string></property></widget></item>
+      <item row="0" column="1"><widget class="QgsMapLayerComboBox" name="navaidLayerComboBox"/></item>
+      <item row="1" column="0"><widget class="QLabel" name="trackLabel"><property name="text"><string>Inbound track line</string></property></widget></item>
+      <item row="1" column="1"><widget class="QgsMapLayerComboBox" name="trackLayerComboBox"/></item>
+     </layout>
+    </widget></item>
+    <item><widget class="QGroupBox" name="paramsGroup">
+     <property name="title"><string>Parameters</string></property>
+     <layout class="QFormLayout" name="paramsLayout">
+      <item row="0" column="0"><widget class="QLabel" name="typeLabel"><property name="text"><string>Navaid</string></property></widget></item>
+      <item row="0" column="1"><widget class="QComboBox" name="navaidTypeComboBox"><item><property name="text"><string>VOR</string></property></item><item><property name="text"><string>NDB</string></property></item></widget></item>
+      <item row="1" column="0"><widget class="QLabel" name="aircraftLabel"><property name="text"><string>Aircraft altitude AMSL</string></property></widget></item>
+      <item row="1" column="1"><layout class="QHBoxLayout" name="aircraftLayout"><item><widget class="QLineEdit" name="aircraftAltitudeLineEdit"><property name="placeholderText"><string>Required</string></property></widget></item><item><widget class="QComboBox" name="aircraftUnitComboBox"><item><property name="text"><string>ft</string></property></item><item><property name="text"><string>m</string></property></item></widget></item></layout></item>
+      <item row="2" column="0"><widget class="QLabel" name="stationLabel"><property name="text"><string>Station elevation AMSL</string></property></widget></item>
+      <item row="2" column="1"><layout class="QHBoxLayout" name="stationLayout"><item><widget class="QLineEdit" name="stationElevationLineEdit"><property name="placeholderText"><string>Required</string></property></widget></item><item><widget class="QComboBox" name="stationUnitComboBox"><item><property name="text"><string>ft</string></property></item><item><property name="text"><string>m</string></property></item></widget></item></layout></item>
+      <item row="3" column="0" colspan="2"><widget class="QCheckBox" name="reverseDirectionCheckBox"><property name="text"><string>Invert inbound direction</string></property></widget></item>
+      <item row="4" column="0" colspan="2"><widget class="QCheckBox" name="includeConeCheckBox"><property name="text"><string>Include cone of silence layer</string></property></widget></item>
+      <item row="5" column="0" colspan="2"><widget class="QCheckBox" name="includePointsCheckBox"><property name="text"><string>Include construction points layer</string></property></widget></item>
+      <item row="6" column="0" colspan="2"><widget class="QLabel" name="crsHintLabel"><property name="text"><string>Map canvas CRS must be projected in metres.</string></property></widget></item>
+     </layout>
+    </widget></item>
+    <item><widget class="QGroupBox" name="outputGroup"><property name="title"><string>Output</string></property><layout class="QVBoxLayout" name="outputLayout"><item><widget class="QCheckBox" name="exportKmlCheckBox"><property name="text"><string>Export selected output layers to KML</string></property></widget></item><item><layout class="QHBoxLayout" name="outputFolderLayout"><item><widget class="QLineEdit" name="outputFolderLineEdit"><property name="placeholderText"><string>KML output folder</string></property></widget></item><item><widget class="QPushButton" name="browseButton"><property name="text"><string>Browse…</string></property></widget></item></layout></item></layout></widget></item>
+    <item><widget class="QGroupBox" name="actionGroup"><property name="title"><string>Action</string></property><layout class="QVBoxLayout" name="actionLayout"><item><widget class="QPushButton" name="calculateButton"><property name="text"><string>Create overhead tolerance</string></property></widget></item></layout></widget></item>
+    <item><widget class="QGroupBox" name="logGroup"><property name="title"><string>Log</string></property><layout class="QVBoxLayout" name="logLayout"><item><widget class="QTextEdit" name="logTextEdit"><property name="readOnly"><bool>true</bool></property></widget></item></layout></widget></item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets><customwidget><class>QgsMapLayerComboBox</class><extends>QComboBox</extends><header>qgsmaplayercombobox.h</header></customwidget></customwidgets>
+ <resources/>
+ <connections/>
+</ui>

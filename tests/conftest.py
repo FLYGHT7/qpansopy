@@ -43,6 +43,7 @@ def _install_qgis_stubs():
         'QgsLayerNotesUtils',
         # Symbol layers
         'QgsSimpleMarkerSymbolLayer', 'QgsMarkerSymbol',
+        'QgsPalLayerSettings', 'QgsVectorLayerSimpleLabeling',
     ]:
         setattr(core, name, _Dummy)
 
