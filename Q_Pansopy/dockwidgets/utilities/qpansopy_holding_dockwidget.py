@@ -109,18 +109,8 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log('Error: No calculation available to show')
             return
 
-        flat_params = {
-            'IAS_kt': f"{summary.get('IAS_kt', 0):.1f}",
-            'Altitude_ft': f"{summary.get('Altitude_ft', 0):.0f}",
-            'ISA_var_C': f"{summary.get('ISA_var_C', 0):.1f}",
-            'Bank_deg': f"{summary.get('Bank_deg', 0):.1f}",
-            'Leg_min': f"{summary.get('Leg_min', 0):.2f}",
-            'Leg_nm': f"{summary.get('Leg_nm', 0):.2f}",
-            'Turn': summary.get('Turn', ''),
-            'TAS_kt': f"{summary.get('TAS_kt', 0):.2f}",
-            'Rate_deg_s': f"{summary.get('Rate_deg_s', 0):.3f}",
-            'Radius_nm': f"{summary.get('Radius_nm', 0):.3f}",
-        }
+        from ...modules.utilities.holding import format_holding_table_parameters
+        flat_params = format_holding_table_parameters(summary)
 
         from ...parameters_inspector_dialog import show_web_popup
         show_web_popup("Holding Pattern — Feature Parameters", [("Holding Pattern", flat_params)])
