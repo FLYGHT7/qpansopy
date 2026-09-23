@@ -4,7 +4,10 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
+import json
 import math
+
+from ...parameters_inspector_dialog import register_parameters_action
 
 # Compat for QGIS 3/4: QgsWkbTypes.LineGeometry → Qgis.GeometryType.Line
 try:
@@ -26,6 +29,22 @@ except ImportError as e:
 
 def _feet(value, unit):
     return value * 3.28084 if unit == 'm' else value
+
+
+def format_holding_table_parameters(summary):
+    """Return the rows displayed by both Holding table entry points."""
+    return {
+        'IAS_kt': f"{summary.get('IAS_kt', 0):.1f}",
+        'Altitude_ft': f"{summary.get('Altitude_ft', 0):.0f}",
+        'ISA_var_C': f"{summary.get('ISA_var_C', 0):.1f}",
+        'Bank_deg': f"{summary.get('Bank_deg', 0):.1f}",
+        'Leg_min': f"{summary.get('Leg_min', 0):.2f}",
+        'Leg_nm': f"{summary.get('Leg_nm', 0):.2f}",
+        'Turn': summary.get('Turn', ''),
+        'TAS_kt': f"{summary.get('TAS_kt', 0):.2f}",
+        'Rate_deg_s': f"{summary.get('Rate_deg_s', 0):.3f}",
+        'Radius_nm': f"{summary.get('Radius_nm', 0):.3f}",
+    }
 
 
 def run_holding_pattern(iface, routing_layer, params: dict):
@@ -220,11 +239,15 @@ def run_holding_pattern(iface, routing_layer, params: dict):
                     ba_layer = QgsVectorLayer(
                         f"Polygon?crs={crs.authid()}", "HoldingBasicArea", "memory")
                     ba_pr = ba_layer.dataProvider()
+                    ba_pr.addAttributes([QgsField('parameters', QVariant.String)])
+                    ba_layer.updateFields()
                     ba_f = QgsFeature()
                     ba_f.setGeometry(hull)
+                    ba_f.setAttributes([json.dumps(format_holding_table_parameters(summary))])
                     ba_pr.addFeatures([ba_f])
                     ba_layer.updateExtents()
                     QgsProject.instance().addMapLayer(ba_layer)
+                    register_parameters_action(ba_layer)
                     try:
                         ba_layer.renderer().symbol().setColor(QColor(255, 0, 0, 76))
                         ba_layer.renderer().symbol().symbolLayer(0).setStrokeColor(QColor("red"))
