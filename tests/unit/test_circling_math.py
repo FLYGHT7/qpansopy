@@ -237,7 +237,9 @@ def test_run_circling_requires_at_least_two_thresholds(selected_count):
     assert 'at least 2' in text
 
 
-def test_run_circling_propagates_category_heights_to_output(monkeypatch):
+@pytest.mark.parametrize('empty_category', [None, 'C'])
+def test_run_circling_propagates_category_heights_to_output(
+        monkeypatch, empty_category):
     mod = _mod()
     message_bar = _RecordingMessageBar()
     built_radii = []
@@ -281,9 +283,11 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
             return [object(), object()]
 
     class _Area:
-        @staticmethod
-        def isEmpty():
-            return False
+        def __init__(self, empty=False):
+            self.empty = empty
+
+        def isEmpty(self):
+            return self.empty
 
     class _Feature:
         def setGeometry(self, geometry):
@@ -339,7 +343,8 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
 
     def _build_area(points, radius_m):
         built_radii.append(radius_m)
-        return _Area()
+        # Reversed category order builds C before A.
+        return _Area(empty_category == 'C' and len(built_radii) == 1)
 
     monkeypatch.setattr(mod, 'QgsProject', _Project)
     monkeypatch.setattr(mod, 'QgsVectorLayer', _VectorLayer)
@@ -370,22 +375,31 @@ def test_run_circling_propagates_category_heights_to_output(monkeypatch):
         })
 
     assert result['summary']['A']['protected_height_ft'] == 900
-    assert result['summary']['C']['protected_height_ft'] == 1300
     assert result['summary']['A']['h1_ft'] == pytest.approx(928.0)
-    assert result['summary']['C']['h1_ft'] == pytest.approx(1328.0)
+    expected_c = mod.calc_circling_category(
+        180, 1300, 28, 20, 15, mod.S_CONST['C'])
     assert built_radii == pytest.approx([
-        result['summary']['C']['circling_radius_nm'] * mod.NM2M,
+        expected_c['circling_radius_nm'] * mod.NM2M,
         result['summary']['A']['circling_radius_nm'] * mod.NM2M,
     ])
-    assert styled_categories == ['C', 'A']
+    assert styled_categories == (['A'] if empty_category else ['C', 'A'])
 
     features = result['layer'].provider.features
     attributes_by_cat = {feature.attributes[0]: feature.attributes
                          for feature in features}
     assert attributes_by_cat['A'][2] == 900
-    assert attributes_by_cat['C'][2] == 1300
     assert json.loads(attributes_by_cat['A'][15])['protected_height_ft'] == 900
-    assert json.loads(attributes_by_cat['C'][15])['protected_height_ft'] == 1300
+    if empty_category:
+        assert 'C' not in result['summary']
+        assert 'C' not in attributes_by_cat
+    else:
+        assert result['summary']['C']['protected_height_ft'] == 1300
+        assert result['summary']['C']['h1_ft'] == pytest.approx(1328.0)
+        assert attributes_by_cat['C'][2] == 1300
+        assert (
+            json.loads(attributes_by_cat['C'][15])['protected_height_ft']
+            == 1300
+        )
     stored = json.loads(attributes_by_cat['A'][15])
     assert stored['isa_source'] == 'calculated'
     assert stored['isa_source_elevation'] == 28

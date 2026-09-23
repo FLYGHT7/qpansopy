@@ -93,24 +93,18 @@ def _complete_table_value(
 def format_circling_complete_table(
         summary: Mapping[str, Mapping[str, float]],
         params: Mapping[str, object]) -> Tuple[str, str]:
-    """Build the web-style CAT A-E results table for Word and plain text.
-
-    All five category columns are retained. A category absent from *summary*
-    was disabled for the calculation and is represented by an em dash.
-    """
+    """Build a Word and plain-text table for categories with created areas."""
+    included_categories = tuple(cat for cat in CATEGORIES if cat in summary)
     headers = ("Parameters",) + tuple(
-        "CAT {0}".format(cat) for cat in CATEGORIES)
+        "CAT {0}".format(cat) for cat in included_categories)
     text_rows = ["\t".join(headers)]
     rendered_rows = []
 
     for label, source, decimals in _COMPLETE_TABLE_ROWS:
         values = []
-        for cat in CATEGORIES:
-            result = summary.get(cat)
-            values.append(
-                _complete_table_value(result, params, source, decimals)
-                if result is not None else "—"
-            )
+        for cat in included_categories:
+            values.append(_complete_table_value(
+                summary[cat], params, source, decimals))
         text_rows.append("\t".join((label,) + tuple(values)))
         rendered_rows.append((label, values))
 
@@ -121,9 +115,12 @@ def format_circling_complete_table(
     cell_style = (
         "background-color:#ffffff;color:#000000;padding:8px;text-align:left"
     )
+    category_width = 65 / len(included_categories) if included_categories else 0
     header_html = "".join(
         '<th style="{0};width:{1}%">{2}</th>'.format(
-            header_style, 35 if index == 0 else 13, html.escape(value))
+            header_style,
+            35 if index == 0 else "{0:g}".format(category_width),
+            html.escape(value))
         for index, value in enumerate(headers)
     )
     body_html = []
@@ -380,8 +377,6 @@ def run_circling(iface, threshold_layer, params=None):
         res = calc_circling_category(
             ias_kt, prot_height_ft, elev_ft, bank_deg, delta_isa, S_CONST[cat],
         )
-        summary[cat] = res
-
         area = build_circling_area(points, res["circling_radius_nm"] * NM2M)
         if area is None or area.isEmpty():
             iface.messageBar().pushMessage(
@@ -389,6 +384,8 @@ def run_circling(iface, threshold_layer, params=None):
                 level=Qgis.Warning,
             )
             continue
+
+        summary[cat] = res
 
         row = {
             "category": cat,
