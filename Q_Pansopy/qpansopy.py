@@ -52,6 +52,9 @@ try:
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
     from .dockwidgets.conv.qpansopy_dme_tolerance_dockwidget import QPANSOPYDMEToleranceDockWidget
+    from .dockwidgets.conv.qpansopy_overhead_tolerance_dockwidget import (
+        QPANSOPYOverheadToleranceDockWidget,
+    )
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
@@ -252,6 +255,14 @@ class Qpansopy:
                     "TOOLTIP": "DME Fix Tolerance Tool (VOR/DME, NDB/DME, LOC/DME) — sector × DME ring intersection",
                     "ICON": os.path.join(self.icons_dir, 'dme_tolerance_group.svg'),
                     "DOCK_WIDGET": QPANSOPYDMEToleranceDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "OVERHEAD_TOL": {
+                    "TITLE": "Overhead Tolerance",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "VOR/NDB overhead facility fix tolerance",
+                    "ICON": os.path.join(self.icons_dir, 'overhead_tolerance.svg'),
+                    "DOCK_WIDGET": QPANSOPYOverheadToleranceDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "ObjectSelection": {
