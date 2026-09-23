@@ -93,6 +93,7 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._der_line_band.setColor(QColor(0, 120, 0, 220))
         self._der_line_band.setWidth(2)
         self._connected_runway_layer = None
+        self.visibilityChanged.connect(self._on_visibility_changed)
 
         self.runwayLayerComboBox.layerChanged.connect(self._on_runway_layer_changed)
         self.cwyDistanceSpinBox.valueChanged.connect(self._update_der_marker)
@@ -120,6 +121,12 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             pass
         self.closingPlugin.emit()
         event.accept()
+
+    def _on_visibility_changed(self, visible):
+        if visible:
+            self._update_der_marker()
+        else:
+            self._clear_der_marker()
 
     def toggle_direction(self):
         """Toggle the runway direction between Start→End and End→Start"""
@@ -155,6 +162,8 @@ class QPANSOPYOmnidirectionalDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def _update_der_marker(self, *args):
         self._clear_der_marker()
+        if not self.isVisible():
+            return
 
         if not self.showDerMarkerCheckBox.isChecked():
             return

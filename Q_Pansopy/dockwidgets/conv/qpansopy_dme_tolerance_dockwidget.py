@@ -57,6 +57,7 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._preview_band.setStrokeColor(QColor(0, 100, 255, 200))
         self._preview_band.setWidth(1)
         self._connected_layers = []
+        self.visibilityChanged.connect(self._on_visibility_changed)
 
         self.pointLayerComboBox.layerChanged.connect(self._on_layer_changed)
         self.fixLayerComboBox.layerChanged.connect(self._on_layer_changed)
@@ -74,6 +75,12 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._clear_preview()
         self.closingPlugin.emit()
         event.accept()
+
+    def _on_visibility_changed(self, visible):
+        if visible:
+            self._update_preview()
+        else:
+            self._clear_preview()
 
     def _on_layer_changed(self):
         for lyr in self._connected_layers:
@@ -103,6 +110,8 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def _update_preview(self, *args):
         self._clear_preview()
+        if not self.isVisible():
+            return
 
         navid_layer = self.pointLayerComboBox.currentLayer()
         fix_layer = self.fixLayerComboBox.currentLayer()

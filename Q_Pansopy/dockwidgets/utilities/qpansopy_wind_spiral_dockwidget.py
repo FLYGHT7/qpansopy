@@ -86,6 +86,7 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self._preview_band.setColor(QColor("green"))
         self._preview_band.setWidth(2)
         self._connected_layers = []
+        self.visibilityChanged.connect(self._on_visibility_changed)
 
         if hasattr(self, 'pointLayerComboBox'):
             self.pointLayerComboBox.layerChanged.connect(self._on_layer_changed)
@@ -420,6 +421,12 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
         self.closingPlugin.emit()
         event.accept()
 
+    def _on_visibility_changed(self, visible):
+        if visible:
+            self._update_preview()
+        else:
+            self._clear_preview()
+
     def _on_layer_changed(self, *args):
         """Re-hook selectionChanged on whichever layers are currently chosen."""
         for lyr in self._connected_layers:
@@ -446,6 +453,8 @@ class QPANSOPYWindSpiralDockWidgetBase(QtWidgets.QDockWidget, FORM_CLASS):
     def _update_preview(self, *args):
         """Recompute the live rubber-band preview of the wind spiral curve."""
         self._clear_preview()
+        if not self.isVisible():
+            return
 
         point_layer = self.pointLayerComboBox.currentLayer()
         reference_layer = self.referenceLayerComboBox.currentLayer()
