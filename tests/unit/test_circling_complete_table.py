@@ -85,20 +85,37 @@ def test_complete_table_matches_web_layout_and_precision():
     ]
 
 
-def test_complete_table_keeps_disabled_category_columns_with_dashes():
+@pytest.mark.parametrize('categories,expected_headers', [
+    (('A', 'C'), 'Parameters\tCAT A\tCAT C'),
+    (('A', 'B', 'C', 'D'), 'Parameters\tCAT A\tCAT B\tCAT C\tCAT D'),
+    (('E',), 'Parameters\tCAT E'),
+    (('E', 'A'), 'Parameters\tCAT A\tCAT E'),
+])
+def test_complete_table_omits_categories_without_areas(
+        categories, expected_headers):
     mod = _circling_module()
 
     html, text = mod.format_circling_complete_table(
-        _summary(categories=('A', 'C')), _params())
+        _summary(categories=categories), _params())
 
-    assert 'CAT B' in html
-    assert 'CAT E' in html
+    assert text.splitlines()[0] == expected_headers
+    assert html.count('<th') == len(categories) + 1
+    assert '—' not in text
     for row in text.splitlines()[1:]:
         cells = row.split('\t')
-        assert len(cells) == 6
-        assert cells[2] == '—'
-        assert cells[4] == '—'
-        assert cells[5] == '—'
+        assert len(cells) == len(categories) + 1
+    for cat in mod.CATEGORIES:
+        assert ('CAT {0}'.format(cat) in html) == (cat in categories)
+
+
+def test_partial_table_html_columns_fill_available_width():
+    mod = _circling_module()
+
+    html, _ = mod.format_circling_complete_table(
+        _summary(categories=('A', 'C')), _params())
+
+    assert html.count('width:35%') == 1
+    assert html.count('width:32.5%') == 2
 
 
 def test_complete_table_uses_each_category_protected_height():
@@ -131,7 +148,7 @@ def test_complete_table_supports_legacy_summary_height():
         row for row in text.splitlines()
         if row.startswith('Protected Height [ft AGL]'))
 
-    assert height_row.split('\t')[1:] == ['1000', '—', '—', '—', '—']
+    assert height_row.split('\t')[1:] == ['1000']
 
 
 def test_complete_table_rejects_incomplete_calculation_data():
@@ -505,7 +522,7 @@ def test_copy_complete_table_sets_html_and_plain_text(
             return _FakeMessageBar()
 
     class _FakeDock:
-        last_summary = _summary()
+        last_summary = _summary(categories=('A', 'C'))
         last_params = _params()
         iface = _FakeIface()
 
@@ -519,13 +536,14 @@ def test_copy_complete_table_sets_html_and_plain_text(
     dock_mod.QPANSOPYCirclingDockWidget.copy_complete_table(_FakeDock())
 
     assert '<table' in captured['html']
-    assert captured['text'].startswith('Parameters\tCAT A')
+    assert captured['text'].startswith('Parameters\tCAT A\tCAT C\n')
+    assert 'CAT E' not in captured['html']
     assert captured['mime'] is not None
     assert captured['log'] == 'Complete Circling table copied to clipboard for Word.'
     assert captured['message'][0][1] == 'Complete Circling table copied to clipboard'
 
 
-def test_show_table_copy_action_uses_complete_matrix(
+def test_show_table_copy_action_uses_calculated_categories(
         monkeypatch, dockwidget_module):
     """The inspector's Copy to Word action must not copy one table per CAT."""
     dock_mod = dockwidget_module
@@ -539,7 +557,7 @@ def test_show_table_copy_action_uses_complete_matrix(
         captured['table_content'] = table_content
 
     class _FakeDock:
-        last_summary = _summary()
+        last_summary = _summary(categories=('A', 'C'))
         last_params = _params()
 
         @staticmethod
@@ -553,9 +571,8 @@ def test_show_table_copy_action_uses_complete_matrix(
     content = captured['table_content']
     assert content is not None
     assert content.html.count('<table') == 1
-    assert content.html.count('<th') == 6
-    assert content.text.startswith(
-        'Parameters\tCAT A\tCAT B\tCAT C\tCAT D\tCAT E')
+    assert content.html.count('<th') == 3
+    assert content.text.startswith('Parameters\tCAT A\tCAT C\n')
     # Custom content replaces the generic per-category cards in the popup.
     assert captured['sections'] == []
 

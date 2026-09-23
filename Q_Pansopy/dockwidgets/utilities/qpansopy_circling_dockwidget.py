@@ -226,7 +226,7 @@ class QPANSOPYCirclingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log("Circling parameters shown in Parameters Inspector.")
 
     def copy_complete_table(self):
-        """Copy the last Circling calculation as one CAT A-E Word table."""
+        """Copy the last Circling calculation's created areas as one Word table."""
         if not self.last_summary or not self.last_params:
             self.log("Error: No calculation available to copy")
             return
