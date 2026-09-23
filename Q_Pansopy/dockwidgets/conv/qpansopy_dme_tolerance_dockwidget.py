@@ -77,6 +77,7 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         event.accept()
 
     def _on_visibility_changed(self, visible):
+        """Clear the canvas preview on hide; rebuild it from current inputs on show."""
         if visible:
             self._update_preview()
         else:
