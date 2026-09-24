@@ -1,5 +1,6 @@
 import hashlib
 import math
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 import xml.etree.ElementTree as ElementTree
@@ -116,6 +117,45 @@ def test_override_replaces_tolerance_and_keeps_all_tied_controls():
 
     assert [item.applied_tolerance_m for item in evaluated] == [0.0, 0.0]
     assert [item.identifier for item in controls] == ['A', 'B']
+
+
+@pytest.mark.parametrize(
+    'override,expected_applied,expected_oca,expected_control',
+    [
+        (None, [31.0, 20.0], [131.0, 140.0], 'survey'),
+        (0.0, [31.0, 0.0], [131.0, 120.0], 'terrain'),
+    ],
+)
+def test_survey_override_preserves_terrain_tolerance_and_control(
+    override, expected_applied, expected_oca, expected_control,
+):
+    from Q_Pansopy.modules.utilities.primary_area_assessment import (
+        _evaluate_control_records,
+        evaluate_records,
+    )
+
+    records = [
+        replace(
+            _record('terrain', 100.0, 31.0),
+            layer_type='DTM',
+            obstacle_type='terrain',
+        ),
+        _record('survey', 120.0, 20.0),
+    ]
+
+    evaluated, controls = evaluate_records(
+        records, moc_m=0.0, override_tolerance_m=override,
+    )
+    assessed_count, control_only = _evaluate_control_records(
+        records, moc_m=0.0, override_tolerance_m=override,
+    )
+
+    assert [item.tolerance_m for item in evaluated] == [31.0, 20.0]
+    assert [item.applied_tolerance_m for item in evaluated] == expected_applied
+    assert [item.oca_m for item in evaluated] == expected_oca
+    assert [item.identifier for item in controls] == [expected_control]
+    assert assessed_count == len(evaluated)
+    assert control_only == controls
 
 
 @pytest.mark.parametrize(
