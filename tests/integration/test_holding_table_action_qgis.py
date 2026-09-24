@@ -16,7 +16,8 @@ from Q_Pansopy.dockwidgets.utilities.qpansopy_holding_dockwidget import (  # noq
     QPANSOPYHoldingDockWidget,
 )
 from Q_Pansopy.modules.utilities.holding import (  # noqa: E402
-    format_holding_table_parameters, run_holding_pattern,
+    build_holding_feature_parameters, build_holding_table_views,
+    run_holding_pattern,
 )
 from Q_Pansopy import parameters_inspector_dialog  # noqa: E402
 
@@ -99,17 +100,23 @@ def test_area_action_and_dock_show_same_table(routing, monkeypatch):
     assert action.actionScopes() == {'Feature', 'Canvas'}
 
     feature = next(area.getFeatures())
-    expected = format_holding_table_parameters(result['summary'])
+    expected = build_holding_feature_parameters(result['summary'])
     assert json.loads(feature['parameters']) == expected
     shown = []
-    monkeypatch.setattr(parameters_inspector_dialog, 'show_web_popup',
-                        lambda title, sections: shown.append((title, sections)))
+    monkeypatch.setattr(
+        parameters_inspector_dialog, 'show_web_popup',
+        lambda title, sections, **kwargs: shown.append((title, sections, kwargs)))
     dock = QPANSOPYHoldingDockWidget(iface)
     dock.last_summary = result['summary']
     dock.show_parameters_table()
     dock.close()
     parameters_inspector_dialog.show_parameters_inspector(area.id(), feature.id())
-    assert shown[0][1][0][1] == shown[1][1][0][1] == expected
+    dock_views = shown[0][2]['table_views']
+    action_views = shown[1][2]['table_views']
+    assert [name for name, _content in dock_views] == ['Complete', 'Short']
+    assert [name for name, _content in action_views] == ['Complete', 'Short']
+    assert [content for _name, content in dock_views] == [
+        content for _name, content in action_views]
 
 
 def test_no_area_means_no_new_action(routing, monkeypatch):

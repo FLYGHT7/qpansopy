@@ -25,6 +25,7 @@ changelog=
     Version 0.6.0:
     - Add a generic Primary Area Obstacle Assessment tool that prepares masked terrain, normalizes surveyed obstacles, evaluates OCA, identifies all tied controlling obstacles, and groups annotated result layers in the project
     - Circling Show Table and Copy Complete Table include only categories with generated areas in the Word-compatible results table
+    - Holding Show Table opens the complete Doc 8168 calculation table by default, with the short summary available from both the dock and HoldingBasicArea action
     Version 0.5.2:
     - Circling ΔT ISA can be calculated from the current aerodrome elevation and a reference temperature, while preserving manual entry and recording the calculation source in output parameters
     - Circling protected height can be configured independently for each enabled aircraft category, with matching values in calculations, output attributes, and result tables

@@ -109,9 +109,9 @@ class QPANSOPYHoldingDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log('Error: No calculation available to show')
             return
 
-        from ...modules.utilities.holding import format_holding_table_parameters
-        flat_params = format_holding_table_parameters(summary)
-
+        from ...modules.utilities.holding import build_holding_table_views
         from ...parameters_inspector_dialog import show_web_popup
-        show_web_popup("Holding Pattern — Feature Parameters", [("Holding Pattern", flat_params)])
+        show_web_popup(
+            "Holding Pattern — Feature Parameters", [],
+            table_views=build_holding_table_views(summary))
         self.log('Holding pattern parameters shown in Parameters Inspector.')
