@@ -174,31 +174,9 @@ def evaluate_records(
     evaluated: List[EvaluatedRecord] = []
 
     for record in records:
-        elevation = float(record.elevation_m)
-        if not math.isfinite(elevation):
-            raise ValueError(
-                f"Elevation for obstacle '{record.identifier}' must be finite"
-            )
-        source_tolerance = _valid_nonnegative(
-            record.tolerance_m,
-            f"Vertical tolerance for obstacle '{record.identifier}'",
-        )
-        applied_tolerance = source_tolerance if override is None else override
-        oca_m = elevation + applied_tolerance + moc
-        oca_ft = round(oca_m / 0.3048, 3)
-        evaluated.append(EvaluatedRecord(
-            identifier=record.identifier,
-            layer_type=record.layer_type,
-            obstacle_type=record.obstacle_type,
-            coordinates=record.coordinates,
-            elevation_m=elevation,
-            tolerance_m=source_tolerance,
-            applied_tolerance_m=applied_tolerance,
-            moc_m=moc,
-            oca_m=oca_m,
-            oca_ft=oca_ft,
-            oca_pub_ft=math.ceil(oca_ft / rounding) * rounding,
-            geometry=record.geometry,
+        values = _evaluation_values(record, moc, override)
+        evaluated.append(_make_evaluated_record(
+            record, moc, values, rounding
         ))
 
     if not evaluated:
@@ -222,7 +200,11 @@ def _evaluation_values(record, moc, override):
         record.tolerance_m,
         f"Vertical tolerance for obstacle '{record.identifier}'",
     )
-    applied_tolerance = source_tolerance if override is None else override
+    applied_tolerance = (
+        override
+        if record.layer_type == "survey" and override is not None
+        else source_tolerance
+    )
     return (
         elevation,
         source_tolerance,
