@@ -22,12 +22,13 @@ with a button to copy it to the clipboard as a Word-pasteable table.
 import html
 import json
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Sequence, Tuple
 
 from qgis.core import QgsAction, QgsProject
 from qgis.PyQt.QtCore import QMimeData, QObject, pyqtSlot
 from qgis.PyQt.QtWidgets import (
-    QApplication, QDialog, QHBoxLayout, QLabel, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout,
+    QApplication, QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox,
+    QPushButton, QTextBrowser, QVBoxLayout,
 )
 
 from .utils import format_parameters_table
@@ -132,6 +133,12 @@ _PAGE_TEMPLATE = """<html>
     .complete-table-card { overflow-x: auto; }
     .complete-table-card table { min-width: 900px; }
     .complete-table-card th, .complete-table-card td { word-break: normal; white-space: nowrap; }
+    .table-view-selector { font-size: 12px; white-space: nowrap; }
+    .table-view-selector select { margin-left: 4px; padding: 4px; }
+    .holding-complete-table { min-width: 1450px; overflow-x: auto; }
+    .holding-data { min-width: 700px !important; width: 82%; margin: 0 auto 16px; }
+    .holding-calculations { min-width: 1450px !important; table-layout: fixed; }
+    .holding-calculations th, .holding-calculations td { white-space: normal; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th, td { padding: 14px 18px; font-size: 14px; line-height: 1.5; word-break: break-all; }
     th { font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em; width: 35%; }
@@ -155,6 +162,7 @@ _PAGE_TEMPLATE = """<html>
         <h3>Feature Parameters</h3>
 
         <div class="controls-wrapper">
+            __QPANSOPY_VIEW_SELECTOR__
             <button class="word-btn" onclick="triggerNativeCopy()">Copy to Word</button>
             <div class="theme-switch-wrapper">
                 <span id="theme-label">Dark Mode</span>
@@ -170,6 +178,7 @@ __QPANSOPY_SECTIONS__
 
     <script>
         let backendBridge;
+        let activeTableView = "";
         // Establish runtime links with the PyQt backend bridge container channels
         new QWebChannel(qt.webChannelTransport, function (channel) {
             backendBridge = channel.objects.pyBridge;
@@ -190,12 +199,23 @@ __QPANSOPY_SECTIONS__
 
         function triggerNativeCopy() {
             if (backendBridge) {
-                backendBridge.copyToClipboard();
+                if (activeTableView) {
+                    backendBridge.copyTableViewToClipboard(activeTableView);
+                } else {
+                    backendBridge.copyToClipboard();
+                }
                 const btn = document.querySelector('.word-btn');
                 const originalText = btn.innerHTML;
                 btn.innerHTML = '✔ Copied!';
                 setTimeout(() => { btn.innerHTML = originalText; }, 1500);
             }
+        }
+
+        function selectTableView(viewKey) {
+            activeTableView = viewKey;
+            document.querySelectorAll('.table-view').forEach((view) => {
+                view.style.display = view.dataset.viewKey === viewKey ? 'block' : 'none';
+            });
         }
     </script>
 </body>
@@ -227,14 +247,35 @@ def _build_section_html(section_title, flat_params, show_heading):
 
 
 def _build_page_html(
-        title, sections, table_content: Optional[TableContent] = None):
+        title, sections, table_content: Optional[TableContent] = None,
+        table_views: Optional[Sequence[Tuple[str, TableContent]]] = None):
     """
     sections: list of (section_title, flat_params_dict) pairs. A single
     section renders exactly like the reference sample (no sub-heading);
     multiple sections (e.g. Basic ILS/OAS ILS aggregating every matching
     layer in the project) each get their own labelled table-card.
     """
-    if table_content is None:
+    view_selector = ''
+    if table_views:
+        view_options = ''.join(
+            '<option value="{0}">{1}</option>'.format(
+                html.escape(name, quote=True), html.escape(name))
+            for name, _content in table_views
+        )
+        view_selector = (
+            '<label class="table-view-selector">View '
+            '<select id="table-view-selector" '
+            'onchange="selectTableView(this.value)">{0}</select></label>'.format(
+                view_options)
+        )
+        sections_html = ''.join(
+            '<div class="table-view" data-view-key="{0}" '
+            'style="display:{1}"><div class="table-card complete-table-card">{2}</div></div>'.format(
+                html.escape(name, quote=True),
+                'block' if index == 0 else 'none', content.html)
+            for index, (name, content) in enumerate(table_views)
+        )
+    elif table_content is None:
         show_heading = len(sections) > 1
         sections_html = "".join(
             _build_section_html(section_title, flat_params, show_heading)
@@ -247,6 +288,11 @@ def _build_page_html(
         )
     page = _PAGE_TEMPLATE.replace("__QPANSOPY_TITLE__", html.escape(title))
     page = page.replace("__QPANSOPY_SECTIONS__", sections_html)
+    page = page.replace("__QPANSOPY_VIEW_SELECTOR__", view_selector)
+    if table_views:
+        page = page.replace(
+            'let activeTableView = "";',
+            'let activeTableView = {0};'.format(json.dumps(table_views[0][0])))
     return page
 
 
@@ -277,18 +323,31 @@ class ClipboardBridge(QObject):
 
     def __init__(
             self, sections,
-            table_content: Optional[TableContent] = None):
+            table_content: Optional[TableContent] = None,
+            table_views: Optional[Sequence[Tuple[str, TableContent]]] = None):
         super().__init__()
         self._sections = sections
         self._table_content = table_content
+        self._table_views = dict(table_views or ())
 
     @pyqtSlot()
     def copyToClipboard(self):
-        content = (
-            self._table_content
-            if self._table_content is not None
-            else _build_clipboard_content(self._sections)
-        )
+        content = self._table_content
+        if content is None and self._table_views:
+            content = next(iter(self._table_views.values()))
+        if content is None:
+            content = _build_clipboard_content(self._sections)
+        self._copy_content(content)
+
+    @pyqtSlot(str)
+    def copyTableViewToClipboard(self, view_name):
+        """Copy the selected named custom table view."""
+        content = self._table_views.get(view_name)
+        if content is not None:
+            self._copy_content(content)
+
+    @staticmethod
+    def _copy_content(content):
         mime = QMimeData()
         mime.setHtml(content.html)
         mime.setText(content.text)
@@ -297,7 +356,8 @@ class ClipboardBridge(QObject):
 
 def show_web_popup(
         title, sections,
-        table_content: Optional[TableContent] = None):
+        table_content: Optional[TableContent] = None,
+        table_views: Optional[Sequence[Tuple[str, TableContent]]] = None):
     """
     Show a Parameters Inspector popup for one or more (section_title,
     flat_params_dict) pairs. Non-modal; kept alive in _open_views until
@@ -306,17 +366,22 @@ def show_web_popup(
     falling back to a QTextBrowser popup otherwise.
     """
     if _WEBENGINE_AVAILABLE:
-        return _show_webengine_popup(title, sections, table_content)
-    return _show_textbrowser_popup(title, sections, table_content)
+        if table_views is None:
+            return _show_webengine_popup(title, sections, table_content)
+        return _show_webengine_popup(title, sections, table_content, table_views)
+    if table_views is None:
+        return _show_textbrowser_popup(title, sections, table_content)
+    return _show_textbrowser_popup(title, sections, table_content, table_views)
 
 
 def _show_webengine_popup(
         title, sections,
-        table_content: Optional[TableContent] = None):
-    page_html = _build_page_html(title, sections, table_content)
+        table_content: Optional[TableContent] = None,
+        table_views: Optional[Sequence[Tuple[str, TableContent]]] = None):
+    page_html = _build_page_html(title, sections, table_content, table_views)
 
     view = QWebEngineView()
-    bridge = ClipboardBridge(sections, table_content)
+    bridge = ClipboardBridge(sections, table_content, table_views)
     channel = QWebChannel(view.page())
     view.page().setWebChannel(channel)
     channel.registerObject("pyBridge", bridge)
@@ -327,7 +392,7 @@ def _show_webengine_popup(
     screen = view.screen().geometry()
     max_width = (
         min(int(screen.width() * 0.85), 1200)
-        if table_content is not None else int(screen.width() / 3)
+        if table_content is not None or table_views else int(screen.width() / 3)
     )
     max_height = int(screen.height() * 0.75)
     view.resize(max_width, max_height)
@@ -409,8 +474,11 @@ def _build_fallback_section_html(section_title, flat_params, show_heading, palet
 
 def _build_fallback_page_html(
         title, sections, theme='dark',
-        table_content: Optional[TableContent] = None):
+        table_content: Optional[TableContent] = None,
+        table_views: Optional[Sequence[Tuple[str, TableContent]]] = None):
     palette = _FALLBACK_PALETTES[theme]
+    if table_views:
+        table_content = table_views[0][1]
     if table_content is None:
         show_heading = len(sections) > 1
         sections_html = "".join(
@@ -435,15 +503,18 @@ class _FallbackParametersDialog(QDialog):
 
     def __init__(
             self, title, sections, parent=None,
-            table_content: Optional[TableContent] = None):
+            table_content: Optional[TableContent] = None,
+            table_views: Optional[Sequence[Tuple[str, TableContent]]] = None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setMinimumSize(
-            820 if table_content is not None else 520,
-            460 if table_content is not None else 360,
+            820 if table_content is not None or table_views else 520,
+            460 if table_content is not None or table_views else 360,
         )
         self._sections = sections
         self._table_content = table_content
+        self._table_views = dict(table_views or ())
+        self._active_table_view = next(iter(self._table_views), None)
         self._title = title
         self._theme = 'dark'
 
@@ -454,6 +525,12 @@ class _FallbackParametersDialog(QDialog):
         title_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f8fafc;")
         header_row.addWidget(title_label)
         header_row.addStretch()
+        self._view_combo = None
+        if self._table_views:
+            self._view_combo = QComboBox(self)
+            self._view_combo.addItems(list(self._table_views))
+            self._view_combo.currentTextChanged.connect(self._select_table_view)
+            header_row.addWidget(self._view_combo)
         copy_btn = QPushButton("Copy to Word")
         copy_btn.clicked.connect(self._copy_to_word)
         header_row.addWidget(copy_btn)
@@ -481,22 +558,29 @@ class _FallbackParametersDialog(QDialog):
             f"QTextBrowser {{ background-color: {palette['bg']}; border: 1px solid {palette['card_border']}; }}"
         )
         self._browser.setHtml(_build_fallback_page_html(
-            self._title, self._sections, self._theme, self._table_content))
+            self._title, self._sections, self._theme,
+            self._table_content or self._table_views.get(self._active_table_view)))
+
+    def _select_table_view(self, view_name):
+        self._active_table_view = view_name
+        self._render()
 
     def _toggle_theme(self):
         self._theme = 'light' if self._theme == 'dark' else 'dark'
         self._render()
 
     def _copy_to_word(self):
-        ClipboardBridge(
-            self._sections, self._table_content).copyToClipboard()
+        content = self._table_content or self._table_views.get(
+            self._active_table_view)
+        ClipboardBridge(self._sections, content).copyToClipboard()
 
 
 def _show_textbrowser_popup(
         title, sections,
-        table_content: Optional[TableContent] = None):
+        table_content: Optional[TableContent] = None,
+        table_views: Optional[Sequence[Tuple[str, TableContent]]] = None):
     dialog = _FallbackParametersDialog(
-        title, sections, table_content=table_content)
+        title, sections, table_content=table_content, table_views=table_views)
     key = id(dialog)
     _open_views[key] = dialog
     dialog.finished.connect(lambda _result: _open_views.pop(key, None))
@@ -542,6 +626,16 @@ def show_parameters_inspector(layer_id, feature_id):
         return
 
     title = resolve_inspector_title(parsed, layer.name())
+    if (
+        isinstance(parsed, dict)
+        and parsed.get('calculation_type') == 'Holding Pattern'
+        and parsed.get('schema_version') == 2
+        and isinstance(parsed.get('summary'), dict)
+    ):
+        from .modules.utilities.holding import build_holding_table_views
+        show_web_popup(
+            title, [], table_views=build_holding_table_views(parsed['summary']))
+        return
     show_web_popup(title, [(layer.name(), parsed)])
 
 

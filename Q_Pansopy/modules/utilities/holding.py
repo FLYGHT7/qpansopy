@@ -5,9 +5,12 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 import json
+import html
 import math
 
-from ...parameters_inspector_dialog import register_parameters_action
+from ...parameters_inspector_dialog import (
+    TableContent, register_parameters_action,
+)
 
 # Compat for QGIS 3/4: QgsWkbTypes.LineGeometry → Qgis.GeometryType.Line
 try:
@@ -45,6 +48,237 @@ def format_holding_table_parameters(summary):
         'Rate_deg_s': f"{summary.get('Rate_deg_s', 0):.3f}",
         'Radius_nm': f"{summary.get('Radius_nm', 0):.3f}",
     }
+
+
+def build_holding_feature_parameters(summary):
+    """Return a numeric, versioned snapshot for the Holding area action."""
+    return {
+        'calculation_type': 'Holding Pattern',
+        'schema_version': 2,
+        'summary': dict(summary),
+    }
+
+
+def _holding_complete_rows(summary):
+    """Return Doc 8168 table rows from the actual Holding calculation values."""
+    tas_kt = float(summary['TAS_kt'])
+    rate = float(summary['Rate_deg_s'])
+    radius_nm = float(summary['Radius_nm'])
+    altitude_ft = float(summary['Altitude_ft'])
+    leg_minutes = float(summary['Leg_min'])
+    bank = float(summary['Bank_deg'])
+    wind_kt = (2 * altitude_ft / 1000.0) + 47.0
+    v_nmps = tas_kt / 3600.0
+    wind_nmps = wind_kt / 3600.0
+    params = _wind_params(altitude_ft, leg_minutes, tas_kt, rate)
+    t = params['t']
+    e45 = params['e45']
+    xe_nm = (
+        2 * radius_nm + (t + 15) * v_nmps
+        + (t + 26 + 195 / rate) * wind_nmps
+    )
+    ye_nm = (
+        11 * v_nmps * math.cos(math.radians(20))
+        + radius_nm * (1 + math.sin(math.radians(20)))
+        + (t + 15) * v_nmps * math.tan(math.radians(5))
+        + (t + 26 + 125 / rate) * wind_nmps
+    )
+
+    si_speed = tas_kt * 1.852  # km/h
+    si_v = si_speed / 3600.0  # km/s
+    si_w = wind_kt * 1.852  # km/h, converted from the geometry's wind value
+    si_wp = si_w / 3600.0
+
+    def si_dist(distance_nm):
+        return distance_nm * 1.852
+
+    h_ft = altitude_ft / 1000.0
+    h_m = altitude_ft * 0.3048 / 1000.0
+    ias_kt = float(summary['IAS_kt'])
+    k = float(summary.get('K_factor', tas_kt / ias_kt))
+    angle_rate = (
+        'R = (3431 tan {0:.1f}°) / (π V)'.format(bank)
+        if abs(bank - 25.0) > 1e-9 else 'R = 509.26 / V'
+    )
+
+    definitions = [
+        ('1', 'K', 'Conversion factor at entered altitude and ISA deviation',
+         'Conversion factor at entered altitude and ISA deviation', k, k, (3, 4)),
+        ('2', 'V', 'V = K × IAS', 'V = K × IAS', si_speed, tas_kt, 2),
+        ('3', 'v', 'v = V ÷ 3 600', 'v = V ÷ 3 600', si_v, v_nmps, (4, 5)),
+        ('4', 'R',
+         'R = (9.81 tan φ ÷ V) × 180/π, V in m/s (φ = {0:.1f}°)'.format(bank),
+         angle_rate, rate, rate, 2),
+        ('5', 'r', 'r = v × 57.296 ÷ R', 'r = V ÷ (62.83 R)',
+         si_dist(radius_nm), radius_nm, 2),
+        ('6', 'h', 'h in thousands of metres', 'h in thousands of feet',
+         h_m, h_ft, 2),
+        ('7', 'w', 'w = (2h_ft + 47) × 1.852 km/h', 'w = 2h + 47',
+         si_w, wind_kt, (1, 0)),
+        ('8', 'w′', 'w′ = w ÷ 3 600', 'w′ = w ÷ 3 600',
+         si_wp, wind_nmps, (5, 4)),
+        ('9', 'E₄₅', 'E₄₅ = 45w′ ÷ R', 'E₄₅ = 45w′ ÷ R',
+         si_dist(e45), e45, 3),
+        ('10', 't', 't = 60T', 't = 60T', t, t, 0),
+        ('11', 'L', 'L = vt', 'L = vt', si_dist(v_nmps * t), v_nmps * t, 2),
+        ('12', 'ab', 'ab = 5v', 'ab = 5v', si_dist(params['ab']), params['ab'], 2),
+        ('13', 'ac', 'ac = 11v', 'ac = 11v', si_dist(params['ac']), params['ac'], 2),
+        ('14', 'g₁ = g₃', 'g₁ = g₃ = (t − 5)v', 'g₁ = g₃ = (t − 5)v',
+         si_dist(params['g1']), params['g1'], 2),
+        ('15', 'g₂ = g₄', 'g₂ = g₄ = (t + 21)v', 'g₂ = g₄ = (t + 21)v',
+         si_dist(params['g2']), params['g2'], 2),
+        ('16', 'Wb', 'Wb = 5w′', 'Wb = 5w′', si_dist(params['wb']), params['wb'], 2),
+        ('17', 'Wc', 'Wc = 11w′', 'Wc = 11w′', si_dist(params['wc']), params['wc'], 2),
+        ('18', 'Wd', 'Wd = Wc + E₄₅', 'Wd = Wc + E₄₅', si_dist(params['wd']), params['wd'], 2),
+        ('19', 'We', 'We = Wc + 2E₄₅', 'We = Wc + 2E₄₅', si_dist(params['we']), params['we'], 2),
+        ('20', 'Wf', 'Wf = Wc + 3E₄₅', 'Wf = Wc + 3E₄₅', si_dist(params['wf']), params['wf'], 2),
+        ('21', 'Wg', 'Wg = Wc + 4E₄₅', 'Wg = Wc + 4E₄₅', si_dist(params['wg']), params['wg'], 2),
+        ('22', 'Wh', 'Wh = Wb + 4E₄₅', 'Wh = Wb + 4E₄₅', si_dist(params['wh']), params['wh'], 2),
+        ('23', 'Wo', 'Wo = Wb + 5E₄₅', 'Wo = Wb + 5E₄₅',
+         si_dist(params['wb'] + 5 * e45), params['wb'] + 5 * e45, 2),
+        ('24', 'Wp', 'Wp = Wb + 6E₄₅', 'Wp = Wb + 6E₄₅',
+         si_dist(params['wb'] + 6 * e45), params['wb'] + 6 * e45, 2),
+        ('25', 'W₁ = W₃', 'W₁ = W₃ = (t + 6)w′ + 4E₄₅',
+         'W₁ = W₃ = (t + 6)w′ + 4E₄₅', si_dist(params['w1']), params['w1'], 2),
+        ('26', 'W₁₂ = W₁₄', 'W₁₂ = W₁₄ = W₁ + 14w′',
+         'W₁₂ = W₁₄ = W₁ + 14w′', si_dist(params['w2']), params['w2'], 2),
+        ('27', 'Wj', 'Wj = W₁₂ + E₄₅', 'Wj = W₁₂ + E₄₅', si_dist(params['wj']), params['wj'], 2),
+        ('28', 'Wk = Wl', 'Wk = Wl = W₁₂ + 2E₄₅',
+         'Wk = Wl = W₁₂ + 2E₄₅', si_dist(params['wk']), params['wk'], 2),
+        ('29', 'Wm', 'Wm = W₁₂ + 3E₄₅', 'Wm = W₁₂ + 3E₄₅', si_dist(params['wm']), params['wm'], 2),
+        ('30', 'Wn₃', 'Wn₃ = W₁ + 4E₄₅', 'Wn₃ = W₁ + 4E₄₅', si_dist(params['wn3']), params['wn3'], 2),
+        ('31', 'Wn₄', 'Wn₄ = W₁₂ + 4E₄₅', 'Wn₄ = W₁₂ + 4E₄₅', si_dist(params['wn4']), params['wn4'], 2),
+        ('32', 'XE', 'XE = 2r + (t + 15)v + (t + 26 + 195 ÷ R)w′',
+         'XE = 2r + (t + 15)v + (t + 26 + 195 ÷ R)w′',
+         si_dist(xe_nm), xe_nm, 2),
+        ('33', 'YE', 'YE = 11v cos 20° + r(1 + sin 20°) + (t + 15)v tan 5° + (t + 26 + 125 ÷ R)w′',
+         'YE = 11v cos 20° + r(1 + sin 20°) + (t + 15)v tan 5° + (t + 26 + 125 ÷ R)w′',
+         si_dist(ye_nm), ye_nm, 2),
+    ]
+    return definitions, (ias_kt * 1.852, tas_kt, altitude_ft * 0.3048,
+                         altitude_ft, leg_minutes, summary['ISA_var_C'], bank)
+
+
+def format_holding_complete_table(summary):
+    """Return the complete ICAO table as Word HTML and tab-separated text."""
+    definitions, _input_data = _holding_complete_rows(summary)
+    html_rows = []
+    text_rows = [
+        'Line\tParameter\tSI Formula\tSI Value\tNon-SI Formula\tNon-SI Value'
+    ]
+    cell_style = (
+        'border:1px solid #333;color:#111;background:#fff;padding:5px 7px;'
+        'font-family:Calibri,Arial,sans-serif;font-size:10pt;vertical-align:middle;'
+        'white-space:normal'
+    )
+    for line, label, si_formula, non_si_formula, si_value, non_si_value, digits in definitions:
+        si_digits, non_si_digits = digits if isinstance(digits, tuple) else (digits, digits)
+        si_units = {'2': 'km/h', '3': 'km/s', '4': '°/s', '5': 'km',
+                    '7': 'km/h', '8': 'km/s', '9': 'km', '10': 's'}
+        non_si_units = {'2': 'kt', '3': 'NM/s', '4': '°/s', '5': 'NM',
+                        '7': 'kt', '8': 'NM/s', '9': 'NM', '10': 's'}
+        si_unit = si_units.get(line, 'km' if line not in ('1', '4', '6', '10') else '')
+        non_si_unit = non_si_units.get(
+            line, 'NM' if line not in ('1', '4', '6', '10') else '')
+        si_value_text = '{0:.{1}f}{2}'.format(si_value, si_digits, ' ' + si_unit if si_unit else '')
+        non_si_value_text = '{0:.{1}f}{2}'.format(non_si_value, non_si_digits, ' ' + non_si_unit if non_si_unit else '')
+        html_rows.append(
+            '<tr><td style="{6}">{0}</td><td style="{6}">{1}</td>'
+            '<td style="{6}">{2}</td><td style="{7}">{3}</td>'
+            '<td style="{6}">{4}</td><td style="{7}">{5}</td></tr>'.format(
+                html.escape(line), html.escape(label), html.escape(si_formula),
+                html.escape(si_value_text), html.escape(non_si_formula),
+                html.escape(non_si_value_text), cell_style,
+                cell_style + ';text-align:center;white-space:nowrap'))
+        text_rows.append('\t'.join((line, label, si_formula, si_value_text,
+                                    non_si_formula, non_si_value_text)))
+
+    _si_speed, _tas_kt, altitude_m, altitude_ft, leg_minutes, isa_var, bank = _input_data
+    isa_text = 'ISA {0:+.1f} °C'.format(float(isa_var))
+    data_th = (
+        'border:1px solid #333;background:#000;color:#fff;padding:6px;'
+        'text-align:center;font-family:Calibri,Arial,sans-serif;font-size:10pt'
+    )
+    data_td = (
+        'border:1px solid #333;color:#111;background:#fff;padding:5px 7px;'
+        'font-family:Calibri,Arial,sans-serif;font-size:10pt'
+    )
+    data_html = (
+        '<table class="holding-data" style="width:82%;min-width:700px;margin:0 auto 16px;'
+        'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt">'
+        '<tr><th colspan="3" style="{0}">DATA</th></tr>'
+        '<tr><th style="{0}">Input</th><th style="{0}">SI Units</th>'
+        '<th style="{0}">Non-SI Units</th></tr>'
+        '<tr><td style="{1}">IAS</td><td style="{1}">{2:.2f} km/h</td>'
+        '<td style="{1}">{3:.2f} kt</td></tr>'
+        '<tr><td style="{1}">Altitude</td><td style="{1}">{4:.0f} m</td>'
+        '<td style="{1}">{5:.0f} ft</td></tr>'
+        '<tr><td style="{1}">T</td><td style="{1}">{6:.2f} min</td>'
+        '<td style="{1}">{6:.2f} min</td></tr>'
+        '<tr><td style="{1}">Temperature</td><td style="{1}">{7}</td>'
+        '<td style="{1}">{7}</td></tr>'
+        '<tr><td style="{1}">Bank angle</td><td style="{1}">{8:.1f}°</td>'
+        '<td style="{1}">{8:.1f}°</td></tr></table>'.format(
+            data_th, data_td, _si_speed, float(summary['IAS_kt']),
+            altitude_m, altitude_ft, leg_minutes, html.escape(isa_text), bank)
+    )
+    plain_data = [
+        'DATA', 'Input\tSI Units\tNon-SI Units',
+        'IAS\t{0:.2f} km/h\t{1:.2f} kt'.format(_si_speed, float(summary['IAS_kt'])),
+        'Altitude\t{0:.0f} m\t{1:.0f} ft'.format(altitude_m, altitude_ft),
+        'T\t{0:.2f} min\t{0:.2f} min'.format(leg_minutes),
+        'Temperature\t{0}\t{0}'.format(isa_text),
+        'Bank angle\t{0:.1f}°\t{0:.1f}°'.format(bank),
+        '',
+        'Line\tParameter\tSI Formula\tSI Value\tNon-SI Formula\tNon-SI Value',
+    ]
+    header_style = (
+        'border:1px solid #333;background:#000;color:#fff;padding:7px 5px;'
+        'text-align:center;font-family:Calibri,Arial,sans-serif;font-size:10pt;'
+        'font-weight:bold;text-transform:none;letter-spacing:normal;width:auto'
+    )
+    table_html = (
+        '<div class="holding-complete-table" style="overflow-x:auto;min-width:1450px">{0}'
+        '<table class="holding-calculations" border="1" cellpadding="0" '
+        'cellspacing="0" style="min-width:1450px;width:1450px;table-layout:fixed;'
+        'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt">'
+        '<colgroup><col style="width:5%"><col style="width:7%">'
+        '<col style="width:30%"><col style="width:8%">'
+        '<col style="width:42%"><col style="width:8%"></colgroup>'
+        '<thead><tr><th rowspan="2" style="{2}">Line</th>'
+        '<th rowspan="2" style="{2}">Parameter</th>'
+        '<th colspan="2" style="{2}">Calculations using SI units</th>'
+        '<th colspan="2" style="{2}">Calculations using non-SI units</th></tr>'
+        '<tr><th style="{2}">Formula</th><th style="{2}">Value</th>'
+        '<th style="{2}">Formula</th><th style="{2}">Value</th></tr></thead>'
+        '<tbody>{1}</tbody></table></div>'.format(
+            data_html, ''.join(html_rows), header_style)
+    )
+    return table_html, '\n'.join(plain_data + text_rows[1:])
+
+
+def _holding_short_content(summary):
+    params = format_holding_table_parameters(summary)
+    header = '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%">'
+    rows = ['<tr><th>Parameter</th><th>Value</th></tr>']
+    rows.extend(
+        '<tr><td><b>{0}</b></td><td>{1}</td></tr>'.format(
+            html.escape(str(key)), html.escape(str(value)))
+        for key, value in params.items()
+    )
+    plain = ['Parameter\tValue'] + [
+        '{0}\t{1}'.format(key, value) for key, value in params.items()
+    ]
+    return TableContent(header + ''.join(rows) + '</table>', '\n'.join(plain))
+
+
+def build_holding_table_views(summary):
+    """Return complete and short views in the default display order."""
+    complete_html, complete_text = format_holding_complete_table(summary)
+    return (
+        ('Complete', TableContent(complete_html, complete_text)),
+        ('Short', _holding_short_content(summary)),
+    )
 
 
 def run_holding_pattern(iface, routing_layer, params: dict):
@@ -103,6 +337,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
             "Bank_deg": bank_angle,
             "Leg_min": leg_time_min,
             "Turn": turn,
+            "K_factor": k,
             "TAS_kt": tas,
             "Rate_deg_s": rate_of_turn,
             "Radius_nm": radius_of_turn,
@@ -243,7 +478,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
                     ba_layer.updateFields()
                     ba_f = QgsFeature()
                     ba_f.setGeometry(hull)
-                    ba_f.setAttributes([json.dumps(format_holding_table_parameters(summary))])
+                    ba_f.setAttributes([json.dumps(build_holding_feature_parameters(summary))])
                     ba_pr.addFeatures([ba_f])
                     ba_layer.updateExtents()
                     QgsProject.instance().addMapLayer(ba_layer)

@@ -158,6 +158,22 @@ def test_build_page_html_uses_complete_table_content():
     assert 'complete-table-card' in page
 
 
+def test_build_page_html_renders_named_views_with_complete_default():
+    mod = _mod()
+    views = (
+        ('Complete', mod.TableContent('<table id="full"></table>', 'full')),
+        ('Short', mod.TableContent('<table id="short"></table>', 'short')),
+    )
+
+    page = mod._build_page_html('Holding', [], table_views=views)
+
+    assert 'value="Complete">Complete</option>' in page
+    assert 'value="Short">Short</option>' in page
+    assert 'let activeTableView = "Complete";' in page
+    assert 'id="full"' in page and 'id="short"' in page
+    assert 'copyTableViewToClipboard(activeTableView)' in page
+
+
 # ---------------------------------------------------------------------------
 # ClipboardBridge
 # ---------------------------------------------------------------------------
@@ -233,6 +249,39 @@ def test_clipboard_bridge_uses_custom_single_table_content(monkeypatch):
     assert captured['html'].count('<table') == 1
 
 
+def test_clipboard_bridge_copies_requested_named_view(monkeypatch):
+    mod = _mod()
+    captured = {}
+
+    class _FakeMimeData:
+        def setHtml(self, value):
+            captured['html'] = value
+
+        def setText(self, value):
+            captured['text'] = value
+
+    class _FakeClipboard:
+        def setMimeData(self, mime):
+            captured['mime'] = mime
+
+    class _FakeQApplication:
+        @staticmethod
+        def clipboard():
+            return _FakeClipboard()
+
+    monkeypatch.setattr(mod, 'QMimeData', _FakeMimeData)
+    monkeypatch.setattr(mod, 'QApplication', _FakeQApplication)
+    views = (
+        ('Complete', mod.TableContent('<table>full</table>', 'full')),
+        ('Short', mod.TableContent('<table>short</table>', 'short')),
+    )
+
+    mod.ClipboardBridge([], table_views=views).copyTableViewToClipboard('Short')
+
+    assert captured['html'] == '<table>short</table>'
+    assert captured['text'] == 'short'
+
+
 # ---------------------------------------------------------------------------
 # QTextBrowser fallback (QtWebEngine unavailable -- issue #193 follow-up)
 # ---------------------------------------------------------------------------
@@ -274,6 +323,29 @@ def test_fallback_dialog_toggle_theme_flips_state():
     assert dialog._theme == 'dark'
 
 
+def test_fallback_dialog_copies_the_selected_named_view(monkeypatch):
+    mod = _mod()
+    views = (
+        ('Complete', mod.TableContent('<table>full</table>', 'full')),
+        ('Short', mod.TableContent('<table>short</table>', 'short')),
+    )
+    dialog = mod._FallbackParametersDialog('Holding', [], table_views=views)
+    dialog._select_table_view('Short')
+    copied = []
+
+    class _Bridge:
+        def __init__(self, _sections, content):
+            self.content = content
+
+        def copyToClipboard(self):
+            copied.append(self.content)
+
+    monkeypatch.setattr(mod, 'ClipboardBridge', _Bridge)
+    dialog._copy_to_word()
+
+    assert copied == [views[1][1]]
+
+
 def test_build_fallback_page_html_multiple_sections_get_subheadings():
     mod = _mod()
     page = mod._build_fallback_page_html("Basic ILS — Feature Parameters", [
@@ -307,6 +379,19 @@ def test_build_fallback_page_html_uses_complete_table_content():
     assert page.count('<table') == 1
     assert 'id="complete"' in page
     assert '<b>IAS</b>' not in page
+
+
+def test_build_fallback_page_html_uses_first_named_view_by_default():
+    mod = _mod()
+    views = (
+        ('Complete', mod.TableContent('<table id="full"></table>', 'full')),
+        ('Short', mod.TableContent('<table id="short"></table>', 'short')),
+    )
+
+    page = mod._build_fallback_page_html('Holding', [], table_views=views)
+
+    assert 'id="full"' in page
+    assert 'id="short"' not in page
 
 
 def test_show_web_popup_falls_back_when_webengine_unavailable(monkeypatch):
@@ -380,3 +465,58 @@ def test_show_web_popup_forwards_custom_content_to_fallback(monkeypatch):
     )
 
     assert calls == [("Title", [("CAT A", {'IAS': 100})], content)]
+
+
+def test_inspector_routes_holding_snapshot_to_named_views_and_keeps_legacy_json(monkeypatch):
+    mod = _mod()
+    summary = {
+        'IAS_kt': 220.0, 'Altitude_ft': 10000.0, 'ISA_var_C': 15.0,
+        'Bank_deg': 25.0, 'Leg_min': 1.0, 'Leg_nm': 4.38, 'Turn': 'R',
+        'TAS_kt': 263.07, 'Rate_deg_s': 1.94, 'Radius_nm': 2.16,
+        'K_factor': 1.19576,
+    }
+
+    class _Feature:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def isValid(self):
+            return True
+
+        def attribute(self, _name):
+            import json
+            return json.dumps(self.payload)
+
+    class _Layer:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def name(self):
+            return 'HoldingBasicArea'
+
+        def getFeature(self, _feature_id):
+            return _Feature(self.payload)
+
+    project = type('Project', (), {'mapLayer': lambda _self, _layer_id: layer})()
+    calls = []
+    monkeypatch.setattr(
+        mod.QgsProject, 'instance', staticmethod(lambda: project), raising=False)
+    monkeypatch.setattr(
+        mod, 'show_web_popup',
+        lambda title, sections, **kwargs: calls.append((title, sections, kwargs)))
+
+    layer = _Layer({
+        'calculation_type': 'Holding Pattern', 'schema_version': 2,
+        'summary': summary,
+    })
+    mod.show_parameters_inspector('layer', 1)
+    assert calls[0][0] == 'Holding Pattern — Feature Parameters'
+    assert calls[0][1] == []
+    assert [name for name, _content in calls[0][2]['table_views']] == [
+        'Complete', 'Short']
+    assert 'XE' in calls[0][2]['table_views'][0][1].html
+
+    layer.payload = {'IAS_kt': '195.0', 'TAS_kt': '247.89'}
+    mod.show_parameters_inspector('layer', 2)
+    assert calls[1][1] == [('HoldingBasicArea', layer.payload)]
+    assert calls[1][2] == {}
