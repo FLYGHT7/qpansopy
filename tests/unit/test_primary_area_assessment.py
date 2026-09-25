@@ -39,11 +39,25 @@ def _record(identifier, elevation, tolerance):
         identifier=identifier,
         layer_type='survey',
         obstacle_type='building',
-        coordinates='500000.000, 1600000.000',
         elevation_m=elevation,
         tolerance_m=tolerance,
         geometry=None,
     )
+
+
+def test_output_fields_omit_coordinates(monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    monkeypatch.setattr(module, 'QgsFields', list)
+    monkeypatch.setattr(
+        module, 'QgsField', lambda name, *args, **kwargs: name
+    )
+
+    assert module._output_fields() == [
+        'id', 'layer_type', 'obstacle_type', 'elev', 'tolerances',
+        'applied_tolerance', 'area_eval', 'moc_m', 'oca_m', 'oca_ft',
+        'oca_pub_ft',
+    ]
 
 
 def test_evaluation_uses_each_records_tolerance():
