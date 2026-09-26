@@ -469,13 +469,6 @@
         </config>
       </editWidget>
     </field>
-    <field configurationFlags="0" name="coordinates">
-      <editWidget type="TextEdit">
-        <config>
-          <Option/>
-        </config>
-      </editWidget>
-    </field>
     <field configurationFlags="0" name="elev">
       <editWidget type="TextEdit">
         <config>
@@ -530,20 +523,18 @@
     <alias field="id" index="0" name=""/>
     <alias field="layer_type" index="1" name=""/>
     <alias field="obstacle_type" index="2" name=""/>
-    <alias field="coordinates" index="3" name=""/>
-    <alias field="elev" index="4" name=""/>
-    <alias field="tolerances" index="5" name=""/>
-    <alias field="applied_tolerance" index="6" name=""/>
-    <alias field="area_eval" index="7" name=""/>
-    <alias field="moc_m" index="8" name=""/>
-    <alias field="oca_m" index="9" name=""/>
-    <alias field="oca_ft" index="10" name=""/>
+    <alias field="elev" index="3" name=""/>
+    <alias field="tolerances" index="4" name=""/>
+    <alias field="applied_tolerance" index="5" name=""/>
+    <alias field="area_eval" index="6" name=""/>
+    <alias field="moc_m" index="7" name=""/>
+    <alias field="oca_m" index="8" name=""/>
+    <alias field="oca_ft" index="9" name=""/>
   </aliases>
   <defaults>
     <default applyOnUpdate="0" expression="" field="id"/>
     <default applyOnUpdate="0" expression="" field="layer_type"/>
     <default applyOnUpdate="0" expression="" field="obstacle_type"/>
-    <default applyOnUpdate="0" expression="" field="coordinates"/>
     <default applyOnUpdate="0" expression="" field="elev"/>
     <default applyOnUpdate="0" expression="" field="tolerances"/>
     <default applyOnUpdate="0" expression="" field="applied_tolerance"/>
@@ -556,7 +547,6 @@
     <constraint constraints="0" exp_strength="0" field="id" notnull_strength="0" unique_strength="0"/>
     <constraint constraints="0" exp_strength="0" field="layer_type" notnull_strength="0" unique_strength="0"/>
     <constraint constraints="0" exp_strength="0" field="obstacle_type" notnull_strength="0" unique_strength="0"/>
-    <constraint constraints="0" exp_strength="0" field="coordinates" notnull_strength="0" unique_strength="0"/>
     <constraint constraints="0" exp_strength="0" field="elev" notnull_strength="0" unique_strength="0"/>
     <constraint constraints="0" exp_strength="0" field="tolerances" notnull_strength="0" unique_strength="0"/>
     <constraint constraints="0" exp_strength="0" field="applied_tolerance" notnull_strength="0" unique_strength="0"/>
@@ -569,7 +559,6 @@
     <constraint desc="" exp="" field="id"/>
     <constraint desc="" exp="" field="layer_type"/>
     <constraint desc="" exp="" field="obstacle_type"/>
-    <constraint desc="" exp="" field="coordinates"/>
     <constraint desc="" exp="" field="elev"/>
     <constraint desc="" exp="" field="tolerances"/>
     <constraint desc="" exp="" field="applied_tolerance"/>
@@ -587,7 +576,6 @@
       <column hidden="0" name="id" type="field" width="-1"/>
       <column hidden="0" name="layer_type" type="field" width="-1"/>
       <column hidden="0" name="obstacle_type" type="field" width="-1"/>
-      <column hidden="0" name="coordinates" type="field" width="-1"/>
       <column hidden="0" name="elev" type="field" width="-1"/>
       <column hidden="0" name="tolerances" type="field" width="-1"/>
       <column hidden="0" name="applied_tolerance" type="field" width="-1"/>
@@ -629,7 +617,6 @@ def my_form_open(dialog, layer, feature):
   <editable>
     <field editable="1" name="applied_tolerance"/>
     <field editable="1" name="area_eval"/>
-    <field editable="1" name="coordinates"/>
     <field editable="1" name="elev"/>
     <field editable="1" name="id"/>
     <field editable="1" name="layer_type"/>
@@ -642,7 +629,6 @@ def my_form_open(dialog, layer, feature):
   <labelOnTop>
     <field labelOnTop="0" name="applied_tolerance"/>
     <field labelOnTop="0" name="area_eval"/>
-    <field labelOnTop="0" name="coordinates"/>
     <field labelOnTop="0" name="elev"/>
     <field labelOnTop="0" name="id"/>
     <field labelOnTop="0" name="layer_type"/>
@@ -655,7 +641,6 @@ def my_form_open(dialog, layer, feature):
   <reuseLastValuePolicy>
     <field name="applied_tolerance" reuseLastValuePolicy="NotAllowed"/>
     <field name="area_eval" reuseLastValuePolicy="NotAllowed"/>
-    <field name="coordinates" reuseLastValuePolicy="NotAllowed"/>
     <field name="elev" reuseLastValuePolicy="NotAllowed"/>
     <field name="id" reuseLastValuePolicy="NotAllowed"/>
     <field name="layer_type" reuseLastValuePolicy="NotAllowed"/>

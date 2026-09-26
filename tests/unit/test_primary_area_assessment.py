@@ -39,28 +39,24 @@ def _record(identifier, elevation, tolerance):
         identifier=identifier,
         layer_type='survey',
         obstacle_type='building',
-        coordinates='500000.000, 1600000.000',
         elevation_m=elevation,
         tolerance_m=tolerance,
         geometry=None,
     )
 
 
-def test_output_fields_place_publication_increment_before_published_oca(
-        monkeypatch):
+def test_output_fields_omit_coordinates(monkeypatch):
     from Q_Pansopy.modules.utilities import primary_area_assessment as module
 
     monkeypatch.setattr(module, 'QgsFields', list)
     monkeypatch.setattr(
-        module, 'QgsField',
-        lambda name, field_type, **kwargs: (name, field_type),
+        module, 'QgsField', lambda name, *args, **kwargs: name
     )
 
-    fields = module._output_fields()
-
-    assert fields[-2:] == [
-        ('oca_pub_increment', module._TYPE_INT),
-        ('oca_pub_ft', module._TYPE_INT),
+    assert module._output_fields() == [
+        'id', 'layer_type', 'obstacle_type', 'elev', 'tolerances',
+        'applied_tolerance', 'area_eval', 'moc_m', 'oca_m', 'oca_ft',
+        'oca_pub_ft',
     ]
 
 

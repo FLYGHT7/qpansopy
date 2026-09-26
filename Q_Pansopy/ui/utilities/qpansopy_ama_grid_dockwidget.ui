@@ -33,8 +33,10 @@
      <widget class="QGroupBox" name="outputGroup">
       <property name="title"><string>Output</string></property>
       <layout class="QFormLayout" name="outputFormLayout">
-       <item row="0" column="0"><widget class="QCheckBox" name="exportKmlCheckBox"><property name="text"><string>Export KML</string></property><property name="checked"><bool>false</bool></property></widget></item>
-       <item row="0" column="1"><layout class="QHBoxLayout" name="outputFolderLayout"><item><widget class="QLineEdit" name="outputFolderLineEdit"/></item><item><widget class="QPushButton" name="browseButton"><property name="maximumSize"><size><width>32</width><height>16777215</height></size></property><property name="text"><string>...</string></property></widget></item></layout></item>
+       <item row="0" column="0"><widget class="QLabel" name="outputCrsLabel"><property name="text"><string>Layer CRS:</string></property></widget></item>
+       <item row="0" column="1"><widget class="QComboBox" name="outputCrsComboBox"><item><property name="text"><string>Project CRS (PCS)</string></property></item><item><property name="text"><string>WGS84 (EPSG:4326)</string></property></item></widget></item>
+       <item row="1" column="0"><widget class="QCheckBox" name="exportKmlCheckBox"><property name="text"><string>Export KML</string></property><property name="checked"><bool>false</bool></property></widget></item>
+       <item row="1" column="1"><layout class="QHBoxLayout" name="outputFolderLayout"><item><widget class="QLineEdit" name="outputFolderLineEdit"/></item><item><widget class="QPushButton" name="browseButton"><property name="maximumSize"><size><width>32</width><height>16777215</height></size></property><property name="text"><string>...</string></property></widget></item></layout></item>
       </layout>
      </widget>
     </item>
