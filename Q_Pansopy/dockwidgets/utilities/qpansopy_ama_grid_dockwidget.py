@@ -33,6 +33,8 @@ class QPANSOPYAMAGridDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.extentSourceComboBox.setItemData(1, "layer")
         self.amaSizeComboBox.setItemData(0, "AMA_1")
         self.amaSizeComboBox.setItemData(1, "AMA_05")
+        self.outputCrsComboBox.setItemData(0, "project")
+        self.outputCrsComboBox.setItemData(1, "wgs84")
         self.extentLayerComboBox.setFilters(MLPM_All)
         self.extentLayerComboBox.setAllowEmptyLayer(True)
         self.extentSourceComboBox.currentIndexChanged.connect(self._update_source_controls)
@@ -83,6 +85,7 @@ class QPANSOPYAMAGridDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             )
             params = {
                 "grid_type": grid_type,
+                "output_crs": self.outputCrsComboBox.currentData(),
                 "export_kml": self.exportKmlCheckBox.isChecked(),
                 "output_dir": self.outputFolderLineEdit.text().strip(),
             }

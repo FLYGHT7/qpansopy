@@ -39,102 +39,25 @@ def _record(identifier, elevation, tolerance):
         identifier=identifier,
         layer_type='survey',
         obstacle_type='building',
-        coordinates='500000.000, 1600000.000',
         elevation_m=elevation,
         tolerance_m=tolerance,
         geometry=None,
     )
 
 
-def test_all_analyzed_obstacles_style_is_small_orange_unlabelled():
-    style_path = (
-        Path(__file__).parents[2]
-        / 'Q_Pansopy/styles/all_analyzed_obstacles.qml'
-    )
-    root = ElementTree.parse(style_path).getroot()
-    symbol = root.find('./renderer-v2/symbols/symbol')
-    marker = symbol.find("./layer[@class='SimpleMarker']/Option")
-    options = {
-        option.get('name'): option.get('value')
-        for option in marker.findall('./Option')
-    }
-
-    assert root.get('labelsEnabled') == '0'
-    assert symbol.get('type') == 'marker'
-    assert options['name'] == 'circle'
-    assert options['color'].startswith('255,171,84,255,')
-    assert options['size'] == '0.25'
-    assert options['size_unit'] == 'MM'
-
-
-def test_all_analyzed_obstacles_style_loads_visual_categories_only():
+def test_output_fields_omit_coordinates(monkeypatch):
     from Q_Pansopy.modules.utilities import primary_area_assessment as module
 
-    class Layer:
-        StyleCategory = SimpleNamespace(AllVisualStyleCategories='visual')
-
-        def __init__(self):
-            self.loaded = []
-
-        def loadNamedStyle(self, path, categories):
-            self.loaded.append((Path(path).name, categories))
-            return '', True
-
-        def triggerRepaint(self):
-            pass
-
-    assessment = Layer()
-    control = Layer()
-
-    module._style_results(assessment, control)
-
-    assert assessment.loaded == [('all_analyzed_obstacles.qml', 'visual')]
-    assert control.loaded == [('control_obstacle_primary_style.qml', 'visual')]
-
-    control_only = Layer()
-    module._style_results(None, control_only)
-    assert control_only.loaded == [
-        ('control_obstacle_primary_style.qml', 'visual')
-    ]
-
-
-def test_all_analyzed_obstacles_style_failure_keeps_circle(monkeypatch):
-    from Q_Pansopy.modules.utilities import primary_area_assessment as module
-
-    class Layer:
-        StyleCategory = SimpleNamespace(AllVisualStyleCategories='visual')
-
-        def __init__(self, succeeds):
-            self.succeeds = succeeds
-            self.symbol = None
-
-        def loadNamedStyle(self, path, categories):
-            return '', self.succeeds
-
-        def renderer(self):
-            return self
-
-        def setSymbol(self, symbol):
-            self.symbol = symbol
-
-        def triggerRepaint(self):
-            pass
-
+    monkeypatch.setattr(module, 'QgsFields', list)
     monkeypatch.setattr(
-        module,
-        'QgsMarkerSymbol',
-        SimpleNamespace(createSimple=lambda settings: settings),
+        module, 'QgsField', lambda name, *args, **kwargs: name
     )
-    assessment = Layer(False)
 
-    module._style_results(assessment, Layer(True))
-
-    assert assessment.symbol == {
-        'name': 'circle',
-        'color': '220,0,0,255',
-        'outline_style': 'no',
-        'size': '1.0',
-    }
+    assert module._output_fields() == [
+        'id', 'layer_type', 'obstacle_type', 'elev', 'tolerances',
+        'applied_tolerance', 'area_eval', 'moc_m', 'oca_m', 'oca_ft',
+        'oca_pub_ft',
+    ]
 
 
 def test_evaluation_uses_each_records_tolerance():
@@ -147,6 +70,7 @@ def test_evaluation_uses_each_records_tolerance():
 
     assert [item.oca_m for item in evaluated] == [178.0, 180.0]
     assert evaluated[0].oca_ft == round(178.0 / 0.3048, 3)
+    assert evaluated[0].oca_pub_increment == 100
     assert evaluated[0].oca_pub_ft == 600
     assert [item.identifier for item in controls] == ['B']
 
@@ -170,6 +94,7 @@ def test_published_oca_rounds_up_to_selected_increment(increment, expected):
     )
 
     assert evaluated[0].oca_ft == 8284.121
+    assert evaluated[0].oca_pub_increment == increment
     assert evaluated[0].oca_pub_ft == expected
 
 
@@ -328,13 +253,16 @@ def test_control_only_evaluation_matches_full_evaluation():
         _record('tie-b', 125.0 + 5e-10, 0.0),
     ]
     evaluated, expected_controls = evaluate_records(
-        records, moc_m=10.0, override_tolerance_m=0.0
+        records, moc_m=10.0, override_tolerance_m=0.0,
+        oca_rounding_ft=10,
     )
     assessed_count, controls = _evaluate_control_records(
-        records, moc_m=10.0, override_tolerance_m=0.0
+        records, moc_m=10.0, override_tolerance_m=0.0,
+        oca_rounding_ft=10,
     )
 
     assert assessed_count == len(evaluated)
+    assert [item.oca_pub_increment for item in controls] == [10, 10]
     assert [item.identifier for item in controls] == [
         item.identifier for item in expected_controls
     ]
