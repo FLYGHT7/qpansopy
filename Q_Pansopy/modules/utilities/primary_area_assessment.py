@@ -545,19 +545,11 @@ def _buffer_result_layer(mask_geometry, crs):
 
 
 def _style_results(assessment_layer, control_layer):
-    if assessment_layer is not None:
-        assessment_layer.renderer().setSymbol(QgsMarkerSymbol.createSimple({
-            "name": "circle",
-            "color": "220,0,0,255",
-            "outline_style": "no",
-            "size": "1.0",
-        }))
-    style_path = os.path.join(
+    styles_dir = os.path.join(
         os.path.dirname(__file__),
         "..",
         "..",
         "styles",
-        "control_obstacle_primary_style.qml",
     )
     try:
         visual_categories = (
@@ -565,8 +557,23 @@ def _style_results(assessment_layer, control_layer):
         )
     except AttributeError:
         visual_categories = control_layer.AllVisualStyleCategories
+    if assessment_layer is not None:
+        _, loaded = assessment_layer.loadNamedStyle(
+            os.path.join(styles_dir, "all_analyzed_obstacles.qml"),
+            categories=visual_categories,
+        )
+        if not loaded:
+            assessment_layer.renderer().setSymbol(
+                QgsMarkerSymbol.createSimple({
+                    "name": "circle",
+                    "color": "220,0,0,255",
+                    "outline_style": "no",
+                    "size": "1.0",
+                })
+            )
+        assessment_layer.triggerRepaint()
     _, loaded = control_layer.loadNamedStyle(
-        style_path,
+        os.path.join(styles_dir, "control_obstacle_primary_style.qml"),
         categories=visual_categories,
     )
     if not loaded:

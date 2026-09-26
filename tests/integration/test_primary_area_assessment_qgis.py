@@ -249,8 +249,17 @@ def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
     )
     assert QgsLayerNotesUtils.layerHasNotes(result.assessment_layer)
     assert QgsLayerNotesUtils.layerHasNotes(result.control_layer)
+    assert 'MOC: 75 m' in QgsLayerNotesUtils.layerNotes(result.assessment_layer)
     assert 'MOC: 75 m' in QgsLayerNotesUtils.layerNotes(result.control_layer)
     assert result.control_layer.labelsEnabled()
+    assert not result.assessment_layer.labelsEnabled()
+    assert result.assessment_layer.renderer().symbol().size() == pytest.approx(
+        0.25
+    )
+    assert (
+        result.assessment_layer.renderer().symbol().symbolLayer(0).layerType()
+        == 'SimpleMarker'
+    )
     assert [
         layer.layerType()
         for layer in result.control_layer.renderer().symbol().symbolLayers()
