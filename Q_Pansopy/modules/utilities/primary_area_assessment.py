@@ -74,6 +74,7 @@ class EvaluatedRecord:
     moc_m: float
     oca_m: float
     oca_ft: float
+    oca_pub_increment: int
     oca_pub_ft: int
     geometry: object
 
@@ -227,6 +228,7 @@ def _make_evaluated_record(record, moc, values, oca_rounding_ft):
         moc_m=moc,
         oca_m=oca_m,
         oca_ft=oca_ft,
+        oca_pub_increment=oca_rounding_ft,
         oca_pub_ft=math.ceil(oca_ft / oca_rounding_ft) * oca_rounding_ft,
         geometry=record.geometry,
     )
@@ -492,6 +494,7 @@ def _output_fields():
         QgsField("moc_m", _TYPE_DOUBLE, len=20, prec=3),
         QgsField("oca_m", _TYPE_DOUBLE, len=20, prec=3),
         QgsField("oca_ft", _TYPE_DOUBLE, len=20, prec=3),
+        QgsField("oca_pub_increment", _TYPE_INT, len=20),
         QgsField("oca_pub_ft", _TYPE_INT, len=20),
     ]:
         fields.append(field)
@@ -519,6 +522,7 @@ def _result_layer(name: str, crs, records):
             record.moc_m,
             record.oca_m,
             record.oca_ft,
+            record.oca_pub_increment,
             record.oca_pub_ft,
         ])
         features.append(feature)

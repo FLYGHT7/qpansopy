@@ -46,6 +46,24 @@ def _record(identifier, elevation, tolerance):
     )
 
 
+def test_output_fields_place_publication_increment_before_published_oca(
+        monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    monkeypatch.setattr(module, 'QgsFields', list)
+    monkeypatch.setattr(
+        module, 'QgsField',
+        lambda name, field_type, **kwargs: (name, field_type),
+    )
+
+    fields = module._output_fields()
+
+    assert fields[-2:] == [
+        ('oca_pub_increment', module._TYPE_INT),
+        ('oca_pub_ft', module._TYPE_INT),
+    ]
+
+
 def test_evaluation_uses_each_records_tolerance():
     from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
 
@@ -56,6 +74,7 @@ def test_evaluation_uses_each_records_tolerance():
 
     assert [item.oca_m for item in evaluated] == [178.0, 180.0]
     assert evaluated[0].oca_ft == round(178.0 / 0.3048, 3)
+    assert evaluated[0].oca_pub_increment == 100
     assert evaluated[0].oca_pub_ft == 600
     assert [item.identifier for item in controls] == ['B']
 
@@ -79,6 +98,7 @@ def test_published_oca_rounds_up_to_selected_increment(increment, expected):
     )
 
     assert evaluated[0].oca_ft == 8284.121
+    assert evaluated[0].oca_pub_increment == increment
     assert evaluated[0].oca_pub_ft == expected
 
 
@@ -237,13 +257,16 @@ def test_control_only_evaluation_matches_full_evaluation():
         _record('tie-b', 125.0 + 5e-10, 0.0),
     ]
     evaluated, expected_controls = evaluate_records(
-        records, moc_m=10.0, override_tolerance_m=0.0
+        records, moc_m=10.0, override_tolerance_m=0.0,
+        oca_rounding_ft=10,
     )
     assessed_count, controls = _evaluate_control_records(
-        records, moc_m=10.0, override_tolerance_m=0.0
+        records, moc_m=10.0, override_tolerance_m=0.0,
+        oca_rounding_ft=10,
     )
 
     assert assessed_count == len(evaluated)
+    assert [item.oca_pub_increment for item in controls] == [10, 10]
     assert [item.identifier for item in controls] == [
         item.identifier for item in expected_controls
     ]

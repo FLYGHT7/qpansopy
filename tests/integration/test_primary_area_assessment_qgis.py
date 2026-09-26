@@ -265,9 +265,13 @@ def test_survey_assessment_adds_annotated_group_and_tied_controls(qgis_app):
         'Control obstacle', 'Primary assessment'
     ]
     for layer in (result.assessment_layer, result.control_layer):
+        names = layer.fields().names()
+        assert names.index('oca_pub_increment') + 1 == names.index('oca_pub_ft')
         assert 'oca_pub_ft' in layer.fields().names()
         assert all(
             isinstance(feature['oca_pub_ft'], int)
+            and isinstance(feature['oca_pub_increment'], int)
+            and feature['oca_pub_increment'] == 100
             for feature in layer.getFeatures()
         )
     assert {
@@ -406,6 +410,7 @@ def test_terrain_pixels_are_evaluated_without_processing_provider(
     assert result.assessed_count == 9
     assert result.control_count == 1
     control = next(result.control_layer.getFeatures())
+    assert control['oca_pub_increment'] == 5
     assert control['elev'] == 9.0
     assert control['oca_m'] == 134.0
     assert control['oca_pub_ft'] == 440
@@ -629,6 +634,7 @@ def test_control_only_assessment_loads_only_controls(qgis_app):
             tolerance='accuracy',
         ),
         moc_m=75.0,
+        oca_rounding_ft=10,
         load_all_points=False,
         confirm_missing=lambda warnings: True,
     )
@@ -636,6 +642,10 @@ def test_control_only_assessment_loads_only_controls(qgis_app):
     assert result.assessment_layer is None
     assert result.assessed_count == 2
     assert result.control_count == 2
+    assert all(
+        feature['oca_pub_increment'] == 10
+        for feature in result.control_layer.getFeatures()
+    )
     group = QgsProject.instance().layerTreeRoot().children()[0]
     assert [node.layer().name() for node in group.children()] == [
         'Control obstacle'
