@@ -135,6 +135,82 @@ def test_dockwidget_exposes_restored_assessment_controls(qgis_app):
     widget.close()
 
 
+def test_dockwidget_rejects_missing_terrain_and_survey_before_processing(
+        qgis_app, monkeypatch):
+    from qgis.core import Qgis, QgsProject
+    from Q_Pansopy.dockwidgets.utilities \
+        .qpansopy_primary_area_assessment_dockwidget import (
+            QPANSOPYPrimaryAreaAssessmentDockWidget,
+        )
+    from Q_Pansopy.modules.utilities import primary_area_assessment
+
+    def unexpected_assessment(*args, **kwargs):
+        pytest.fail('Assessment must not run without an input source')
+
+    monkeypatch.setattr(
+        primary_area_assessment,
+        'run_primary_area_assessment',
+        unexpected_assessment,
+    )
+    area = _area_layer()
+    QgsProject.instance().addMapLayer(area)
+    iface = _DockIface()
+    widget = QPANSOPYPrimaryAreaAssessmentDockWidget(iface)
+    widget.areaLayerComboBox.setLayer(area)
+    monkeypatch.setattr(
+        QPANSOPYPrimaryAreaAssessmentDockWidget,
+        '_confirm_missing',
+        lambda self, warnings: pytest.fail(
+            'Missing-data prompt must not open'
+        ),
+    )
+
+    widget.calculate()
+
+    assert any(
+        'Please select a terrain or survey layer' in args[1]
+        for args, _ in iface.message_bar.messages
+    )
+    assert not any(
+        kwargs.get('level') in (Qgis.Info, Qgis.Success)
+        for _, kwargs in iface.message_bar.messages
+    )
+    assert widget.calculateButton.isEnabled()
+    assert not widget._assessing
+    assert widget._processing_message is None
+    assert all(
+        node.name() != 'Obstacle assessment'
+        for node in QgsProject.instance().layerTreeRoot().children()
+    )
+    widget.close()
+
+
+def test_dockwidget_accepts_terrain_without_survey(qgis_app, tmp_path):
+    from qgis.core import QgsCoordinateReferenceSystem, QgsProject, QgsRasterLayer
+    from Q_Pansopy.dockwidgets.utilities \
+        .qpansopy_primary_area_assessment_dockwidget import (
+            QPANSOPYPrimaryAreaAssessmentDockWidget,
+        )
+
+    raster_path = tmp_path / 'terrain.asc'
+    raster_path.write_text(
+        'ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\n'
+        'cellsize 100\nNODATA_value -9999\n100\n',
+        encoding='ascii',
+    )
+    terrain = QgsRasterLayer(str(raster_path), 'terrain')
+    assert terrain.isValid()
+    terrain.setCrs(QgsCoordinateReferenceSystem('EPSG:32616'))
+    area = _area_layer()
+    QgsProject.instance().addMapLayers([area, terrain])
+    widget = QPANSOPYPrimaryAreaAssessmentDockWidget(_DockIface())
+    widget.areaLayerComboBox.setLayer(area)
+    widget.terrainLayerComboBox.setLayer(terrain)
+
+    assert widget._validate_inputs() == (area, None, None)
+    widget.close()
+
+
 def test_dockwidget_passes_restored_assessment_options(
         qgis_app, monkeypatch):
     from qgis.core import QgsProject
@@ -160,10 +236,16 @@ def test_dockwidget_passes_restored_assessment_options(
         fake_assessment,
     )
     area = _area_layer()
-    QgsProject.instance().addMapLayer(area)
+    survey = _obstacle_layer()
+    QgsProject.instance().addMapLayers([area, survey])
     iface = _DockIface()
     widget = QPANSOPYPrimaryAreaAssessmentDockWidget(iface)
     widget.areaLayerComboBox.setLayer(area)
+    widget.obstacleLayerComboBox.setLayer(survey)
+    widget.idFieldComboBox.setCurrentText('survey_id')
+    widget.typeFieldComboBox.setCurrentText('kind')
+    widget.elevationFieldComboBox.setCurrentText('elevation')
+    widget.toleranceFieldComboBox.setCurrentText('accuracy')
     widget.areaBufferDoubleSpinBox.setValue(2.0)
     widget.areaBufferUnitComboBox.setCurrentText('NM')
     widget.ocaRoundingComboBox.setCurrentText('10')
@@ -174,6 +256,7 @@ def test_dockwidget_passes_restored_assessment_options(
     assert captured['area_buffer_m'] == 3704.0
     assert captured['oca_rounding_ft'] == 10
     assert captured['load_all_points'] is True
+    assert captured['obstacle_layer'] is survey
     widget.close()
 
 

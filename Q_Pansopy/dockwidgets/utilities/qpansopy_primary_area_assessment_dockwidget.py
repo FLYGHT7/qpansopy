@@ -211,7 +211,10 @@ class QPANSOPYPrimaryAreaAssessmentDockWidget(
                 "Use selected areas is checked, but no area is selected"
             )
 
+        terrain_layer = self.terrainLayerComboBox.currentLayer()
         obstacle_layer = self.obstacleLayerComboBox.currentLayer()
+        if terrain_layer is None and obstacle_layer is None:
+            raise ValueError("Please select a terrain or survey layer")
         mapping = None
         if obstacle_layer is not None:
             mapping = self._field_mapping()
