@@ -30,6 +30,9 @@ from qgis.core import (
 GRID_STEPS = {"AMA_1": 1.0, "AMA_05": 0.5}
 MAX_CELLS = 50000
 WGS84_AUTHID = "EPSG:4326"
+PROJECT_OUTPUT = "project"
+WGS84_OUTPUT = "wgs84"
+MAX_EDGE_STEP_DEGREES = 0.1
 
 
 def grid_step(grid_type):
@@ -126,10 +129,26 @@ def _layer_name(grid_type):
     return "AMA Grid - 1 degree" if grid_type == "AMA_1" else "AMA Grid - 30 minutes"
 
 
-def _build_layer(indices, grid_type):
+def _output_crs(iface, output_mode):
+    if output_mode == WGS84_OUTPUT:
+        return QgsCoordinateReferenceSystem(WGS84_AUTHID)
+    if output_mode != PROJECT_OUTPUT:
+        raise ValueError("Unsupported AMA output CRS: {0}".format(output_mode))
+    crs = iface.mapCanvas().mapSettings().destinationCrs()
+    if not crs.isValid() or crs.type() != Qgis.CrsType.Projected:
+        raise ValueError("Set the map canvas to a projected CRS or choose WGS84 output")
+    return crs
+
+
+def _build_layer(indices, grid_type, output_crs):
     west_i, south_i, east_i, north_i = indices
     step = grid_step(grid_type)
-    layer = QgsVectorLayer("Polygon?crs={0}".format(WGS84_AUTHID), _layer_name(grid_type), "memory")
+    layer = QgsVectorLayer("Polygon", _layer_name(grid_type), "memory")
+    layer.setCrs(output_crs)
+    wgs84_crs = QgsCoordinateReferenceSystem(WGS84_AUTHID)
+    transform = None
+    if output_crs != wgs84_crs:
+        transform = QgsCoordinateTransform(wgs84_crs, output_crs, QgsProject.instance())
     provider = layer.dataProvider()
     provider.addAttributes([
         QgsField("cell_id", QVariant.String),
@@ -148,7 +167,12 @@ def _build_layer(indices, grid_type):
             west = lon_i * step
             east = (lon_i + 1) * step
             feature = QgsFeature(layer.fields())
-            feature.setGeometry(QgsGeometry.fromRect(QgsRectangle(west, south, east, north)))
+            geometry = QgsGeometry.fromRect(QgsRectangle(west, south, east, north))
+            if transform is not None:
+                geometry = geometry.densifyByDistance(MAX_EDGE_STEP_DEGREES)
+                if geometry.transform(transform) != 0:
+                    raise RuntimeError("Failed to transform AMA cell to the output CRS")
+            feature.setGeometry(geometry)
             feature.setAttributes([
                 cell_id(lon_i, lat_i, grid_type), grid_type,
                 south, west, north, east,
@@ -185,14 +209,16 @@ def run_ama_grid(iface, extent, source_crs, params=None):
     """Create an AMA grid layer and optionally export it to KML.
 
     ``params`` accepts ``grid_type`` (``AMA_1`` or ``AMA_05``),
-    ``export_kml`` and ``output_dir``.  The function returns ``True`` after
-    the layer has been added to the current QGIS project.
+    ``output_crs`` (``project`` by default or ``wgs84``), ``export_kml`` and
+    ``output_dir``. The function returns ``True`` after the layer has been
+    added to the current QGIS project.
     """
     params = params or {}
     grid_type = params.get("grid_type", "AMA_1")
+    output_crs = _output_crs(iface, params.get("output_crs", PROJECT_OUTPUT))
     transformed_extent = _transform_extent(extent, source_crs)
     indices = snapped_grid_indices(transformed_extent, grid_type)
-    layer = _build_layer(indices, grid_type)
+    layer = _build_layer(indices, grid_type, output_crs)
     kml_path = None
     if params.get("export_kml", False):
         kml_path = _export_kml(layer, params.get("output_dir", ""), grid_type)
