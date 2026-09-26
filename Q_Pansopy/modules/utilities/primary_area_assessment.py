@@ -54,7 +54,6 @@ class SourceRecord:
     identifier: str
     layer_type: str
     obstacle_type: str
-    coordinates: str
     elevation_m: float
     tolerance_m: float
     geometry: object
@@ -67,7 +66,6 @@ class EvaluatedRecord:
     identifier: str
     layer_type: str
     obstacle_type: str
-    coordinates: str
     elevation_m: float
     tolerance_m: float
     applied_tolerance_m: float
@@ -220,7 +218,6 @@ def _make_evaluated_record(record, moc, values, oca_rounding_ft):
         identifier=record.identifier,
         layer_type=record.layer_type,
         obstacle_type=record.obstacle_type,
-        coordinates=record.coordinates,
         elevation_m=elevation,
         tolerance_m=source_tolerance,
         applied_tolerance_m=applied_tolerance,
@@ -312,18 +309,6 @@ def _build_mask_geometry(
     )
 
 
-def _point_from_geometry(geometry, identifier: str):
-    if geometry.isMultipart():
-        raise ValueError(
-            f"Obstacle '{identifier}' has multipart geometry; use single points"
-        )
-    return geometry.asPoint()
-
-
-def _coordinates(point) -> str:
-    return f"{point.x():.3f}, {point.y():.3f}"
-
-
 def _field_value(feature, field_name: str, label: str):
     value = feature[field_name]
     if value is None:
@@ -378,7 +363,11 @@ def _survey_records(obstacle_layer, mask_geometry, mapping, has_override):
         )).strip()
         if not identifier:
             raise ValueError(f"Feature {feature.id()} has an empty obstacle ID")
-        point = _point_from_geometry(geometry, identifier)
+        if geometry.isMultipart():
+            raise ValueError(
+                f"Obstacle '{identifier}' has multipart geometry; "
+                "use single points"
+            )
         tolerance = (
             0.0
             if mapping.tolerance is None
@@ -392,7 +381,6 @@ def _survey_records(obstacle_layer, mask_geometry, mapping, has_override):
             obstacle_type=str(_field_value(
                 feature, mapping.obstacle_type, "obstacle type"
             )),
-            coordinates=_coordinates(point),
             elevation_m=_numeric_field_value(
                 feature, mapping.elevation, "elevation"
             ),
@@ -470,7 +458,6 @@ def _terrain_records(terrain_layer, mask_geometry, tolerance_m, band):
                 identifier=f"DTM_{sequence:06d}",
                 layer_type="DTM",
                 obstacle_type="terrain",
-                coordinates=_coordinates(point),
                 elevation_m=float(block.value(row, column)),
                 tolerance_m=tolerance_m,
                 geometry=geometry,
@@ -484,7 +471,6 @@ def _output_fields():
         QgsField("id", _TYPE_STRING, len=80),
         QgsField("layer_type", _TYPE_STRING, len=20),
         QgsField("obstacle_type", _TYPE_STRING, len=80),
-        QgsField("coordinates", _TYPE_STRING, len=80),
         QgsField("elev", _TYPE_DOUBLE, len=20, prec=3),
         QgsField("tolerances", _TYPE_DOUBLE, len=20, prec=3),
         QgsField("applied_tolerance", _TYPE_DOUBLE, len=20, prec=3),
@@ -511,7 +497,6 @@ def _result_layer(name: str, crs, records):
             record.identifier,
             record.layer_type,
             record.obstacle_type,
-            record.coordinates,
             record.elevation_m,
             record.tolerance_m,
             record.applied_tolerance_m,
