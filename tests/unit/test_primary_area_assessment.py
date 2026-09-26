@@ -46,6 +46,97 @@ def _record(identifier, elevation, tolerance):
     )
 
 
+def test_all_analyzed_obstacles_style_is_small_orange_unlabelled():
+    style_path = (
+        Path(__file__).parents[2]
+        / 'Q_Pansopy/styles/all_analyzed_obstacles.qml'
+    )
+    root = ElementTree.parse(style_path).getroot()
+    symbol = root.find('./renderer-v2/symbols/symbol')
+    marker = symbol.find("./layer[@class='SimpleMarker']/Option")
+    options = {
+        option.get('name'): option.get('value')
+        for option in marker.findall('./Option')
+    }
+
+    assert root.get('labelsEnabled') == '0'
+    assert symbol.get('type') == 'marker'
+    assert options['name'] == 'circle'
+    assert options['color'].startswith('255,171,84,255,')
+    assert options['size'] == '0.25'
+    assert options['size_unit'] == 'MM'
+
+
+def test_all_analyzed_obstacles_style_loads_visual_categories_only():
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    class Layer:
+        StyleCategory = SimpleNamespace(AllVisualStyleCategories='visual')
+
+        def __init__(self):
+            self.loaded = []
+
+        def loadNamedStyle(self, path, categories):
+            self.loaded.append((Path(path).name, categories))
+            return '', True
+
+        def triggerRepaint(self):
+            pass
+
+    assessment = Layer()
+    control = Layer()
+
+    module._style_results(assessment, control)
+
+    assert assessment.loaded == [('all_analyzed_obstacles.qml', 'visual')]
+    assert control.loaded == [('control_obstacle_primary_style.qml', 'visual')]
+
+    control_only = Layer()
+    module._style_results(None, control_only)
+    assert control_only.loaded == [
+        ('control_obstacle_primary_style.qml', 'visual')
+    ]
+
+
+def test_all_analyzed_obstacles_style_failure_keeps_circle(monkeypatch):
+    from Q_Pansopy.modules.utilities import primary_area_assessment as module
+
+    class Layer:
+        StyleCategory = SimpleNamespace(AllVisualStyleCategories='visual')
+
+        def __init__(self, succeeds):
+            self.succeeds = succeeds
+            self.symbol = None
+
+        def loadNamedStyle(self, path, categories):
+            return '', self.succeeds
+
+        def renderer(self):
+            return self
+
+        def setSymbol(self, symbol):
+            self.symbol = symbol
+
+        def triggerRepaint(self):
+            pass
+
+    monkeypatch.setattr(
+        module,
+        'QgsMarkerSymbol',
+        SimpleNamespace(createSimple=lambda settings: settings),
+    )
+    assessment = Layer(False)
+
+    module._style_results(assessment, Layer(True))
+
+    assert assessment.symbol == {
+        'name': 'circle',
+        'color': '220,0,0,255',
+        'outline_style': 'no',
+        'size': '1.0',
+    }
+
+
 def test_evaluation_uses_each_records_tolerance():
     from Q_Pansopy.modules.utilities.primary_area_assessment import evaluate_records
 
