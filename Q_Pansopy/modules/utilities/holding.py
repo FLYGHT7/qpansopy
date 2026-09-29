@@ -1,12 +1,14 @@
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry, QgsWkbTypes,
-    QgsCircularString, QgsPoint, QgsPointXY, QgsField, Qgis
+    QgsCircularString, QgsPoint, QgsPointXY, QgsField, Qgis,
+    QgsPalLayerSettings, QgsVectorLayerSimpleLabeling,
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
 import json
 import html
 import math
+from dataclasses import dataclass
 
 from ...parameters_inspector_dialog import (
     TableContent, register_parameters_action,
@@ -32,6 +34,155 @@ except ImportError as e:
 
 def _feet(value, unit):
     return value * 3.28084 if unit == 'm' else value
+
+
+NM_METRES = 1852.0
+
+
+@dataclass(frozen=True)
+class PointEConstruction:
+    """Projected map point and the eight lines used to locate it."""
+
+    point: tuple[float, float]
+    bounds: tuple[float, float, float, float]
+    lines: dict[str, tuple[tuple[float, float], tuple[float, float]]]
+
+
+def calculate_holding_entry_offsets_nm(summary: dict) -> tuple[float, float]:
+    """Return unrounded XE and YE from Doc 8168 table lines 32 and 33."""
+    tas_kt = float(summary['TAS_kt'])
+    rate = float(summary['Rate_deg_s'])
+    radius_nm = float(summary['Radius_nm'])
+    altitude_ft = float(summary['Altitude_ft'])
+    leg_minutes = float(summary['Leg_min'])
+    values = (tas_kt, rate, radius_nm, altitude_ft, leg_minutes)
+    if not all(math.isfinite(value) for value in values) or rate <= 0:
+        raise ValueError('Holding entry offsets need finite values and a positive turn rate')
+    wind_kt = (2 * altitude_ft / 1000.0) + 47.0
+    v_nmps = tas_kt / 3600.0
+    wind_nmps = wind_kt / 3600.0
+    t = leg_minutes * 60.0
+    xe_nm = (
+        2 * radius_nm + (t + 15) * v_nmps
+        + (t + 26 + 195 / rate) * wind_nmps
+    )
+    ye_nm = (
+        11 * v_nmps * math.cos(math.radians(20))
+        + radius_nm * (1 + math.sin(math.radians(20)))
+        + (t + 15) * v_nmps * math.tan(math.radians(5))
+        + (t + 26 + 125 / rate) * wind_nmps
+    )
+    return xe_nm, ye_nm
+
+
+def build_point_e_construction(
+        outline: list[tuple[float, float]],
+        origin: tuple[float, float],
+        azimuth: float,
+        turn: str,
+        xe_nm: float,
+        ye_nm: float,
+) -> PointEConstruction:
+    """Place E at (xmin + XE, ymin + YE) in turn-aligned local axes."""
+    if turn not in ('R', 'L'):
+        raise ValueError('Holding turn must be R or L')
+    if (len(outline) < 3 or not math.isfinite(azimuth) or
+            not math.isfinite(xe_nm) or not math.isfinite(ye_nm) or
+            xe_nm <= 0 or ye_nm <= 0 or
+            len(origin) != 2 or not all(map(math.isfinite, origin)) or
+            any(len(point) != 2 or not all(map(math.isfinite, point))
+                for point in outline)):
+        raise ValueError('Point E needs a valid outline and positive XE/YE')
+
+    angle = math.radians(90 - azimuth)
+    ux, uy = math.cos(angle), math.sin(angle)
+    vx, vy = (uy, -ux) if turn == 'R' else (-uy, ux)
+
+    def local(point):
+        dx, dy = point[0] - origin[0], point[1] - origin[1]
+        return (dx * ux + dy * uy, dx * vx + dy * vy)
+
+    def map_point(x, y):
+        return (origin[0] + x * ux + y * vx,
+                origin[1] + x * uy + y * vy)
+
+    coordinates = [local(point) for point in outline]
+    xmin = min(point[0] for point in coordinates)
+    xmax = max(point[0] for point in coordinates)
+    ymin = min(point[1] for point in coordinates)
+    ymax = max(point[1] for point in coordinates)
+    if xmax - xmin <= 1e-9 or ymax - ymin <= 1e-9:
+        raise ValueError('Point E outline has no usable width or height')
+    ex = xmin + xe_nm * NM_METRES
+    ey = ymin + ye_nm * NM_METRES
+    extension = NM_METRES
+
+    def line(x1, y1, x2, y2):
+        return (map_point(x1, y1), map_point(x2, y2))
+
+    lines = {
+        'MIN_LONGITUDINAL': line(xmin, ymin, xmax, ymin),
+        'MAX_LONGITUDINAL': line(xmin, ymax, xmax, ymax),
+        'MIN_LATERAL': line(xmin, ymin, xmin, ymax),
+        'MAX_LATERAL': line(xmax, ymin, xmax, ymax),
+        'x-AXIS': line(xmin - extension, 0, xmax + extension, 0),
+        'y-AXIS': line(0, ymin - extension, 0, ymax + extension),
+        'E_OFFSET_X': line(ex, min(ymin, ey) - extension,
+                           ex, max(ymax, ey) + extension),
+        'E_OFFSET_Y': line(min(xmin, ex) - extension, ey,
+                           max(xmax, ex) + extension, ey),
+    }
+    return PointEConstruction(map_point(ex, ey), (xmin, xmax, ymin, ymax), lines)
+
+
+def _point_e_layers(construction, crs, xe_nm, ye_nm):
+    """Build the labeled E point and its eight construction lines."""
+    point_layer = QgsVectorLayer('Point', 'Point_E', 'memory')
+    point_layer.setCrs(crs)
+    point_provider = point_layer.dataProvider()
+    point_provider.addAttributes([
+        QgsField('point', QVariant.String),
+        QgsField('XE_nm', QVariant.Double),
+        QgsField('YE_nm', QVariant.Double),
+        QgsField('x', QVariant.Double),
+        QgsField('y', QVariant.Double),
+    ])
+    point_layer.updateFields()
+    ex, ey = construction.point
+    point_feature = QgsFeature(point_layer.fields())
+    point_feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(ex, ey)))
+    point_feature.setAttributes(['E', xe_nm, ye_nm, ex, ey])
+    point_provider.addFeature(point_feature)
+    point_layer.updateExtents()
+    point_layer.renderer().symbol().setColor(QColor('#e67e22'))
+    point_layer.renderer().symbol().setSize(3.5)
+    labels = QgsPalLayerSettings()
+    labels.fieldName = 'point'
+    point_layer.setLabeling(QgsVectorLayerSimpleLabeling(labels))
+    point_layer.setLabelsEnabled(True)
+
+    construction_layer = QgsVectorLayer('LineString', 'Axis_Bounding_Box', 'memory')
+    construction_layer.setCrs(crs)
+    line_provider = construction_layer.dataProvider()
+    line_provider.addAttributes([
+        QgsField('type', QVariant.String),
+        QgsField('length_m', QVariant.Double),
+        QgsField('length_nm', QVariant.Double),
+    ])
+    construction_layer.updateFields()
+    lines = []
+    for name, (start, end) in construction.lines.items():
+        geometry = QgsGeometry.fromPolylineXY([
+            QgsPointXY(*start), QgsPointXY(*end)])
+        feature = QgsFeature(construction_layer.fields())
+        feature.setGeometry(geometry)
+        feature.setAttributes([name, geometry.length(), geometry.length() / NM_METRES])
+        lines.append(feature)
+    line_provider.addFeatures(lines)
+    construction_layer.updateExtents()
+    construction_layer.renderer().symbol().setColor(QColor('#e67e22'))
+    construction_layer.renderer().symbol().setWidth(0.5)
+    return point_layer, construction_layer
 
 
 def format_holding_table_parameters(summary):
@@ -73,16 +224,7 @@ def _holding_complete_rows(summary):
     params = _wind_params(altitude_ft, leg_minutes, tas_kt, rate)
     t = params['t']
     e45 = params['e45']
-    xe_nm = (
-        2 * radius_nm + (t + 15) * v_nmps
-        + (t + 26 + 195 / rate) * wind_nmps
-    )
-    ye_nm = (
-        11 * v_nmps * math.cos(math.radians(20))
-        + radius_nm * (1 + math.sin(math.radians(20)))
-        + (t + 15) * v_nmps * math.tan(math.radians(5))
-        + (t + 26 + 125 / rate) * wind_nmps
-    )
+    xe_nm, ye_nm = calculate_holding_entry_offsets_nm(summary)
 
     si_speed = tas_kt * 1.852  # km/h
     si_v = si_speed / 3600.0  # km/s
@@ -441,6 +583,10 @@ def run_holding_pattern(iface, routing_layer, params: dict):
         except Exception:  # nosec B110 - cosmetic styling; must not abort a successful calculation
             pass
 
+        point_e = None
+        point_e_layer = None
+        construction_layer = None
+
         # Basic holding area — isolated so failures do not affect the nominal return value
         try:
             show_circles = bool(params.get('show_circles', True))
@@ -490,6 +636,31 @@ def run_holding_pattern(iface, routing_layer, params: dict):
                         ba_layer.triggerRepaint()
                     except Exception:  # nosec B110 - cosmetic styling; must not abort a successful calculation
                         pass
+
+                    if (crs.isGeographic() or
+                            crs.mapUnits() != Qgis.DistanceUnit.Meters or
+                            routing_layer.crs() != crs):
+                        iface.messageBar().pushMessage(
+                            'QPANSOPY', 'Point E requires the routing layer and '
+                            'map canvas to use the same projected CRS in metres',
+                            level=Qgis.Warning)
+                    else:
+                        try:
+                            xe_nm, ye_nm = calculate_holding_entry_offsets_nm(summary)
+                            outline = [(vertex.x(), vertex.y())
+                                       for vertex in hull.vertices()]
+                            construction = build_point_e_construction(
+                                outline, (start_pt.x(), start_pt.y()),
+                                azimuth, turn, xe_nm, ye_nm)
+                            point_e_layer, construction_layer = _point_e_layers(
+                                construction, crs, xe_nm, ye_nm)
+                            QgsProject.instance().addMapLayer(construction_layer)
+                            QgsProject.instance().addMapLayer(point_e_layer)
+                            point_e = QgsPointXY(*construction.point)
+                        except Exception as e:
+                            iface.messageBar().pushMessage(
+                                'QPANSOPY', f'Point E construction failed: {e}',
+                                level=Qgis.Warning)
                 else:
                     iface.messageBar().pushMessage(
                         "QPANSOPY", "Basic area hull is null — verify CRS and coordinates",
@@ -505,6 +676,9 @@ def run_holding_pattern(iface, routing_layer, params: dict):
             "radius_nm": radius_of_turn,
             "summary": summary,
             "summary_text": summary_text,
+            "point_e": point_e,
+            "point_e_layer": point_e_layer,
+            "construction_layer": construction_layer,
         }
     except Exception as e:
         iface.messageBar().pushMessage("QPANSOPY", f"Holding failed: {e}", level=Qgis.Critical)
