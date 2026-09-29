@@ -55,6 +55,9 @@ try:
     from .dockwidgets.conv.qpansopy_overhead_tolerance_dockwidget import (
         QPANSOPYOverheadToleranceDockWidget,
     )
+    from .dockwidgets.conv.qpansopy_radial_bearing_intersection_dockwidget import (
+        QPANSOPYRadialBearingIntersectionDockWidget,
+    )
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
@@ -263,6 +266,14 @@ class Qpansopy:
                     "TOOLTIP": "VOR/NDB overhead facility fix tolerance",
                     "ICON": os.path.join(self.icons_dir, 'overhead_tolerance.svg'),
                     "DOCK_WIDGET": QPANSOPYOverheadToleranceDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "RADIAL_BEARING_TOL": {
+                    "TITLE": "Radial / Bearing Tolerance",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "Fix tolerance from intersecting VOR, ILS or NDB radials/bearings",
+                    "ICON": os.path.join(self.icons_dir, 'radial_bearing_intersection.svg'),
+                    "DOCK_WIDGET": QPANSOPYRadialBearingIntersectionDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "ObjectSelection": {

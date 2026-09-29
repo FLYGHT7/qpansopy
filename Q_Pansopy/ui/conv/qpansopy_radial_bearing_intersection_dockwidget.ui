@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QPANSOPYRadialBearingIntersectionDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYRadialBearingIntersectionDockWidget">
+  <property name="windowTitle"><string>Radial / Bearing Fix Tolerance</string></property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item><widget class="QGroupBox" name="inputGroup">
+     <property name="title"><string>Input layers — one point per role</string></property>
+     <layout class="QFormLayout" name="inputLayout">
+      <item row="0" column="0"><widget class="QLabel" name="trackingLayerLabel"><property name="text"><string>Tracking facility</string></property></widget></item>
+      <item row="0" column="1"><widget class="QgsMapLayerComboBox" name="trackingLayerComboBox"/></item>
+      <item row="1" column="0"><widget class="QLabel" name="crossingLayerLabel"><property name="text"><string>Intersecting facility</string></property></widget></item>
+      <item row="1" column="1"><widget class="QgsMapLayerComboBox" name="crossingLayerComboBox"/></item>
+      <item row="2" column="0"><widget class="QLabel" name="fixLayerLabel"><property name="text"><string>Nominal fix</string></property></widget></item>
+      <item row="2" column="1"><widget class="QgsMapLayerComboBox" name="fixLayerComboBox"/></item>
+     </layout>
+    </widget></item>
+    <item><widget class="QGroupBox" name="paramsGroup">
+     <property name="title"><string>Parameters</string></property>
+     <layout class="QFormLayout" name="paramsLayout">
+      <item row="0" column="0"><widget class="QLabel" name="trackingTypeLabel"><property name="text"><string>Tracking navaid</string></property></widget></item>
+      <item row="0" column="1"><widget class="QComboBox" name="trackingTypeComboBox"><item><property name="text"><string>VOR</string></property></item><item><property name="text"><string>ILS</string></property></item><item><property name="text"><string>NDB</string></property></item></widget></item>
+      <item row="1" column="0"><widget class="QLabel" name="crossingTypeLabel"><property name="text"><string>Intersecting navaid</string></property></widget></item>
+      <item row="1" column="1"><widget class="QComboBox" name="crossingTypeComboBox"><item><property name="text"><string>VOR</string></property></item><item><property name="text"><string>ILS</string></property></item><item><property name="text"><string>NDB</string></property></item></widget></item>
+      <item row="2" column="0"><widget class="QLabel" name="directionLabel"><property name="text"><string>Flight direction</string></property></widget></item>
+      <item row="2" column="1"><widget class="QComboBox" name="flightDirectionComboBox"><item><property name="text"><string>Outbound</string></property></item><item><property name="text"><string>Inbound</string></property></item></widget></item>
+      <item row="3" column="0" colspan="2"><widget class="QLabel" name="crsHintLabel"><property name="text"><string>Map canvas CRS must be projected in metres.</string></property></widget></item>
+     </layout>
+    </widget></item>
+    <item><widget class="QGroupBox" name="outputGroup">
+     <property name="title"><string>Output</string></property>
+     <layout class="QVBoxLayout" name="outputLayout">
+      <item><widget class="QCheckBox" name="exportKmlCheckBox"><property name="text"><string>Export tolerance polygon to KML</string></property></widget></item>
+      <item><layout class="QHBoxLayout" name="outputFolderLayout">
+       <item><widget class="QLineEdit" name="outputFolderLineEdit"><property name="placeholderText"><string>KML output folder</string></property></widget></item>
+       <item><widget class="QPushButton" name="browseButton"><property name="text"><string>Browse…</string></property></widget></item>
+      </layout></item>
+     </layout>
+    </widget></item>
+    <item><widget class="QGroupBox" name="actionGroup">
+     <property name="title"><string>Action</string></property>
+     <layout class="QVBoxLayout" name="actionLayout"><item><widget class="QPushButton" name="calculateButton"><property name="text"><string>Create fix tolerance</string></property></widget></item></layout>
+    </widget></item>
+    <item><widget class="QGroupBox" name="logGroup">
+     <property name="title"><string>Log</string></property>
+     <layout class="QVBoxLayout" name="logLayout">
+      <item><widget class="QTextEdit" name="logTextEdit"><property name="readOnly"><bool>true</bool></property></widget></item>
+      <item><spacer name="verticalSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>1</height></size></property></spacer></item>
+     </layout>
+    </widget></item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets><customwidget><class>QgsMapLayerComboBox</class><extends>QComboBox</extends><header>qgsmaplayercombobox.h</header></customwidget></customwidgets>
+ <resources/>
+ <connections/>
+</ui>
