@@ -5,9 +5,9 @@ from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtGui import QColor
 from qgis.gui import QgsRubberBand
 from qgis.core import (
-    QgsProject, QgsDistanceArea, QgsCoordinateTransform, Qgis,
+    QgsProject, QgsDistanceArea, QgsCsException, Qgis,
 )
-from ...modules.conv.dme_tolerance import build_tolerance_geometry
+from ...modules.conv.dme_tolerance import build_tolerance_geometry, _geom_to_map_crs
 from ...qt_compat import (
     MLPM_PointLayer,
     preseed_active_layer, Qgis_GeomType_Point, Qgis_GeomType_Polygon,
@@ -28,11 +28,11 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     closingPlugin = pyqtSignal()
 
-    # (nav_type, default_rotate, point_layer_label)
+    # (nav_type, default_rotate, default_non_collocated)
     _TOLERANCE_TYPES = [
-        ('VOR/DME', 5.2, 'DME Point Layer'),
-        ('NDB/DME', 6.9, 'NDB Point Layer'),
-        ('LOC/DME', 2.4, 'LOC Point Layer'),
+        ('VOR/DME', 5.2, False),
+        ('NDB/DME', 6.9, False),
+        ('LOC/DME', 2.4, True),
     ]
 
     def __init__(self, iface):
@@ -40,12 +40,15 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.setupUi(self)
         self.iface = iface
 
-        for nav_type, default_rotate, point_layer_label in self._TOLERANCE_TYPES:
-            self.toleranceTypeComboBox.addItem(nav_type, (default_rotate, point_layer_label))
+        for nav_type, default_rotate, non_collocated in self._TOLERANCE_TYPES:
+            self.toleranceTypeComboBox.addItem(nav_type, (default_rotate, non_collocated))
         self.toleranceTypeComboBox.currentIndexChanged.connect(self._on_tolerance_type_changed)
 
         self.pointLayerComboBox.setFilters(MLPM_PointLayer)
         self.fixLayerComboBox.setFilters(MLPM_PointLayer)
+        self.trackingLayerComboBox.setFilters(MLPM_PointLayer)
+        self.trackingLayerComboBox.setAllowEmptyLayer(True)
+        self.trackingLayerComboBox.setLayer(None)
         preseed_active_layer(iface, self.pointLayerComboBox, Qgis_GeomType_Point)
         preseed_active_layer(iface, self.fixLayerComboBox, Qgis_GeomType_Point)
 
@@ -61,15 +64,26 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.pointLayerComboBox.layerChanged.connect(self._on_layer_changed)
         self.fixLayerComboBox.layerChanged.connect(self._on_layer_changed)
+        self.trackingLayerComboBox.layerChanged.connect(self._on_layer_changed)
+        self.nonCollocatedDmeCheckBox.toggled.connect(self._on_dme_mode_changed)
         self.rotateDoubleSpinBox.valueChanged.connect(self._update_preview)
+        iface.mapCanvas().destinationCrsChanged.connect(self._update_preview)
 
         self._on_tolerance_type_changed()
         self._on_layer_changed()
 
     def _on_tolerance_type_changed(self, *args):
-        default_rotate, point_layer_label = self.toleranceTypeComboBox.currentData()
-        self.pointLayerLabel.setText(point_layer_label)
+        default_rotate, non_collocated = self.toleranceTypeComboBox.currentData()
         self.rotateDoubleSpinBox.setValue(default_rotate)
+        self.nonCollocatedDmeCheckBox.setChecked(non_collocated)
+        self._on_dme_mode_changed()
+
+    def _on_dme_mode_changed(self, *args):
+        enabled = self.nonCollocatedDmeCheckBox.isChecked()
+        self.trackingLayerLabel.setVisible(enabled)
+        self.trackingLayerComboBox.setVisible(enabled)
+        self.trackingLayerComboBox.setEnabled(enabled)
+        self._on_layer_changed()
 
     def closeEvent(self, event):
         self._clear_preview()
@@ -92,7 +106,10 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._connected_layers = []
 
         seen = set()
-        for combo in [self.pointLayerComboBox, self.fixLayerComboBox]:
+        combos = [self.pointLayerComboBox, self.fixLayerComboBox]
+        if self.nonCollocatedDmeCheckBox.isChecked():
+            combos.append(self.trackingLayerComboBox)
+        for combo in combos:
             lyr = combo.currentLayer()
             if lyr and id(lyr) not in seen:
                 lyr.selectionChanged.connect(self._update_preview)
@@ -116,75 +133,80 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         navid_layer = self.pointLayerComboBox.currentLayer()
         fix_layer = self.fixLayerComboBox.currentLayer()
-        if not navid_layer or not fix_layer:
-            return
-
-        if navid_layer.selectedFeatureCount() > 1 or fix_layer.selectedFeatureCount() > 1:
+        non_collocated = self.nonCollocatedDmeCheckBox.isChecked()
+        tracking_layer = self.trackingLayerComboBox.currentLayer() if non_collocated else None
+        layers = [navid_layer, fix_layer]
+        if non_collocated:
+            layers.append(tracking_layer)
+        if any(not layer or layer.selectedFeatureCount() != 1 for layer in layers):
             return
 
         navid_sel = navid_layer.selectedFeatures()
         fix_sel = fix_layer.selectedFeatures()
-        if not navid_sel or not fix_sel:
-            return
 
         try:
             map_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
             project = QgsProject.instance()
 
-            def to_map(feat, lyr):
-                g = feat.geometry()
-                g.transform(QgsCoordinateTransform(lyr.crs(), map_crs, project))
-                return g.asPoint()
-
-            navid_geom = to_map(navid_sel[0], navid_layer)
-            fix_geom = to_map(fix_sel[0], fix_layer)
-
-            if navid_geom.distance(fix_geom) == 0:
-                return
+            navid_geom = _geom_to_map_crs(navid_sel[0], navid_layer, map_crs, project, 'DME')
+            fix_geom = _geom_to_map_crs(fix_sel[0], fix_layer, map_crs, project, 'Fix')
+            tracking_geom = None
+            if non_collocated:
+                tracking_geom = _geom_to_map_crs(
+                    tracking_layer.selectedFeatures()[0], tracking_layer,
+                    map_crs, project, 'Tracking Navaid')
 
             rotate = self.rotateDoubleSpinBox.value()
             da = QgsDistanceArea()
             da.setSourceCrs(map_crs, project.transformContext())
             da.setEllipsoid(project.ellipsoid())
 
-            tolerance_area, _ = build_tolerance_geometry(navid_geom, fix_geom, rotate, da)
+            tolerance_area, _ = build_tolerance_geometry(
+                navid_geom, fix_geom, rotate, da, tracking_geom)
             if tolerance_area and not tolerance_area.isEmpty():
                 self._preview_band.setToGeometry(tolerance_area, None)
         except Exception:  # nosec B110 - best-effort live preview; a geometry/transform glitch must not crash the tool
             pass
 
+    def _warn(self, message):
+        self._clear_preview()
+        self.log(f'Warning: {message}')
+        self.iface.messageBar().pushMessage('QPANSOPY', message, level=Qgis.Warning)
+
     def calculate(self):
         navid_layer = self.pointLayerComboBox.currentLayer()
         fix_layer = self.fixLayerComboBox.currentLayer()
 
-        if not navid_layer:
-            self.log("Error: Please select a NAVID point layer")
-            return
-        if not fix_layer:
-            self.log("Error: Please select a Fix point layer")
-            return
-
-        if navid_layer.selectedFeatureCount() > 1:
-            msg = 'Select exactly one feature in the NAVID layer before calculating'
-            self.log(f'Error: {msg}')
-            self.iface.messageBar().pushMessage('QPANSOPY', msg, level=Qgis.Warning)
-            return
-        if fix_layer.selectedFeatureCount() > 1:
-            msg = 'Select exactly one feature in the Fix layer before calculating'
-            self.log(f'Error: {msg}')
-            self.iface.messageBar().pushMessage('QPANSOPY', msg, level=Qgis.Warning)
-            return
+        non_collocated = self.nonCollocatedDmeCheckBox.isChecked()
+        tracking_layer = self.trackingLayerComboBox.currentLayer() if non_collocated else None
+        roles = [('DME', navid_layer), ('Fix', fix_layer)]
+        if non_collocated:
+            roles.append(('Tracking Navaid', tracking_layer))
+        for role, layer in roles:
+            if not layer:
+                self._warn(f'Please select a {role} point layer')
+                return
+            selected_count = layer.selectedFeatureCount()
+            if selected_count > 1 or (selected_count == 0 and layer.featureCount() != 1):
+                self._warn(f'Select exactly one feature in the {role} layer before calculating')
+                return
 
         nav_type = self.toleranceTypeComboBox.currentText()
-        params = {'rotate': self.rotateDoubleSpinBox.value(), 'nav_type': nav_type}
+        params = {
+            'rotate': self.rotateDoubleSpinBox.value(), 'nav_type': nav_type,
+            'non_collocated_dme': non_collocated,
+        }
 
         try:
             self.log(f"Calculating {nav_type} Tolerance...")
             from ...modules.conv.dme_tolerance import run_dme_tolerance
-            result = run_dme_tolerance(self.iface, navid_layer, fix_layer, params)
+            result = run_dme_tolerance(
+                self.iface, navid_layer, fix_layer, params, tracking_layer=tracking_layer)
             if result:
                 self._clear_preview()
                 self.log(f"{nav_type} Tolerance calculation completed successfully")
+        except (ValueError, QgsCsException) as e:
+            self._warn(str(e))
         except Exception as e:
             self.log(f"Error during calculation: {e}")
             import traceback

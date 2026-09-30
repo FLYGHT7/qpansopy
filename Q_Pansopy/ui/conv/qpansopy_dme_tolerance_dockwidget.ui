@@ -60,12 +60,39 @@
        <item>
         <widget class="QLabel" name="pointLayerLabel">
          <property name="text">
-          <string>Navaid Point Layer</string>
+          <string>DME Point Layer</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QgsMapLayerComboBox" name="pointLayerComboBox">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="nonCollocatedDmeCheckBox">
+         <property name="text">
+          <string>Non-collocated DME</string>
+         </property>
+         <property name="toolTip">
+          <string>Use a separate tracking station for the sector. Requires a projected map CRS in metres and a divergence at the fix of no more than 23°.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="trackingLayerLabel">
+         <property name="text">
+          <string>Tracking Navaid Point Layer</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QgsMapLayerComboBox" name="trackingLayerComboBox">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
            <horstretch>0</horstretch>

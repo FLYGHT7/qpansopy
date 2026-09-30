@@ -18,6 +18,7 @@ def _load_preview_docks(monkeypatch):
         'QgsPoint', 'QgsPolygon', 'QgsLineString',
     ):
         monkeypatch.setattr(core, name, dummy_qgis_type, raising=False)
+    monkeypatch.setattr(core, 'QgsCsException', type('QgsCsException', (Exception,), {}), raising=False)
     qt_core = sys.modules['qgis.PyQt.QtCore']
     qt_gui = sys.modules['qgis.PyQt.QtGui']
     uic = sys.modules['qgis.PyQt.uic']
@@ -52,6 +53,7 @@ def _load_preview_docks(monkeypatch):
 
     tolerance = types.ModuleType('Q_Pansopy.modules.conv.dme_tolerance')
     tolerance.build_tolerance_geometry = MagicMock()
+    tolerance._geom_to_map_crs = MagicMock()
     monkeypatch.setitem(sys.modules, 'Q_Pansopy.modules.conv.dme_tolerance', tolerance)
 
     modules = (
