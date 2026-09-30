@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Non-collocated DME fix tolerance with separate tracking station and 23-degree divergence limit
     - Circling Protection Area tool
 	- Object Selection bug fixed for selection only option 
 	- Add complete Circling table for Word
