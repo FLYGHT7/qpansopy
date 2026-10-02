@@ -60,6 +60,7 @@ def _load_preview_docks(monkeypatch):
         'Q_Pansopy.dockwidgets.conv.qpansopy_dme_tolerance_dockwidget',
         'Q_Pansopy.dockwidgets.departures.qpansopy_omnidirectional_dockwidget',
         'Q_Pansopy.dockwidgets.utilities.qpansopy_wind_spiral_dockwidget',
+        'Q_Pansopy.dockwidgets.departures.qpansopy_sid_initial_dockwidget',
     )
     loaded = []
     for name in modules:
@@ -84,6 +85,7 @@ def _dock_class(module):
     (0, '_clear_preview', '_update_preview'),
     (1, '_clear_der_marker', '_update_der_marker'),
     (2, '_clear_preview', '_update_preview'),
+    (3, '_clear_der_marker', '_update_der_marker'),
 ])
 def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     preview_docks, dock_index, clear_method, update_method
@@ -105,6 +107,7 @@ def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     (0, '_update_preview', '_preview_band', 2),
     (1, '_update_der_marker', '_der_marker_band', 2),
     (2, '_update_preview', '_preview_band', 1),
+    (3, '_update_der_marker', '_der_marker_band', 2),
 ])
 def test_hidden_dock_updates_clear_rubberband_without_recomputing(
     preview_docks, dock_index, update_method, band_name, geometry_type
@@ -113,8 +116,9 @@ def test_hidden_dock_updates_clear_rubberband_without_recomputing(
     dock = object.__new__(dock_class)
     band = MagicMock()
     setattr(dock, band_name, band)
-    if dock_index == 1:
-        dock._der_line_band = MagicMock()
+    if dock_index in (1, 3):
+        if dock_index == 1:
+            dock._der_line_band = MagicMock()
         dock.runwayLayerComboBox = MagicMock()
     elif dock_index == 0:
         dock.pointLayerComboBox = MagicMock()

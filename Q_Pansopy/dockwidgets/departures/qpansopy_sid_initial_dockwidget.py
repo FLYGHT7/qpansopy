@@ -28,11 +28,20 @@ import datetime
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import Qgis
+from qgis.PyQt.QtGui import QColor
+from qgis.core import (
+    Qgis, QgsGeometry, QgsPoint, QgsPolygon, QgsLineString,
+    QgsProject, QgsCoordinateTransform,
+)
+from qgis.gui import QgsRubberBand
 from ...qt_compat import (
-    DOCK_FEATURES_DEFAULT, MLPM_LineLayer, Qgis_GeomType_Line,
+    DOCK_FEATURES_DEFAULT, MLPM_LineLayer, Qgis_GeomType_Line, Qgis_GeomType_Polygon,
     Qt_ALLOWED_DOCK_AREAS, preseed_active_layer,
 )
+
+
+_DER_MARKER_LENGTH_PX = 24
+_DER_MARKER_HALF_WIDTH_PX = 12
 
 
 # Load UI file
@@ -104,6 +113,19 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.direction_reversed = False
         self.update_direction_button()
 
+        # Live DER direction preview, matching the Omnidirectional SID marker.
+        self._der_marker_band = QgsRubberBand(iface.mapCanvas(), Qgis_GeomType_Polygon)
+        self._der_marker_band.setColor(QColor(0, 170, 0, 120))
+        self._der_marker_band.setStrokeColor(QColor(0, 120, 0, 220))
+        self._der_marker_band.setWidth(1)
+        self._connected_runway_layer = None
+        self.visibilityChanged.connect(self._on_visibility_changed)
+        self.runwayLayerComboBox.layerChanged.connect(self._on_runway_layer_changed)
+        self.showDerMarkerCheckBox.toggled.connect(self._update_der_marker)
+        iface.mapCanvas().scaleChanged.connect(self._update_der_marker)
+        iface.mapCanvas().destinationCrsChanged.connect(self._update_der_marker)
+        self._on_runway_layer_changed()
+
         # Log initial message
         self.log("SID Initial Climb module loaded.")
         self.log("Select a runway layer and configure parameters.")
@@ -138,6 +160,68 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.update_direction_button()
         direction = "End → Start" if self.direction_reversed else "Start → End"
         self.log(f"Direction changed to: {direction}")
+        self._update_der_marker()
+
+    def _on_visibility_changed(self, visible):
+        if visible:
+            self._update_der_marker()
+        else:
+            self._clear_der_marker()
+
+    def _on_runway_layer_changed(self, *args):
+        if self._connected_runway_layer is not None:
+            try:
+                self._connected_runway_layer.selectionChanged.disconnect(self._update_der_marker)
+            except (TypeError, RuntimeError):
+                pass
+            self._connected_runway_layer = None
+
+        if self._der_marker_band is None:
+            return
+        layer = self.runwayLayerComboBox.currentLayer()
+        if layer:
+            layer.selectionChanged.connect(self._update_der_marker)
+            self._connected_runway_layer = layer
+        self._update_der_marker()
+
+    def _clear_der_marker(self):
+        if self._der_marker_band is not None:
+            self._der_marker_band.reset(Qgis_GeomType_Polygon)
+
+    def _update_der_marker(self, *args):
+        self._clear_der_marker()
+        if self._der_marker_band is None or not self.isVisible():
+            return
+        if not self.showDerMarkerCheckBox.isChecked():
+            return
+
+        layer = self.runwayLayerComboBox.currentLayer()
+        if not layer or layer.selectedFeatureCount() != 1:
+            return
+
+        try:
+            canvas = self.iface.mapCanvas()
+            geom = QgsGeometry(layer.selectedFeatures()[0].geometry())
+            geom.transform(QgsCoordinateTransform(
+                layer.crs(), canvas.mapSettings().destinationCrs(), QgsProject.instance()))
+            vertices = geom.asPolyline()
+            if len(vertices) < 2:
+                return
+
+            # Match run_sid_initial_climb: use the first and last vertices.
+            start_point = QgsPoint(vertices[-1] if self.direction_reversed else vertices[0])
+            der_point = QgsPoint(vertices[0] if self.direction_reversed else vertices[-1])
+            if start_point.x() == der_point.x() and start_point.y() == der_point.y():
+                return
+            azimuth = start_point.azimuth(der_point)
+            mupp = canvas.mapUnitsPerPixel()
+            base_center = der_point.project(_DER_MARKER_LENGTH_PX * mupp, azimuth + 180)
+            base_left = base_center.project(_DER_MARKER_HALF_WIDTH_PX * mupp, azimuth - 90)
+            base_right = base_center.project(_DER_MARKER_HALF_WIDTH_PX * mupp, azimuth + 90)
+            triangle = QgsGeometry(QgsPolygon(QgsLineString([der_point, base_left, base_right])))
+            self._der_marker_band.setToGeometry(triangle, None)
+        except Exception:  # nosec B110 - best-effort preview; invalid geometry or a transform must not crash the dock
+            pass
 
     def update_direction_button(self):
         """Update direction button text based on current state."""
@@ -337,5 +421,21 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def closeEvent(self, event):
         """Handle close event."""
+        self._clear_der_marker()
+        if self._connected_runway_layer is not None:
+            try:
+                self._connected_runway_layer.selectionChanged.disconnect(self._update_der_marker)
+            except (TypeError, RuntimeError):
+                pass
+            self._connected_runway_layer = None
+        canvas = self.iface.mapCanvas()
+        for signal in (canvas.scaleChanged, canvas.destinationCrsChanged):
+            try:
+                signal.disconnect(self._update_der_marker)
+            except (TypeError, RuntimeError):
+                pass
+        if self._der_marker_band is not None:
+            canvas.scene().removeItem(self._der_marker_band)
+            self._der_marker_band = None
         self.closingPlugin.emit()
         event.accept()
