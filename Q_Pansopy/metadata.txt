@@ -24,6 +24,7 @@ deprecated=False
 changelog=
     Version 0.5.2:
     - Allow four decimal places for Initial SID IAS
+    - Enter Initial SID ISA temperature in the ISA calculator dialog
     - Non-collocated DME fix tolerance with separate tracking station and 23-degree divergence limit
     - Circling Protection Area tool
 	- Object Selection bug fixed for selection only option 

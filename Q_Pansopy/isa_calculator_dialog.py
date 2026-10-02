@@ -37,7 +37,8 @@ class ISACalculatorDialog(QDialog):
     """Dialog for ISA calculation with independent inputs"""
 
     def __init__(self, parent=None, fixed_elevation: Optional[float] = None,
-                 fixed_elevation_unit: str = 'ft'):
+                 fixed_elevation_unit: str = 'ft',
+                 reference_temperature_c: float = 15.0):
         super().__init__(parent)
         self.setWindowTitle("ISA Calculator")
         self.setFixedSize(400, 300)
@@ -46,6 +47,7 @@ class ISACalculatorDialog(QDialog):
         # Result values
         self.isa_variation = None
         self.calculation_metadata = {}
+        self.reference_temperature_c = float(reference_temperature_c)
 
         self.setup_ui()
         if fixed_elevation is not None:
@@ -91,7 +93,7 @@ class ISACalculatorDialog(QDialog):
         # Temperature Reference
         self.temperature_edit = QLineEdit()
         self.temperature_edit.setValidator(validator)
-        self.temperature_edit.setText("15")
+        self.temperature_edit.setText('{0:g}'.format(self.reference_temperature_c))
         self.temperature_edit.setMinimumHeight(28)
         input_layout.addRow("Temperature Reference (°C):", self.temperature_edit)
 
@@ -132,11 +134,11 @@ class ISACalculatorDialog(QDialog):
         self.elevation_edit.setText('{0:g}'.format(float(elevation)))
         self.elevation_edit.setReadOnly(True)
         self.elevation_edit.setToolTip(
-            'Aerodrome elevation provided by the Circling tool')
+            'Aerodrome elevation provided by the calling tool')
         self.elevation_unit_combo.setCurrentText(unit)
         self.elevation_unit_combo.setEnabled(False)
         self.elevation_unit_combo.setToolTip(
-            'Elevation unit provided by the Circling tool')
+            'Elevation unit provided by the calling tool')
 
     def calculate_isa(self):
         """Calculate ISA variation"""

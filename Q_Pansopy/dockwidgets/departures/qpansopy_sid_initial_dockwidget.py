@@ -47,7 +47,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     This widget provides input controls for:
         - Runway/DER layer selection
         - Aerodrome and DER elevations
-        - PDG, Temperature, IAS
+        - PDG, ISA Variation, IAS
         - Turn altitude, bank angle
         - Wind speed, pilot reaction time
         - Direction toggle (Start→End / End→Start)
@@ -69,8 +69,9 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Store exact values entered by user
         self.exact_values = {}
 
-        # ISA Variation: manual input or calculated from AD elevation + Temp (issue #204)
-        self.isa_calculation_metadata = {'method': 'calculated'}
+        # ISA Variation can be entered manually or calculated in the shared ISA dialog.
+        self.reference_temp_c = 15.0
+        self.isa_calculation_metadata = {'method': 'manual'}
         self._isa_updating = False
 
         # Configure dock widget properties
@@ -187,18 +188,39 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.isa_calculation_metadata['method'] = 'manual'
 
     def _calculate_isa(self):
-        """Recompute ISA Variation from the current AD elevation + Temp fields
-        (issue #204: give the option to input manually or calculate)."""
-        from ...modules.departures.sid_initial_climb import calculate_isa_temperature
-        isa_values = calculate_isa_temperature(self.adElevSpinBox.value(), self.tempSpinBox.value())
+        """Calculate ISA Variation in the shared dialog using AD elevation."""
+        from ...isa_calculator_dialog import ISACalculatorDialog
+
+        dialog = ISACalculatorDialog(
+            self,
+            fixed_elevation=self.adElevSpinBox.value(),
+            fixed_elevation_unit='m',
+            reference_temperature_c=self.reference_temp_c,
+        )
+        if not dialog.exec():
+            return
+
+        isa_variation = dialog.get_isa_variation()
+        if isa_variation is None:
+            return
+        minimum = self.isaVarSpinBox.minimum()
+        maximum = self.isaVarSpinBox.maximum()
+        if not minimum <= isa_variation <= maximum:
+            self.log(
+                'Error: Calculated ΔT ISA {0:.4f} °C is outside the allowed '
+                'range ({1:.4f} to {2:.4f} °C)'.format(
+                    isa_variation, minimum, maximum))
+            return
 
         self._isa_updating = True
         try:
-            self.isaVarSpinBox.setValue(isa_values['delta_isa'])
+            self.isaVarSpinBox.setValue(isa_variation)
         finally:
             self._isa_updating = False
-        self.isa_calculation_metadata['method'] = 'calculated'
-        self.log(f"ISA Variation calculated: {isa_values['delta_isa']:.4f}°C")
+        metadata = dialog.get_calculation_metadata()
+        self.isa_calculation_metadata = dict(metadata)
+        self.reference_temp_c = metadata['temperature_reference']
+        self.log('ISA Variation calculated: {0:.4f}°C'.format(isa_variation))
 
     def get_parameters(self):
         """
@@ -211,7 +233,7 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'aerodrome_elevation_m': self.adElevSpinBox.value(),
             'der_elevation_m': self.derElevSpinBox.value(),
             'pdg_percent': self.pdgSpinBox.value(),
-            'reference_temp_c': self.tempSpinBox.value(),
+            'reference_temp_c': self.reference_temp_c,
             'isa_var': self.isaVarSpinBox.value(),
             'isa_source': self.isa_calculation_metadata['method'],
             'ias_kt': self.iasSpinBox.value(),
@@ -274,7 +296,8 @@ class QPANSOPYSIDInitialDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.log(f"AD Elevation: {params['aerodrome_elevation_m']}m")
         self.log(f"DER Elevation: {params['der_elevation_m']}m")
         self.log(f"PDG: {params['pdg_percent']}%")
-        self.log(f"Temperature: {params['reference_temp_c']}°C")
+        if params['isa_source'] == 'calculated':
+            self.log(f"ISA reference temperature: {params['reference_temp_c']}°C")
         self.log(f"ISA Variation: {params['isa_var']}°C ({params['isa_source']})")
         self.log(f"IAS: {params['ias_kt']}kt")
         self.log(f"Turn Altitude: {params['altitude_ft']}ft")
