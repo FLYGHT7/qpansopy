@@ -109,8 +109,8 @@ def test_dialog_applies_and_locks_fixed_elevation(isa_dialog_module):
     assert calls['unit'] == 'ft'
     assert calls['read_only'] is True
     assert calls['unit_enabled'] is False
-    assert 'Circling' in calls['elevation_tooltip']
-    assert 'Circling' in calls['unit_tooltip']
+    assert 'calling tool' in calls['elevation_tooltip']
+    assert 'calling tool' in calls['unit_tooltip']
 
 
 def test_dialog_rejects_unknown_fixed_elevation_unit(isa_dialog_module):
