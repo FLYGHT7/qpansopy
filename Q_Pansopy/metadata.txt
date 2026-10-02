@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Add VSS/OCS direction reversal for Straight In and LOC
     - Allow four decimal places for Initial SID IAS
     - Non-collocated DME fix tolerance with separate tracking station and 23-degree divergence limit
     - Circling Protection Area tool
