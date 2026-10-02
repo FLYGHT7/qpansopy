@@ -48,6 +48,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Set up the user interface from Designer.
         self.setupUi(self)
         self.iface = iface
+        self.direction_reversed = False
 
         # Diccionario para almacenar los valores exactos ingresados
         self.exact_values = {}
@@ -68,6 +69,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Connect signals
         self.calculateButton.clicked.connect(self.calculate)
         self.browseButton.clicked.connect(self.browse_output_folder)
+        self.directionButton.clicked.connect(self.toggle_direction)
+        self.update_direction_button()
 
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -99,6 +102,22 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Log message
         self.log("QPANSOPY VSS plugin loaded. Select layers and parameters, then click Calculate.")
+
+    def _get_reverse_direction(self):
+        """Return the direction flag consumed by both VSS calculators."""
+        return 'YES' if self.direction_reversed else 'NO'
+
+    def toggle_direction(self):
+        """Reverse the next VSS/OCS construction around the selected threshold."""
+        self.direction_reversed = not self.direction_reversed
+        self.update_direction_button()
+        direction = 'Start to End' if self.direction_reversed else 'End to Start'
+        self.log(f"Direction changed to: {direction}")
+
+    def update_direction_button(self):
+        """Show the runway direction used by the next calculation."""
+        direction = 'Start to End' if self.direction_reversed else 'End to Start'
+        self.directionButton.setText(f"Direction: {direction}")
 
     def _setup_tooltips(self) -> None:
         """Set helpful tooltips on critical VSS input fields."""
@@ -145,6 +164,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
             'RDH_unit': self.units.get('RDH', 'm'),
             'VPA': self.exact_values.get('VPA', self.VPALineEdit.text()),
+            'reverse_direction': self._get_reverse_direction(),
         }
 
         show_web_popup("VSS — Feature Parameters", [("VSS", flat_params)])
@@ -167,7 +187,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'OCH_unit': self.units.get('OCH', 'm'),
                 'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
                 'RDH_unit': self.units.get('RDH', 'm'),
-                'VPA': self.exact_values.get('VPA', self.VPALineEdit.text())
+                'VPA': self.exact_values.get('VPA', self.VPALineEdit.text()),
+                'reverse_direction': self._get_reverse_direction()
             }
         }
         params_json = json.dumps(params_dict, indent=2)
@@ -412,13 +433,16 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Añadir información de unidades
             'thr_elev_unit': self.units.get('thr_elev', 'm'),
             'OCH_unit': self.units.get('OCH', 'm'),
-            'RDH_unit': self.units.get('RDH', 'm')
+            'RDH_unit': self.units.get('RDH', 'm'),
+            'reverse_direction': self._get_reverse_direction()
         }
 
         # Registrar las unidades utilizadas
         self.log(
             f"Using units - Threshold Elevation: {self.units.get('thr_elev', 'm')}, "
             f"OCH: {self.units.get('OCH', 'm')}, RDH: {self.units.get('RDH', 'm')}")
+        direction = 'Start to End' if self.direction_reversed else 'End to Start'
+        self.log(f"VSS/OCS construction direction: {direction}")
 
         try:
             # Run calculation for selected type

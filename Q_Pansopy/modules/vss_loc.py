@@ -37,6 +37,7 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     OCH_raw = float(params.get('OCH', 100))
     RDH_raw = float(params.get('RDH', 15))
     VPA = float(params.get('VPA', 3.0))
+    reverse_direction = params.get('reverse_direction', 'NO')
     export_kml = params.get('export_kml', True)
     output_dir = params.get('output_dir', os.path.expanduser('~'))
 
@@ -52,6 +53,7 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
 
     # Create a parameters dictionary for JSON storage - store original values
     parameters_dict = {
+        'reverse_direction': reverse_direction,
         'rwy_width': str(rwy_width),
         'thr_elev': str(thr_elev_raw),
         'strip_width': str(strip_width),
@@ -114,6 +116,8 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     end_point = QgsPoint(runway_geom[0])
     angle0 = start_point.azimuth(end_point) - 180
     azimuth = angle0 + 180
+    if reverse_direction == 'YES':
+        azimuth = (azimuth + 180.0) % 360.0
 
     # Function to convert from PointXY and add Z value
     def pz(point, z):
@@ -275,6 +279,9 @@ def copy_parameters_table(params):
 
     params_dict = {
         'runway_data': {
+            'reverse_direction': {
+                'value': params.get('reverse_direction', 'NO'), 'unit': ''
+            },
             'runway_width': {'value': params.get('rwy_width', 45), 'unit': 'm'},
             'threshold_elevation': {'value': params.get('thr_elev', 0), 'unit': params.get('thr_elev_unit', 'm')},
             'strip_width': {'value': params.get('strip_width', 140), 'unit': 'm'}
@@ -287,6 +294,7 @@ def copy_parameters_table(params):
     }
 
     sections = {
+        'reverse_direction': 'Runway Data',
         'runway_width': 'Runway Data',
         'threshold_elevation': 'Runway Data',
         'strip_width': 'Runway Data',
