@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Show an optional green DER direction marker for Initial SID
     - Allow four decimal places for Initial SID IAS
     - Non-collocated DME fix tolerance with separate tracking station and 23-degree divergence limit
     - Circling Protection Area tool
