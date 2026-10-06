@@ -23,19 +23,7 @@
       <item row="0" column="1"><widget class="QComboBox" name="trackingTypeComboBox"><item><property name="text"><string>VOR</string></property></item><item><property name="text"><string>ILS</string></property></item><item><property name="text"><string>NDB</string></property></item></widget></item>
       <item row="1" column="0"><widget class="QLabel" name="crossingTypeLabel"><property name="text"><string>Intersecting navaid</string></property></widget></item>
       <item row="1" column="1"><widget class="QComboBox" name="crossingTypeComboBox"><item><property name="text"><string>VOR</string></property></item><item><property name="text"><string>ILS</string></property></item><item><property name="text"><string>NDB</string></property></item></widget></item>
-      <item row="2" column="0"><widget class="QLabel" name="directionLabel"><property name="text"><string>Flight direction</string></property></widget></item>
-      <item row="2" column="1"><widget class="QComboBox" name="flightDirectionComboBox"><item><property name="text"><string>Outbound</string></property></item><item><property name="text"><string>Inbound</string></property></item></widget></item>
-      <item row="3" column="0" colspan="2"><widget class="QLabel" name="crsHintLabel"><property name="text"><string>Map canvas CRS must be projected in metres.</string></property></widget></item>
-     </layout>
-    </widget></item>
-    <item><widget class="QGroupBox" name="outputGroup">
-     <property name="title"><string>Output</string></property>
-     <layout class="QVBoxLayout" name="outputLayout">
-      <item><widget class="QCheckBox" name="exportKmlCheckBox"><property name="text"><string>Export tolerance polygon to KML</string></property></widget></item>
-      <item><layout class="QHBoxLayout" name="outputFolderLayout">
-       <item><widget class="QLineEdit" name="outputFolderLineEdit"><property name="placeholderText"><string>KML output folder</string></property></widget></item>
-       <item><widget class="QPushButton" name="browseButton"><property name="text"><string>Browse…</string></property></widget></item>
-      </layout></item>
+      <item row="2" column="0" colspan="2"><widget class="QCheckBox" name="includeConstructionLinesCheckBox"><property name="text"><string>Load construction lines</string></property><property name="checked"><bool>false</bool></property></widget></item>
      </layout>
     </widget></item>
     <item><widget class="QGroupBox" name="actionGroup">

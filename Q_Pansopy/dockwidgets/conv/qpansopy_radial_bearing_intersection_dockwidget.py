@@ -29,23 +29,10 @@ class QPANSOPYRadialBearingIntersectionDockWidget(QtWidgets.QDockWidget, FORM_CL
             combo.setFilters(MLPM_PointLayer)
             preseed_active_layer(iface, combo, Qgis_GeomType_Point)
         self.calculateButton.clicked.connect(self.calculate)
-        self.browseButton.clicked.connect(self._browse)
-        self.exportKmlCheckBox.toggled.connect(self._update_export_controls)
-        self._update_export_controls(False)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
-
-    def _update_export_controls(self, enabled):
-        self.outputFolderLineEdit.setEnabled(enabled)
-        self.browseButton.setEnabled(enabled)
-
-    def _browse(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(
-            self, 'Select KML output folder', self.outputFolderLineEdit.text())
-        if folder:
-            self.outputFolderLineEdit.setText(folder)
 
     def log(self, message):
         self.logTextEdit.append(str(message))
@@ -59,9 +46,7 @@ class QPANSOPYRadialBearingIntersectionDockWidget(QtWidgets.QDockWidget, FORM_CL
         params = {
             'tracking_type': self.trackingTypeComboBox.currentText(),
             'crossing_type': self.crossingTypeComboBox.currentText(),
-            'flight_direction': self.flightDirectionComboBox.currentText().lower(),
-            'export_kml': self.exportKmlCheckBox.isChecked(),
-            'output_dir': self.outputFolderLineEdit.text().strip(),
+            'include_construction_lines': self.includeConstructionLinesCheckBox.isChecked(),
             'on_result': self._log_result,
         }
         try:
