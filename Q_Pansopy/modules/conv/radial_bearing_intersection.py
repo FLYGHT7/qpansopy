@@ -20,6 +20,15 @@ ACCURACY_DEGREES = {
 
 
 @dataclass(frozen=True)
+class ConstructionLine:
+    role: str
+    navaid: str
+    offset_deg: float
+    start: tuple[float, float]
+    end: tuple[float, float]
+
+
+@dataclass(frozen=True)
 class ToleranceResult:
     ring: tuple[tuple[float, float], ...]
     area_m2: float
@@ -27,6 +36,7 @@ class ToleranceResult:
     cross_angle_deg: float
     early_nm: float
     late_nm: float
+    construction_lines: tuple[ConstructionLine, ...] = ()
 
 
 def _cross(a, b):
@@ -55,6 +65,31 @@ def _line_intersection(origin_a, direction_a, origin_b, direction_b):
     return point, distance_a, distance_b
 
 
+def _construction_segments(
+        station: tuple[float, float],
+        nominal_direction: tuple[float, float],
+        boundary_directions: list[tuple[float, float]],
+        angle_deg: float,
+        role: str,
+        navaid: str,
+        corners: list[tuple[float, float]],
+) -> tuple[ConstructionLine, ...]:
+    """Extend the nominal axis and both boundaries 10% past the polygon."""
+    segments = []
+    for offset, direction in ((0.0, nominal_direction),
+                              (-angle_deg, boundary_directions[0]),
+                              (angle_deg, boundary_directions[1])):
+        length = 1.1 * max(
+            (x - station[0]) * direction[0] + (y - station[1]) * direction[1]
+            for x, y in corners)
+        end = (station[0] + length * direction[0],
+               station[1] + length * direction[1])
+        if length <= 0 or not all(math.isfinite(value) for value in (*end, length)):
+            raise ValueError('Construction lines must have finite positive lengths')
+        segments.append(ConstructionLine(role, navaid, offset, station, end))
+    return tuple(segments)
+
+
 def build_intersection_tolerance(
         tracking_station: tuple[float, float],
         crossing_station: tuple[float, float],
@@ -63,7 +98,7 @@ def build_intersection_tolerance(
         crossing_type: str,
         flight_direction: str,
 ) -> ToleranceResult:
-    """Return the bounded intersection area and along-track limits.
+    """Return the bounded intersection area, along-track limits and construction.
 
     ``inbound`` means flight toward the tracking station; ``outbound`` means
     flight away from it. The fix is the nominal intersection of both radials.
@@ -141,12 +176,53 @@ def build_intersection_tolerance(
         cross_angle_deg=cross_angle,
         early_nm=-min(along_track) / NM_METRES,
         late_nm=max(along_track) / NM_METRES,
+        construction_lines=(
+            _construction_segments(tracking_station, tracking_unit, track_boundaries,
+                                   track_angle, 'Tracking', tracking_type, corners) +
+            _construction_segments(crossing_station, crossing_unit, cross_boundaries,
+                                   cross_angle, 'Intersecting', crossing_type, corners)),
     )
+
+
+def _construction_layer(name: str, map_crs, lines: tuple[ConstructionLine, ...]):
+    """Prepare the optional QGIS line layer without adding it to the project."""
+    from qgis.PyQt.QtCore import QVariant
+    from qgis.PyQt.QtGui import QColor
+    from qgis.core import QgsFeature, QgsField, QgsGeometry, QgsPointXY, QgsVectorLayer
+
+    layer = QgsVectorLayer('LineString', name, 'memory')
+    if not layer.isValid():
+        raise RuntimeError('Could not create construction lines layer')
+    layer.setCrs(map_crs)
+    provider = layer.dataProvider()
+    if not provider.addAttributes([
+            QgsField('Role', QVariant.String),
+            QgsField('Navaid', QVariant.String),
+            QgsField('OffsetDeg', QVariant.Double)]):
+        raise RuntimeError('Could not create construction line attributes')
+    layer.updateFields()
+    features = []
+    for line in lines:
+        geometry = QgsGeometry.fromPolylineXY([
+            QgsPointXY(*line.start), QgsPointXY(*line.end)])
+        if geometry.isEmpty() or not geometry.isGeosValid() or geometry.length() <= 0:
+            raise ValueError('Calculated construction line is invalid')
+        feature = QgsFeature(layer.fields())
+        feature.setGeometry(geometry)
+        feature.setAttributes([line.role, line.navaid, line.offset_deg])
+        features.append(feature)
+    added, _ = provider.addFeatures(features)
+    if not added:
+        raise RuntimeError('Could not add construction line features')
+    layer.updateExtents()
+    layer.renderer().symbol().setColor(QColor('#e6b800'))
+    layer.renderer().symbol().setWidth(0.3)
+    return layer
 
 
 def run_radial_bearing_intersection(
         iface, tracking_layer, crossing_layer, fix_layer, params=None) -> bool:
-    """Create one tolerance polygon for three point features selected in QGIS."""
+    """Create a tolerance polygon and optional construction lines in QGIS."""
     from qgis.PyQt.QtCore import QVariant
     from qgis.PyQt.QtGui import QColor
     from qgis.core import (
@@ -214,7 +290,13 @@ def run_radial_bearing_intersection(
     layer.updateExtents()
     layer.renderer().symbol().setColor(QColor('#365fc8'))
     layer.renderer().symbol().setOpacity(0.35)
-    project.addMapLayer(layer)
+    layers = [layer]
+    if params.get('include_construction_lines', False):
+        construction_name = '{0}_{1}_Radial_Bearing_Construction_Lines'.format(
+            tracking_type, crossing_type)
+        layers.append(_construction_layer(construction_name, map_crs, result.construction_lines))
+    for output_layer in layers:
+        project.addMapLayer(output_layer)
     callback = params.get('on_result')
     if callback is not None:
         callback(result)

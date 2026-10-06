@@ -103,9 +103,6 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
         iface.messageBar().pushMessage("QPANSOPY", "Runway layer must have at least 2 vertices", level=Qgis.Critical)
         return None
 
-    # Get map CRS
-    map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
-
     # Verify both layers use the same projected CRS (validation should be done in dockwidget)
     # Both layers should have the same CRS at this point (validated by dockwidget)
     # No transformation needed - use point geometry directly
@@ -138,7 +135,8 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     VSS_d = VSS_s.project(120/2, azimuth+90)
 
     # Create VSS layer
-    vss_layer = QgsVectorLayer("PolygonZ?crs=" + map_srid, "LOC - VSS area", "memory")
+    vss_layer = QgsVectorLayer("PolygonZ", "LOC - VSS area", "memory")
+    vss_layer.setCrs(point_layer.crs())
     vss_provider = vss_layer.dataProvider()
 
     # Add fields
@@ -180,7 +178,8 @@ def calculate_vss_loc(iface, point_layer, runway_layer, params):
     OCS_d = OCS_start.project(30 + rwy_width/2, azimuth+90)
 
     # Create OCS layer
-    ocs_layer = QgsVectorLayer("PolygonZ?crs=" + map_srid, "LOC - OCS area", "memory")
+    ocs_layer = QgsVectorLayer("PolygonZ", "LOC - OCS area", "memory")
+    ocs_layer.setCrs(point_layer.crs())
     ocs_provider = ocs_layer.dataProvider()
 
     # Add fields
