@@ -23,6 +23,7 @@
       <item row="0" column="1"><widget class="QComboBox" name="trackingTypeComboBox"><item><property name="text"><string>VOR</string></property></item><item><property name="text"><string>ILS</string></property></item><item><property name="text"><string>NDB</string></property></item></widget></item>
       <item row="1" column="0"><widget class="QLabel" name="crossingTypeLabel"><property name="text"><string>Intersecting navaid</string></property></widget></item>
       <item row="1" column="1"><widget class="QComboBox" name="crossingTypeComboBox"><item><property name="text"><string>VOR</string></property></item><item><property name="text"><string>ILS</string></property></item><item><property name="text"><string>NDB</string></property></item></widget></item>
+      <item row="2" column="0" colspan="2"><widget class="QCheckBox" name="includeConstructionLinesCheckBox"><property name="text"><string>Load construction lines</string></property><property name="checked"><bool>false</bool></property></widget></item>
      </layout>
     </widget></item>
     <item><widget class="QGroupBox" name="actionGroup">

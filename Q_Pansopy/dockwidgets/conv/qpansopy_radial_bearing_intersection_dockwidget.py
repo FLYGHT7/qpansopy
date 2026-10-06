@@ -46,6 +46,7 @@ class QPANSOPYRadialBearingIntersectionDockWidget(QtWidgets.QDockWidget, FORM_CL
         params = {
             'tracking_type': self.trackingTypeComboBox.currentText(),
             'crossing_type': self.crossingTypeComboBox.currentText(),
+            'include_construction_lines': self.includeConstructionLinesCheckBox.isChecked(),
             'on_result': self._log_result,
         }
         try:
