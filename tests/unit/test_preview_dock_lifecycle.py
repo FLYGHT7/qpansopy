@@ -16,6 +16,7 @@ def _load_preview_docks(monkeypatch):
     for name in (
         'QgsDistanceArea', 'QgsProject', 'QgsCoordinateTransform', 'QgsGeometry',
         'QgsPoint', 'QgsPolygon', 'QgsLineString',
+        'QgsPointXY',
     ):
         monkeypatch.setattr(core, name, dummy_qgis_type, raising=False)
     monkeypatch.setattr(core, 'QgsCsException', type('QgsCsException', (Exception,), {}), raising=False)
@@ -45,6 +46,7 @@ def _load_preview_docks(monkeypatch):
     qt_compat.Qgis_GeomType_Line = 1
     qt_compat.Qgis_GeomType_Polygon = 2
     qt_compat.DOCK_FEATURES_DEFAULT = 0
+    qt_compat.FORM_FIELD_ROLE = 0
     qt_compat.Qt_ALLOWED_DOCK_AREAS = 0
     qt_compat.Qt_AlignLeft = 0
     qt_compat.Qt_AlignRight = 0
@@ -61,6 +63,7 @@ def _load_preview_docks(monkeypatch):
         'Q_Pansopy.dockwidgets.departures.qpansopy_omnidirectional_dockwidget',
         'Q_Pansopy.dockwidgets.utilities.qpansopy_wind_spiral_dockwidget',
         'Q_Pansopy.dockwidgets.departures.qpansopy_sid_initial_dockwidget',
+        'Q_Pansopy.dockwidgets.utilities.qpansopy_vss_dockwidget',
     )
     loaded = []
     for name in modules:
@@ -86,6 +89,7 @@ def _dock_class(module):
     (1, '_clear_der_marker', '_update_der_marker'),
     (2, '_clear_preview', '_update_preview'),
     (3, '_clear_der_marker', '_update_der_marker'),
+    (4, '_clear_direction_preview', '_update_direction_preview'),
 ])
 def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     preview_docks, dock_index, clear_method, update_method
@@ -108,6 +112,7 @@ def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     (1, '_update_der_marker', '_der_marker_band', 2),
     (2, '_update_preview', '_preview_band', 1),
     (3, '_update_der_marker', '_der_marker_band', 2),
+    (4, '_update_direction_preview', '_direction_preview_band', 2),
 ])
 def test_hidden_dock_updates_clear_rubberband_without_recomputing(
     preview_docks, dock_index, update_method, band_name, geometry_type
@@ -120,9 +125,11 @@ def test_hidden_dock_updates_clear_rubberband_without_recomputing(
         if dock_index == 1:
             dock._der_line_band = MagicMock()
         dock.runwayLayerComboBox = MagicMock()
-    elif dock_index == 0:
+    elif dock_index in (0, 4):
+        dock.runwayLayerComboBox = MagicMock()
         dock.pointLayerComboBox = MagicMock()
-        dock.fixLayerComboBox = MagicMock()
+        if dock_index == 0:
+            dock.fixLayerComboBox = MagicMock()
     else:
         dock.pointLayerComboBox = MagicMock()
         dock.referenceLayerComboBox = MagicMock()

@@ -22,20 +22,31 @@ Procedure Analysis and Obstacle Protection Surfaces - VSS Module
 """
 
 import os
+import math
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
-from qgis.core import Qgis
+from qgis.PyQt.QtGui import QColor
+from qgis.core import (
+    Qgis, QgsCoordinateTransform, QgsGeometry, QgsLineString, QgsPoint,
+    QgsPointXY, QgsPolygon, QgsProject,
+)
+from qgis.gui import QgsRubberBand
 from ...qt_compat import (
     DOCK_FEATURES_DEFAULT, FORM_FIELD_ROLE, MLPM_LineLayer, MLPM_PointLayer,
-    Qgis_GeomType_Line, Qt_ALLOWED_DOCK_AREAS, preseed_active_layer,
+    Qgis_GeomType_Line, Qgis_GeomType_Point, Qgis_GeomType_Polygon,
+    Qt_ALLOWED_DOCK_AREAS, preseed_active_layer,
 )
+from ...utils import get_selected_feature
 import json
 import datetime
 
 # Use __file__ to get the current script path
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'utilities', 'qpansopy_vss_dockwidget.ui'))
+
+_DIRECTION_MARKER_LENGTH_PX = 24
+_DIRECTION_MARKER_HALF_WIDTH_PX = 12
 
 
 class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -80,6 +91,20 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.runwayLayerComboBox.setFilters(MLPM_LineLayer)
         preseed_active_layer(iface, self.runwayLayerComboBox, Qgis_GeomType_Line)
 
+        self._direction_preview_band = QgsRubberBand(
+            iface.mapCanvas(), Qgis_GeomType_Polygon)
+        self._direction_preview_band.setColor(QColor(0, 170, 0, 120))
+        self._direction_preview_band.setStrokeColor(QColor(0, 120, 0, 220))
+        self._direction_preview_band.setWidth(1)
+        self._connected_point_layer = None
+        self._connected_runway_layer = None
+        self.visibilityChanged.connect(self._on_visibility_changed)
+        self.pointLayerComboBox.layerChanged.connect(self._on_preview_layers_changed)
+        self.runwayLayerComboBox.layerChanged.connect(self._on_preview_layers_changed)
+        iface.mapCanvas().scaleChanged.connect(self._update_direction_preview)
+        iface.mapCanvas().destinationCrsChanged.connect(self._update_direction_preview)
+        self._on_preview_layers_changed()
+
         # Reemplazar los spinboxes con QLineEdit y añadir selectores de unidades
         self.setup_lineedits()
         self._setup_tooltips()
@@ -113,6 +138,104 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.update_direction_button()
         direction = 'Start to End' if self.direction_reversed else 'End to Start'
         self.log(f"Direction changed to: {direction}")
+        self._update_direction_preview()
+
+    def _on_visibility_changed(self, visible):
+        if visible:
+            self._update_direction_preview()
+        else:
+            self._clear_direction_preview()
+
+    def _on_preview_layers_changed(self, *args):
+        for attr in ('_connected_point_layer', '_connected_runway_layer'):
+            old_layer = getattr(self, attr, None)
+            if old_layer is not None:
+                try:
+                    for signal_name in (
+                        'selectionChanged', 'geometryChanged', 'featureAdded',
+                        'featureDeleted', 'dataChanged', 'crsChanged',
+                    ):
+                        getattr(old_layer, signal_name).disconnect(
+                            self._update_direction_preview)
+                except (TypeError, RuntimeError):
+                    pass
+            setattr(self, attr, None)
+
+        for attr, combo in (
+            ('_connected_point_layer', self.pointLayerComboBox),
+            ('_connected_runway_layer', self.runwayLayerComboBox),
+        ):
+            layer = combo.currentLayer()
+            if layer is not None:
+                for signal_name in (
+                    'selectionChanged', 'geometryChanged', 'featureAdded',
+                    'featureDeleted', 'dataChanged', 'crsChanged',
+                ):
+                    getattr(layer, signal_name).connect(self._update_direction_preview)
+                setattr(self, attr, layer)
+        self._update_direction_preview()
+
+    def _clear_direction_preview(self):
+        if self._direction_preview_band is not None:
+            self._direction_preview_band.reset(Qgis_GeomType_Polygon)
+
+    def _update_direction_preview(self, *args):
+        self._clear_direction_preview()
+        if self._direction_preview_band is None or not self.isVisible():
+            return
+        point_layer = self.pointLayerComboBox.currentLayer()
+        runway_layer = self.runwayLayerComboBox.currentLayer()
+        if not point_layer or not runway_layer or point_layer.crs() != runway_layer.crs():
+            return
+        if (not point_layer.crs().isValid() or point_layer.crs().isGeographic()):
+            return
+        try:
+            point_feature = get_selected_feature(point_layer, lambda _message: None)
+            runway_feature = get_selected_feature(runway_layer, lambda _message: None)
+            if point_feature is None or runway_feature is None:
+                return
+            point_geometry = point_feature.geometry()
+            runway_geometry = runway_feature.geometry()
+            if point_geometry.isEmpty() or runway_geometry.isEmpty():
+                return
+            if point_geometry.type() != Qgis_GeomType_Point or point_geometry.isMultipart():
+                return
+            if runway_geometry.type() != Qgis_GeomType_Line or runway_geometry.isMultipart():
+                return
+            threshold = QgsPoint(point_geometry.asPoint())
+            vertices = runway_geometry.asPolyline()
+            if len(vertices) < 2:
+                return
+            end_to_start = QgsPoint(vertices[-1])
+            start = QgsPoint(vertices[0])
+            if end_to_start == start:
+                return
+            azimuth = end_to_start.azimuth(start)
+            if self.direction_reversed:
+                azimuth = (azimuth + 180.0) % 360.0
+
+            canvas = self.iface.mapCanvas()
+            canvas_crs = canvas.mapSettings().destinationCrs()
+            transform = QgsCoordinateTransform(
+                point_layer.crs(), canvas_crs, QgsProject.instance())
+            canvas_threshold = QgsPoint(transform.transform(QgsPointXY(threshold)))
+            reference = threshold.project(100.0, azimuth)
+            canvas_reference = QgsPoint(transform.transform(QgsPointXY(reference)))
+            canvas_azimuth = canvas_threshold.azimuth(canvas_reference)
+            map_units_per_pixel = canvas.mapUnitsPerPixel()
+            if not map_units_per_pixel or not math.isfinite(map_units_per_pixel):
+                return
+            tip = canvas_threshold.project(_DIRECTION_MARKER_LENGTH_PX * map_units_per_pixel,
+                                           canvas_azimuth)
+            base = canvas_threshold
+            left = base.project(_DIRECTION_MARKER_HALF_WIDTH_PX * map_units_per_pixel,
+                                canvas_azimuth - 90)
+            right = base.project(_DIRECTION_MARKER_HALF_WIDTH_PX * map_units_per_pixel,
+                                 canvas_azimuth + 90)
+            triangle = QgsGeometry(QgsPolygon(QgsLineString([tip, left, right, tip])))
+            self._direction_preview_band.setToGeometry(triangle, None)
+        except Exception:  # nosec B110 - invalid layer/transform clears the optional preview only
+            return
 
     def update_direction_button(self):
         """Show the runway direction used by the next calculation."""
@@ -322,6 +445,8 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             pass
 
     def closeEvent(self, event):
+        self._clear_direction_preview()
+        self._direction_preview_band = None
         self.closingPlugin.emit()
         event.accept()
 

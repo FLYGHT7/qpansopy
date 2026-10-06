@@ -23,6 +23,8 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Show the VSS/OCS construction direction as a live map preview
+    - Assign VSS/OCS output surfaces the input layers' CRS
     - Add VSS/OCS direction reversal for Straight In and LOC
     - Allow four decimal places for Initial SID IAS
     - Enter Initial SID ISA temperature in the ISA calculator dialog
