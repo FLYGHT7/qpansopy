@@ -15,6 +15,7 @@ from qgis.core import (  # noqa: E402
 )
 from qgis.gui import QgsMapCanvas  # noqa: E402
 from qgis.PyQt.QtWidgets import QApplication, QMainWindow  # noqa: E402
+from qgis.PyQt.QtCore import Qt  # noqa: E402
 
 from Q_Pansopy.dockwidgets.utilities.qpansopy_vss_dockwidget import (  # noqa: E402
     QPANSOPYVSSDockWidget,
@@ -301,3 +302,54 @@ def test_reversed_surfaces_export_kml(clear_project, tmp_path, mode):
 
     assert set(result) >= {'vss_path', 'ocs_path'}
     assert len(list(tmp_path.glob('*.kml'))) == 2
+
+
+@pytest.mark.parametrize('mode', ['Straight In', 'LOC'])
+def test_surface_crs_uses_input_crs_when_canvas_crs_differs(clear_project, mode):
+    project = clear_project
+    point_layer, runway_layer, _ = _input_layers(project, 37.0)
+    iface = _iface(project)
+    iface.canvas.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:3857'))
+
+    result = _calculate(mode, iface, point_layer, runway_layer)
+    for name in ('vss_layer', 'ocs_layer'):
+        output = result[name]
+        assert output.crs() == point_layer.crs()
+        assert output.crs().authid() == 'EPSG:32616'
+    _remove_outputs(project, result)
+
+
+def test_direction_preview_tracks_toggle_and_visibility(clear_project):
+    project = clear_project
+    point_layer, runway_layer, _ = _input_layers(project, 37.0)
+    iface = _iface(project)
+    dock = QPANSOPYVSSDockWidget(iface)
+    dock.pointLayerComboBox.setLayer(point_layer)
+    dock.runwayLayerComboBox.setLayer(runway_layer)
+    iface.window.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+    iface.window.show()
+    dock.show()
+    QApplication.processEvents()
+    try:
+        band = dock._direction_preview_band
+        first = band.asGeometry()
+        assert not first.isEmpty()
+        first_vertices = first.asMultiPolygon()[0][0]
+        assert len(first_vertices) == 4
+
+        dock.directionButton.click()
+        QApplication.processEvents()
+        reversed_geometry = band.asGeometry()
+        assert not reversed_geometry.isEmpty()
+        reversed_vertices = reversed_geometry.asMultiPolygon()[0][0]
+        assert reversed_vertices[0].x() != pytest.approx(first_vertices[0].x())
+        assert reversed_vertices[0].y() != pytest.approx(first_vertices[0].y())
+
+        dock.hide()
+        QApplication.processEvents()
+        assert band.asGeometry().isEmpty()
+        dock.show()
+        QApplication.processEvents()
+        assert not band.asGeometry().isEmpty()
+    finally:
+        dock.close()
