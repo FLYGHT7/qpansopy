@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Simplify Radial / Bearing Tolerance UI by removing flight direction, CRS hint and KML export controls
     - Add VSS/OCS direction reversal for Straight In and LOC
     - Allow four decimal places for Initial SID IAS
     - Enter Initial SID ISA temperature in the ISA calculator dialog

@@ -163,7 +163,7 @@ def test_multiple_selected_features_are_rejected(points):
     assert _outputs() == []
 
 
-def test_dock_loads_with_fixed_types_and_direction(points):
+def test_simplified_dock_loads_and_creates_tolerance(points):
     iface = _Iface(QgsCoordinateReferenceSystem('EPSG:32616'))
     window = QMainWindow()
     iface.mainWindow = lambda: window
@@ -172,7 +172,25 @@ def test_dock_loads_with_fixed_types_and_direction(points):
         'VOR', 'ILS', 'NDB']
     assert [dock.crossingTypeComboBox.itemText(index) for index in range(3)] == [
         'VOR', 'ILS', 'NDB']
-    assert [dock.flightDirectionComboBox.itemText(index) for index in range(2)] == [
-        'Outbound', 'Inbound']
-    assert not dock.outputFolderLineEdit.isEnabled()
+    for name in ('directionLabel', 'flightDirectionComboBox', 'crsHintLabel',
+                 'outputGroup', 'exportKmlCheckBox', 'outputFolderLineEdit',
+                 'browseButton'):
+        assert not hasattr(dock, name)
+    dock.trackingLayerComboBox.setLayer(points[0])
+    dock.crossingLayerComboBox.setLayer(points[1])
+    dock.fixLayerComboBox.setLayer(points[2])
+    dock.crossingTypeComboBox.setCurrentText('NDB')
+    dock.calculateButton.click()
+    outputs = _outputs()
+    assert len(outputs) == 1
+    feature = next(outputs[0].getFeatures())
+    assert feature.geometry().isGeosValid()
+    assert feature['TrackType'] == 'VOR'
+    assert feature['CrossType'] == 'NDB'
+    assert feature['Direction'] == 'outbound'
+    expected_nm = 10000 * math.tan(math.radians(6.2)) / 1852
+    assert feature['EarlyNM'] == pytest.approx(expected_nm)
+    assert feature['LateNM'] == pytest.approx(expected_nm)
+    assert 'Early:' in dock.logTextEdit.toPlainText()
+    assert 'Radial/bearing fix tolerance created.' in dock.logTextEdit.toPlainText()
     dock.close()
