@@ -66,7 +66,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Diccionario para almacenar las unidades seleccionadas
         self.units = {
             'thr_elev': 'm',
-            'OCH': 'm',
+            'OCH': 'ft',
             'RDH': 'm'
         }
 
@@ -283,7 +283,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'thr_elev_unit': self.units.get('thr_elev', 'm'),
             'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
             'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
-            'OCH_unit': self.units.get('OCH', 'm'),
+            'OCH_unit': self.units.get('OCH', 'ft'),
             'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
             'RDH_unit': self.units.get('RDH', 'm'),
             'VPA': self.exact_values.get('VPA', self.VPALineEdit.text()),
@@ -307,7 +307,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 'thr_elev_unit': self.units.get('thr_elev', 'm'),
                 'strip_width': self.exact_values.get('strip_width', self.stripWidthLineEdit.text()),
                 'OCH': self.exact_values.get('OCH', self.OCHLineEdit.text()),
-                'OCH_unit': self.units.get('OCH', 'm'),
+                'OCH_unit': self.units.get('OCH', 'ft'),
                 'RDH': self.exact_values.get('RDH', self.RDHLineEdit.text()),
                 'RDH_unit': self.units.get('RDH', 'm'),
                 'VPA': self.exact_values.get('VPA', self.VPALineEdit.text()),
@@ -359,7 +359,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             lambda text: self.store_exact_value('OCH', text))
 
         self.OCHUnitCombo = QtWidgets.QComboBox(self)
-        self.OCHUnitCombo.addItems(['m', 'ft'])
+        self.OCHUnitCombo.addItems(['ft', 'm'])
         self.OCHUnitCombo.currentTextChanged.connect(
             lambda text: self.update_unit('OCH', text))
 
@@ -557,7 +557,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             'output_dir': output_dir,
             # Añadir información de unidades
             'thr_elev_unit': self.units.get('thr_elev', 'm'),
-            'OCH_unit': self.units.get('OCH', 'm'),
+            'OCH_unit': self.units.get('OCH', 'ft'),
             'RDH_unit': self.units.get('RDH', 'm'),
             'reverse_direction': self._get_reverse_direction()
         }
@@ -565,7 +565,7 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Registrar las unidades utilizadas
         self.log(
             f"Using units - Threshold Elevation: {self.units.get('thr_elev', 'm')}, "
-            f"OCH: {self.units.get('OCH', 'm')}, RDH: {self.units.get('RDH', 'm')}")
+            f"OCH: {self.units.get('OCH', 'ft')}, RDH: {self.units.get('RDH', 'm')}")
         direction = 'Start to End' if self.direction_reversed else 'End to Start'
         self.log(f"VSS/OCS construction direction: {direction}")
 
