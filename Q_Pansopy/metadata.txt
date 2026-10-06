@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Default VSS/OCS OCH units to feet
     - Add VSS/OCS direction reversal for Straight In and LOC
     - Allow four decimal places for Initial SID IAS
     - Enter Initial SID ISA temperature in the ISA calculator dialog
