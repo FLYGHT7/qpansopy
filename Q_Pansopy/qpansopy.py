@@ -286,6 +286,7 @@ class Qpansopy:
                 },
                 "PrimaryAreaAssessment": {
                     "TITLE": "Primary Area Assessment",
+                    "MENU_CATEGORY": "GENERIC",
                     "TOOLBAR": "UTILITIES",
                     "TOOLTIP": "Evaluate terrain and obstacles in a primary area",
                     "ICON": "primary_area_assessment.svg",
@@ -353,7 +354,14 @@ class Qpansopy:
             }
 
             # If you do not want empty submenus to be displayed self.submenus can be left as an empty dictionary
-            self.submenus: dict = {"CONV": None, "ILS": None, "PBN": None, "UTILITIES": None, "DEPARTURES": None}
+            self.submenus: dict = {
+                "CONV": None,
+                "ILS": None,
+                "PBN": None,
+                "UTILITIES": None,
+                "DEPARTURES": None,
+                "GENERIC": None,
+            }
 
             # Crear el menú QPANSOPY
             menuBar = self.iface.mainWindow().menuBar()
@@ -405,10 +413,11 @@ class Qpansopy:
                     self.toolbars[toolbar_name] = tb
                 self.toolbars[toolbar_name].addAction(action)
                 self.actions.append(action)
-                if self.submenus.get(toolbar_name) is None:
-                    self.submenus[toolbar_name] = QMenu(toolbar_name, self.menu)
-                    self.menu.addMenu(self.submenus[toolbar_name])
-                self.submenus[toolbar_name].addAction(action)
+                menu_category = properties.get("MENU_CATEGORY", toolbar_name)
+                if self.submenus.get(menu_category) is None:
+                    self.submenus[menu_category] = QMenu(menu_category, self.menu)
+                    self.menu.addMenu(self.submenus[menu_category])
+                self.submenus[menu_category].addAction(action)
 
             # Add separators in toolbars
             if self.toolbars.get('ILS'):

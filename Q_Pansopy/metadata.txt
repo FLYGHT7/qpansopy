@@ -38,6 +38,7 @@ changelog=
 	- Circling CAT E default unchecked
 	- Filter the Circling legend by created categories
     - Primary Area Obstacle Assessment Generic Tool
+    - Add a Generic menu category for Primary Area Assessment
     - Make Primary Area Assessment scrollable
 	- Primary area assessment remove terrain band option setting default
 	- Primary area assessment survey terminology

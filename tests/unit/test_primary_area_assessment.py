@@ -1,3 +1,4 @@
+import ast
 import hashlib
 import math
 from dataclasses import replace
@@ -337,6 +338,43 @@ def test_geographic_input_stops_before_mask_processing(monkeypatch):
         )
 
     assert not mask_called
+
+
+def test_primary_assessment_uses_generic_menu_category_and_utilities_toolbar():
+    plugin_path = Path(__file__).parents[2] / 'Q_Pansopy/qpansopy.py'
+    plugin_source = plugin_path.read_text(encoding='utf-8-sig')
+    plugin_tree = ast.parse(plugin_source)
+
+    modules_dict = next(
+        node
+        for node in ast.walk(plugin_tree)
+        if isinstance(node, ast.Dict)
+        and any(
+            isinstance(key, ast.Constant)
+            and key.value == 'PrimaryAreaAssessment'
+            for key in node.keys
+        )
+    )
+    module_config = next(
+        value
+        for key, value in zip(modules_dict.keys, modules_dict.values)
+        if isinstance(key, ast.Constant)
+        and key.value == 'PrimaryAreaAssessment'
+    )
+    module_properties = {
+        key.value: ast.literal_eval(value)
+        for key, value in zip(module_config.keys, module_config.values)
+        if isinstance(key, ast.Constant)
+        and key.value in {'TITLE', 'MENU_CATEGORY', 'TOOLBAR'}
+    }
+
+    assert module_properties == {
+        'TITLE': 'Primary Area Assessment',
+        'MENU_CATEGORY': 'GENERIC',
+        'TOOLBAR': 'UTILITIES',
+    }
+    assert '"GENERIC": None' in plugin_source
+    assert 'properties.get("MENU_CATEGORY", toolbar_name)' in plugin_source
 
 
 def test_dockwidget_defaults_match_generic_assessment_contract():
