@@ -1,8 +1,9 @@
-"""QGIS geometry and widget checks for VSS/OCS direction reversal (#307)."""
+"""QGIS checks for VSS/OCS direction, preview and THR reference line."""
 
 import json
 import math
 from unittest.mock import patch
+from xml.etree import ElementTree as ET
 
 import pytest
 
@@ -10,8 +11,9 @@ pytest.importorskip('qgis')
 pytestmark = pytest.mark.qgis_runtime
 
 from qgis.core import (  # noqa: E402
-    QgsApplication, QgsCoordinateReferenceSystem, QgsFeature, QgsGeometry,
-    QgsPointXY, QgsProject, QgsVectorLayer,
+    QgsApplication, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
+    QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorFileWriter,
+    QgsVectorLayer,
 )
 from qgis.gui import QgsMapCanvas  # noqa: E402
 from qgis.PyQt.QtWidgets import QApplication, QMainWindow  # noqa: E402
@@ -112,7 +114,7 @@ def _iface(project):
 
 
 def _calculate(mode, iface, point_layer, runway_layer, reverse_direction=None,
-               export_kml=False, output_dir=None):
+               export_kml=False, output_dir=None, **overrides):
     params = {
         'rwy_width': '45',
         'thr_elev': '100',
@@ -128,6 +130,7 @@ def _calculate(mode, iface, point_layer, runway_layer, reverse_direction=None,
     }
     if reverse_direction is not None:
         params['reverse_direction'] = reverse_direction
+    params.update(overrides)
     calculator = {
         'Straight In': calculate_vss_straight,
         'LOC': calculate_vss_loc,
@@ -145,7 +148,7 @@ def _output_vertices(layer):
 
 
 def _remove_outputs(project, result):
-    for layer in (result['vss_layer'], result['ocs_layer']):
+    for layer in (result['vss_layer'], result['ocs_layer'], result['reference_line_layer']):
         project.removeMapLayer(layer.id())
 
 
@@ -292,16 +295,37 @@ def test_dock_direction_toggle_and_parameter_exports(clear_project, monkeypatch)
 
 
 @pytest.mark.parametrize('mode', ['Straight In', 'LOC'])
-def test_reversed_surfaces_export_kml(clear_project, tmp_path, mode):
+@pytest.mark.parametrize('elevation,unit', [(100.0, 'm'), (1000.0, 'ft')])
+def test_reversed_surfaces_export_kml(clear_project, tmp_path, mode, elevation, unit):
     project = clear_project
     point_layer, runway_layer, _ = _input_layers(project, 0.0)
     result = _calculate(
         mode, _iface(project), point_layer, runway_layer, 'YES',
         export_kml=True, output_dir=str(tmp_path),
+        thr_elev=elevation, thr_elev_unit=unit,
     )
 
-    assert set(result) >= {'vss_path', 'ocs_path'}
-    assert len(list(tmp_path.glob('*.kml'))) == 2
+    assert set(result) >= {'vss_path', 'ocs_path', 'reference_line_path'}
+    assert len(list(tmp_path.glob('*.kml'))) == 3
+
+    namespaces = {'kml': 'http://www.opengis.net/kml/2.2'}
+    root = ET.parse(result['reference_line_path']).getroot()
+    line = root.find('.//kml:LineString', namespaces)
+    assert line is not None
+    assert line.find('kml:altitudeMode', namespaces).text == 'absolute'
+    coordinates = [
+        tuple(map(float, value.split(',')))
+        for value in line.find('kml:coordinates', namespaces).text.split()
+    ]
+    points = next(result['reference_line_layer'].getFeatures()).geometry().constGet().points()
+    transform = QgsCoordinateTransform(
+        point_layer.crs(), QgsCoordinateReferenceSystem('EPSG:4326'), project
+    )
+    assert len(coordinates) == len(points) == 3
+    z = elevation if unit == 'm' else elevation * 0.3048
+    for coordinate, point in zip(coordinates, points):
+        lon_lat = transform.transform(QgsPointXY(point.x(), point.y()))
+        assert coordinate == pytest.approx((lon_lat.x(), lon_lat.y(), z), abs=1e-7)
 
 
 @pytest.mark.parametrize('mode', ['Straight In', 'LOC'])
@@ -312,11 +336,153 @@ def test_surface_crs_uses_input_crs_when_canvas_crs_differs(clear_project, mode)
     iface.canvas.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:3857'))
 
     result = _calculate(mode, iface, point_layer, runway_layer)
-    for name in ('vss_layer', 'ocs_layer'):
+    for name in ('vss_layer', 'ocs_layer', 'reference_line_layer'):
         output = result[name]
         assert output.crs() == point_layer.crs()
         assert output.crs().authid() == 'EPSG:32616'
     _remove_outputs(project, result)
+
+
+@pytest.mark.parametrize('mode', ['Straight In', 'LOC'])
+@pytest.mark.parametrize('line_angle_degrees', [0.0, 37.0], ids=['east-west', 'oblique'])
+@pytest.mark.parametrize('reverse_direction', ['NO', 'YES'])
+@pytest.mark.parametrize('elevation,unit', [(100.0, 'm'), (1000.0, 'ft')])
+def test_reference_line_geometry_and_threshold_elevation(
+        clear_project, tmp_path, mode, line_angle_degrees, reverse_direction, elevation, unit):
+    project = clear_project
+    point_layer, runway_layer, threshold = _input_layers(project, line_angle_degrees)
+    point_wkb = next(point_layer.getFeatures()).geometry().asWkb()
+    runway_wkb = next(runway_layer.getFeatures()).geometry().asWkb()
+    point_selection = point_layer.selectedFeatureIds()
+    runway_selection = runway_layer.selectedFeatureIds()
+    result = _calculate(
+        mode, _iface(project), point_layer, runway_layer, reverse_direction,
+        output_dir=str(tmp_path), thr_elev=elevation, thr_elev_unit=unit,
+    )
+
+    reference = result['reference_line_layer']
+    assert reference.name() == 'VSS_OCS_RWY_reference_line'
+    assert project.mapLayer(reference.id()) is reference
+    assert reference.featureCount() == 1
+    feature = next(reference.getFeatures())
+    assert feature.geometry().wkbType().name.endswith('LineStringZ')
+    points = feature.geometry().constGet().points()
+    assert len(points) == 3
+    z = elevation if unit == 'm' else elevation * 0.3048
+    assert all(point.z() == pytest.approx(z) for point in points)
+    assert (points[1].x(), points[1].y()) == pytest.approx((threshold.x(), threshold.y()))
+
+    angle = math.radians(line_angle_degrees)
+    for point in (points[0], points[2]):
+        dx, dy = point.x() - threshold.x(), point.y() - threshold.y()
+        assert dx * math.cos(angle) + dy * math.sin(angle) == pytest.approx(0.0, abs=1e-8)
+    assert points[0].x() + points[2].x() == pytest.approx(2 * threshold.x())
+    assert points[0].y() + points[2].y() == pytest.approx(2 * threshold.y())
+
+    # Independently measure the widest surface in runway-relative coordinates.
+    surface_half_width = max(
+        abs((x - threshold.x()) * -math.sin(angle) + (y - threshold.y()) * math.cos(angle))
+        for name in ('vss_layer', 'ocs_layer')
+        for x, y, _z in _output_vertices(result[name])
+    )
+    half_width = surface_half_width + 926.0
+    assert feature.geometry().length() == pytest.approx(2 * half_width)
+    for point in (points[0], points[2]):
+        assert math.hypot(point.x() - threshold.x(), point.y() - threshold.y()) == pytest.approx(half_width)
+    assert reference.renderer().symbol().color().name() == '#800080'
+    assert reference.renderer().symbol().width() == pytest.approx(0.5)
+    assert len(reference.actions().actions()) > 0
+    assert feature['id'] == 1
+    assert json.loads(feature['parameters']) == json.loads(next(result['vss_layer'].getFeatures())['parameters'])
+    assert next(point_layer.getFeatures()).geometry().asWkb() == point_wkb
+    assert next(runway_layer.getFeatures()).geometry().asWkb() == runway_wkb
+    assert point_layer.selectedFeatureIds() == point_selection
+    assert runway_layer.selectedFeatureIds() == runway_selection
+    assert 'reference_line_path' not in result
+    assert not list(tmp_path.glob('*.kml'))
+
+    _remove_outputs(project, result)
+    inverted = _calculate(
+        mode, _iface(project), point_layer, runway_layer,
+        'YES' if reverse_direction == 'NO' else 'NO', thr_elev=elevation, thr_elev_unit=unit,
+    )
+    inverted_points = next(inverted['reference_line_layer'].getFeatures()).geometry().constGet().points()
+    for normal_point, inverted_point in zip(points, reversed(inverted_points)):
+        assert (normal_point.x(), normal_point.y(), normal_point.z()) == pytest.approx(
+            (inverted_point.x(), inverted_point.y(), inverted_point.z())
+        )
+
+
+@pytest.mark.parametrize('mode', ['Straight In', 'LOC'])
+@pytest.mark.parametrize('overrides', [
+    {'rwy_width': 3000},
+    {'strip_width': 3000},
+    {'OCH': 25, 'strip_width': 20},
+])
+def test_reference_covers_widest_surface(clear_project, mode, overrides):
+    project = clear_project
+    point_layer, runway_layer, threshold = _input_layers(project, 37.0)
+    result = _calculate(mode, _iface(project), point_layer, runway_layer, **overrides)
+    normal_x, normal_y = -math.sin(math.radians(37.0)), math.cos(math.radians(37.0))
+    widest = max(
+        abs((x - threshold.x()) * normal_x + (y - threshold.y()) * normal_y)
+        for name in ('vss_layer', 'ocs_layer')
+        for x, y, _z in _output_vertices(result[name])
+    )
+    line = next(result['reference_line_layer'].getFeatures()).geometry()
+    assert line.length() == pytest.approx(2 * (widest + 926.0))
+
+
+@pytest.mark.parametrize('mode', ['Straight In', 'LOC'])
+@pytest.mark.parametrize('failure', [None, 'write', 'altitude'], ids=['success', 'write-error', 'altitude-error'])
+def test_reference_export_status_preserves_outputs_and_logs(
+        clear_project, tmp_path, monkeypatch, mode, failure):
+    project = clear_project
+    point_layer, runway_layer, _ = _input_layers(project, 0.0)
+    if failure == 'write':
+        writer = QgsVectorFileWriter.writeAsVectorFormat
+
+        def fail_reference(layer, *args, **kwargs):
+            if layer.name() == 'VSS_OCS_RWY_reference_line':
+                return QgsVectorFileWriter.ErrCreateDataSource, 'Reference write failed'
+            return writer(layer, *args, **kwargs)
+
+        monkeypatch.setattr(QgsVectorFileWriter, 'writeAsVectorFormat', fail_reference)
+    elif failure == 'altitude':
+        monkeypatch.setattr('Q_Pansopy.modules.vss_reference.fix_kml_altitude_mode', lambda _path: False)
+
+    result = _calculate(
+        mode, _iface(project), point_layer, runway_layer,
+        export_kml=True, output_dir=str(tmp_path),
+    )
+    assert ('reference_line_path' in result) is (failure is None)
+    assert set(result) >= {'vss_path', 'ocs_path'}
+    for name in ('vss_layer', 'ocs_layer', 'reference_line_layer'):
+        assert project.mapLayer(result[name].id()) is result[name]
+
+    iface = _iface(project)
+    dock = QPANSOPYVSSDockWidget(iface)
+    dock.pointLayerComboBox.setLayer(point_layer)
+    dock.runwayLayerComboBox.setLayer(runway_layer)
+    dock.exportKmlCheckBox.setChecked(True)
+    dock.outputFolderLineEdit.setText(str(tmp_path))
+    dock.locRadioButton.setChecked(mode == 'LOC')
+    logs = []
+    monkeypatch.setattr(dock, 'log', logs.append)
+    calculator = 'vss_loc.calculate_vss_loc' if mode == 'LOC' else 'vss_straight.calculate_vss_straight'
+    try:
+        with patch(f'Q_Pansopy.modules.{calculator}', return_value=result):
+            dock.calculate()
+        assert any('Reference line created: VSS_OCS_RWY_reference_line' in message for message in logs)
+        if failure is None:
+            assert f"Reference line KML exported to: {result['reference_line_path']}" in logs
+            assert 'Calculation completed successfully!' in logs
+        else:
+            assert any('Reference line KML export failed' in message for message in logs)
+            assert not any('Reference line KML exported to:' in message for message in logs)
+            assert 'Calculation completed successfully!' not in logs
+    finally:
+        dock.close()
 
 
 def test_direction_preview_tracks_toggle_and_visibility(clear_project):
