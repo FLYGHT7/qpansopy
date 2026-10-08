@@ -8,6 +8,7 @@ import math
 import os
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable, Optional
 
 
 NM_METRES = 1852.0
@@ -220,24 +221,18 @@ def _construction_layer(name: str, map_crs, lines: tuple[ConstructionLine, ...])
     return layer
 
 
-def run_radial_bearing_intersection(
-        iface, tracking_layer, crossing_layer, fix_layer, params=None) -> bool:
-    """Create a tolerance polygon and optional construction lines in QGIS."""
-    from qgis.PyQt.QtCore import QVariant
-    from qgis.PyQt.QtGui import QColor
+def build_intersection_tolerance_from_layers(
+        tracking_layer, crossing_layer, fix_layer, map_crs,
+        tracking_type='VOR', crossing_type='VOR',
+        flight_direction='outbound',
+        show_error: Optional[Callable[[str], None]] = None,
+) -> ToleranceResult:
+    """Resolve input points and calculate without creating layers or UI output."""
     from qgis.core import (
-        Qgis, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeature,
-        QgsField, QgsGeometry, QgsPointXY, QgsProject, QgsVectorFileWriter,
-        QgsVectorLayer,
+        Qgis, QgsCoordinateTransform, QgsGeometry, QgsProject,
     )
-
     from ...utils import get_selected_feature
 
-    params = params or {}
-    tracking_type = params.get('tracking_type', 'VOR')
-    crossing_type = params.get('crossing_type', 'VOR')
-    direction = params.get('flight_direction', 'outbound')
-    map_crs = iface.mapCanvas().mapSettings().destinationCrs()
     if map_crs.isGeographic() or map_crs.mapUnits() != Qgis.DistanceUnit.Meters:
         raise ValueError('Set the map canvas to a projected CRS in metres')
     project = QgsProject.instance()
@@ -246,8 +241,8 @@ def run_radial_bearing_intersection(
         if layer is None:
             raise ValueError('Select a {0} point layer'.format(role))
         feature = get_selected_feature(
-            layer, lambda message: iface.messageBar().pushMessage(
-                'QPANSOPY', '{0}: {1}'.format(role, message), level=Qgis.Warning))
+            layer, lambda message: show_error('{0}: {1}'.format(role, message))
+            if show_error is not None else None)
         if feature is None:
             raise ValueError('Select exactly one {0} point'.format(role))
         geometry = QgsGeometry(feature.geometry())
@@ -261,8 +256,31 @@ def run_radial_bearing_intersection(
     tracking = selected_point(tracking_layer, 'tracking station')
     crossing = selected_point(crossing_layer, 'crossing station')
     fix = selected_point(fix_layer, 'nominal fix')
-    result = build_intersection_tolerance(
-        tracking, crossing, fix, tracking_type, crossing_type, direction)
+    return build_intersection_tolerance(
+        tracking, crossing, fix, tracking_type, crossing_type, flight_direction)
+
+
+def run_radial_bearing_intersection(
+        iface, tracking_layer, crossing_layer, fix_layer, params=None) -> bool:
+    """Create a tolerance polygon and optional construction lines in QGIS."""
+    from qgis.PyQt.QtCore import QVariant
+    from qgis.PyQt.QtGui import QColor
+    from qgis.core import (
+        Qgis, QgsCoordinateReferenceSystem, QgsFeature, QgsField, QgsGeometry,
+        QgsPointXY, QgsProject, QgsVectorFileWriter, QgsVectorLayer,
+    )
+
+    params = params or {}
+    tracking_type = params.get('tracking_type', 'VOR')
+    crossing_type = params.get('crossing_type', 'VOR')
+    direction = params.get('flight_direction', 'outbound')
+    map_crs = iface.mapCanvas().mapSettings().destinationCrs()
+    result = build_intersection_tolerance_from_layers(
+        tracking_layer, crossing_layer, fix_layer, map_crs,
+        tracking_type, crossing_type, direction,
+        show_error=lambda message: iface.messageBar().pushMessage(
+            'QPANSOPY', message, level=Qgis.Warning))
+    project = QgsProject.instance()
 
     name = '{0}_{1}_Radial_Bearing_Tolerance'.format(tracking_type, crossing_type)
     layer = QgsVectorLayer('Polygon', name, 'memory')
