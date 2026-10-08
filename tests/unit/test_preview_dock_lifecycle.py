@@ -64,6 +64,7 @@ def _load_preview_docks(monkeypatch):
         'Q_Pansopy.dockwidgets.utilities.qpansopy_wind_spiral_dockwidget',
         'Q_Pansopy.dockwidgets.departures.qpansopy_sid_initial_dockwidget',
         'Q_Pansopy.dockwidgets.utilities.qpansopy_vss_dockwidget',
+        'Q_Pansopy.dockwidgets.conv.qpansopy_radial_bearing_intersection_dockwidget',
     )
     loaded = []
     for name in modules:
@@ -90,6 +91,7 @@ def _dock_class(module):
     (2, '_clear_preview', '_update_preview'),
     (3, '_clear_der_marker', '_update_der_marker'),
     (4, '_clear_direction_preview', '_update_direction_preview'),
+    (5, '_stop_preview', '_start_preview'),
 ])
 def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     preview_docks, dock_index, clear_method, update_method
@@ -113,6 +115,7 @@ def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     (2, '_update_preview', '_preview_band', 1),
     (3, '_update_der_marker', '_der_marker_band', 2),
     (4, '_update_direction_preview', '_direction_preview_band', 2),
+    (5, '_update_preview', '_preview_band', 2),
 ])
 def test_hidden_dock_updates_clear_rubberband_without_recomputing(
     preview_docks, dock_index, update_method, band_name, geometry_type
@@ -121,6 +124,8 @@ def test_hidden_dock_updates_clear_rubberband_without_recomputing(
     dock = object.__new__(dock_class)
     band = MagicMock()
     setattr(dock, band_name, band)
+    if dock_index == 5:
+        dock._construction_preview_band = MagicMock()
     if dock_index in (1, 3):
         if dock_index == 1:
             dock._der_line_band = MagicMock()
@@ -142,6 +147,8 @@ def test_hidden_dock_updates_clear_rubberband_without_recomputing(
         dock._der_line_band.reset.assert_called_once_with(1)
     else:
         band.reset.assert_called_once_with(geometry_type)
+    if dock_index == 5:
+        dock._construction_preview_band.reset.assert_called_once_with(1)
     dock.isVisible.assert_called_once_with()
     for combo_name in (
         'pointLayerComboBox', 'fixLayerComboBox', 'runwayLayerComboBox',

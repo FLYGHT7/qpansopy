@@ -23,7 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
-    - Add a VSS/OCS runway reference line at the THR elevation with KML export
+    - Add Radial / Bearing Tolerance live preview with optional construction lines
     - Add optional construction lines layer to Radial / Bearing Tolerance
     - Simplify Radial / Bearing Tolerance UI by removing flight direction, CRS hint and KML export controls
     - Add VSS/OCS direction reversal for Straight In and LOC
