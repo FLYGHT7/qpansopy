@@ -18,6 +18,7 @@ import json
 from ..utils import get_selected_feature, fix_kml_altitude_mode
 from ..parameters_inspector_dialog import register_parameters_action
 from .constants import FT_TO_M
+from .vss_reference import create_vss_reference_line, export_vss_reference_line
 
 
 def calculate_vss_straight(iface, point_layer, runway_layer, params):
@@ -211,13 +212,23 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
     register_parameters_action(vss_layer)
     register_parameters_action(ocs_layer)
 
+    surface_half_width = max(
+        strip_width / 2, strip_width / 2 + 0.15 * D_VSS,
+        30 + rwy_width / 2, OCS_E_width,
+    )
+    reference_line_layer = create_vss_reference_line(
+        new_geom, azimuth, surface_half_width, thr_elev,
+        point_layer.crs(), parameters_json,
+    )
+
     # Add layers to the project
-    QgsProject.instance().addMapLayers([vss_layer, ocs_layer])
+    QgsProject.instance().addMapLayers([vss_layer, ocs_layer, reference_line_layer])
 
     # Export to KML if requested
     result = {
         'vss_layer': vss_layer,
-        'ocs_layer': ocs_layer
+        'ocs_layer': ocs_layer,
+        'reference_line_layer': reference_line_layer,
     }
 
     if export_kml:
@@ -259,6 +270,10 @@ def calculate_vss_straight(iface, point_layer, runway_layer, params):
         if ocs_error[0] == QgsVectorFileWriter.NoError:
             fix_kml_altitude_mode(ocs_export_path)
             result['ocs_path'] = ocs_export_path
+
+        reference_line_path = export_vss_reference_line(reference_line_layer, output_dir, timestamp)
+        if reference_line_path:
+            result['reference_line_path'] = reference_line_path
 
     # Zoom to appropriate scale
     sc = iface.mapCanvas().scale()

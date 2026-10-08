@@ -585,10 +585,21 @@ class QPANSOPYVSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
             # Log results
             if result:
+                self.log(f"Reference line created: {result['reference_line_layer'].name()}")
+                reference_export_failed = False
                 if export_kml:
                     self.log(f"VSS KML exported to: {result.get('vss_path', 'N/A')}")
                     self.log(f"OCS KML exported to: {result.get('ocs_path', 'N/A')}")
-                self.log("Calculation completed successfully!")
+                    reference_line_path = result.get('reference_line_path')
+                    if reference_line_path:
+                        self.log(f"Reference line KML exported to: {reference_line_path}")
+                    else:
+                        reference_export_failed = True
+                        self.log("Reference line KML export failed; calculated layers remain available.")
+                if reference_export_failed:
+                    self.log("Calculation completed with a reference line KML export error.")
+                else:
+                    self.log("Calculation completed successfully!")
                 self.log("You can now use the 'Copy Parameters to Clipboard' button "
                          "to copy the parameters for documentation.")
             else:
