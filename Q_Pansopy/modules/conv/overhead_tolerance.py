@@ -125,6 +125,36 @@ def _map_geometry(feature, layer, map_crs, project):
     return geometry
 
 
+def resolve_overhead_direction_from_layers(
+        navaid_layer: QgsVectorLayer, track_layer: QgsVectorLayer,
+        map_crs: QgsCoordinateReferenceSystem, reverse: bool = False,
+) -> tuple[tuple[float, float], tuple[float, float], bool]:
+    """Resolve the station and inbound track in the projected metre map CRS."""
+    if navaid_layer is None or track_layer is None:
+        raise ValueError('Select a navaid point layer and a track line layer')
+    if map_crs.isGeographic() or map_crs.mapUnits() != Qgis.DistanceUnit.Meters:
+        raise ValueError('Set the map canvas to a projected CRS in metres')
+    project = QgsProject.instance()
+    station_geom = _map_geometry(
+        _selected_one(navaid_layer, 'navaid point'), navaid_layer, map_crs, project)
+    track_geom = _map_geometry(
+        _selected_one(track_layer, 'track line'), track_layer, map_crs, project)
+    if station_geom.isMultipart() or station_geom.type() != Qgis.GeometryType.Point:
+        raise ValueError('Navaid must be a single point')
+    if track_geom.isMultipart() or track_geom.type() != Qgis.GeometryType.Line:
+        raise ValueError('Track must be a single LineString')
+    station_point = station_geom.asPoint()
+    station = (station_point.x(), station_point.y())
+    vertices = [(p.x(), p.y()) for p in track_geom.asPolyline()]
+    direction, tied = inbound_from_track(station, vertices, reverse)
+    if not all(math.isfinite(value) for value in station):
+        raise ValueError('Navaid coordinates must be finite')
+    norm = math.hypot(*direction)
+    if not math.isfinite(norm) or norm < 1e-9:
+        raise ValueError('Track has no usable inbound direction')
+    return station, direction, tied
+
+
 def _polygon_layer(name, crs, ring, color):
     layer = QgsVectorLayer('Polygon', name, 'memory')
     layer.setCrs(crs)
@@ -181,22 +211,9 @@ def run_overhead_tolerance(iface, navaid_layer, track_layer, params=None):
     aircraft_ft = float(params['aircraft_altitude_ft'])
     station_ft = float(params['station_elevation_ft'])
     map_crs = iface.mapCanvas().mapSettings().destinationCrs()
-    if map_crs.isGeographic() or map_crs.mapUnits() != Qgis.DistanceUnit.Meters:
-        raise ValueError('Set the map canvas to a projected CRS in metres')
     project = QgsProject.instance()
-    station_geom = _map_geometry(
-        _selected_one(navaid_layer, 'navaid point'), navaid_layer, map_crs, project)
-    track_geom = _map_geometry(
-        _selected_one(track_layer, 'track line'), track_layer, map_crs, project)
-    if station_geom.isMultipart() or station_geom.type() != Qgis.GeometryType.Point:
-        raise ValueError('Navaid must be a single point')
-    if track_geom.isMultipart() or track_geom.type() != Qgis.GeometryType.Line:
-        raise ValueError('Track must be a single LineString')
-    station_point = station_geom.asPoint()
-    station = (station_point.x(), station_point.y())
-    vertices = [(p.x(), p.y()) for p in track_geom.asPolyline()]
-    direction, tied = inbound_from_track(
-        station, vertices, params.get('reverse_direction', False))
+    station, direction, tied = resolve_overhead_direction_from_layers(
+        navaid_layer, track_layer, map_crs, params.get('reverse_direction', False))
     area, cone, points, radius_nm, q_nm = build_overhead_coordinates(
         station, direction, aircraft_ft - station_ft, navaid_type)
     layers = [_polygon_layer('{0}_Overhead_Tolerance'.format(navaid_type),
