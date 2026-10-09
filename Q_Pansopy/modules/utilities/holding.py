@@ -457,7 +457,7 @@ def run_holding_pattern(iface, routing_layer, params: dict):
         # Inputs
         IAS = float(params.get('IAS', 195))
         altitude_ft = _feet(float(params.get('altitude', 10000)), params.get('altitude_unit', 'ft'))
-        isa_var = float(params.get('isa_var', 0.0))
+        isa_var = float(params.get('isa_var', 15.0))
         bank_angle = float(params.get('bank_angle', 25))
         leg_time_min = float(params.get('leg_time_min', 1.0))
         turn = params.get('turn', 'R').upper()
