@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Add live nominal preview to Holding
     - Add Radial / Bearing Tolerance live preview with optional construction lines
     - Add optional construction lines layer to Radial / Bearing Tolerance
     - Simplify Radial / Bearing Tolerance UI by removing flight direction, CRS hint and KML export controls
