@@ -6,12 +6,18 @@
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item><widget class="QGroupBox" name="inputGroup">
-     <property name="title"><string>Input layers — select one feature in each</string></property>
+     <property name="title"><string>Input layers</string></property>
      <layout class="QFormLayout" name="inputLayout">
       <item row="0" column="0"><widget class="QLabel" name="navaidLabel"><property name="text"><string>VOR/NDB point</string></property></widget></item>
       <item row="0" column="1"><widget class="QgsMapLayerComboBox" name="navaidLayerComboBox"/></item>
       <item row="1" column="0"><widget class="QLabel" name="trackLabel"><property name="text"><string>Inbound track line</string></property></widget></item>
       <item row="1" column="1"><widget class="QgsMapLayerComboBox" name="trackLayerComboBox"/></item>
+      <item row="2" column="1"><widget class="QCheckBox" name="useSelectionOnlyCheckBox">
+       <property name="text"><string>Use selection only</string></property>
+       <property name="checked"><bool>true</bool></property>
+       <property name="enabled"><bool>false</bool></property>
+       <property name="toolTip"><string>Select exactly one feature in each input layer. Unselected features are not processed. This requirement is always enabled.</string></property>
+      </widget></item>
      </layout>
     </widget></item>
     <item><widget class="QGroupBox" name="paramsGroup">
