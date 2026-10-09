@@ -13,6 +13,11 @@ from qgis.PyQt.QtGui import QColor
 from ...utils import get_selected_feature
 
 
+def _calculate_dme_tolerance_m(distance_m: float) -> float:
+    """Return the one-sided DME tolerance from the unrounded distance."""
+    return 0.25 * 1852 + 0.0125 * distance_m
+
+
 def _geom_to_map_crs(feature, layer, map_crs, project, role='Input') -> QgsPointXY:
     """Validate a single point and return it in the map CRS."""
     g = QgsGeometry(feature.geometry())
@@ -68,7 +73,7 @@ def build_tolerance_geometry(
         raise ValueError('DME distance must be finite and greater than zero')
     distance_nm = round(length0_m / 1852, 3)
 
-    dme_tol_m = 0.25 * 1852 + 0.0125 * length0_m
+    dme_tol_m = _calculate_dme_tolerance_m(length0_m)
     dme_tolerance = (dme_tol_m / length0_m) * length0 if length0_m > 0 else dme_tol_m
 
     reach = length0 * 5
@@ -159,6 +164,7 @@ def run_dme_tolerance(iface, navid_layer, fix_layer, params=None, tracking_layer
 
     tolerance_area, distance_nm = build_tolerance_geometry(
         navid_geom, fix_geom, rotate, da, tracking_geom)
+    dme_tolerance_nm = _calculate_dme_tolerance_m(da.measureLine(navid_geom, fix_geom)) / 1852
 
     # Build result layer
     layer_name = f"{nav_type.replace('/', '')}_tolerance"
@@ -168,12 +174,13 @@ def run_dme_tolerance(iface, navid_layer, fix_layer, params=None, tracking_layer
         QgsField('Symbol', QVariant.String),
         QgsField('Distance_NM', QVariant.Double),
         QgsField('Sector_Angle', QVariant.Double),
+        QgsField('DME_Tolerance_NM', QVariant.Double),
     ])
     v_layer.updateFields()
 
     seg = QgsFeature()
     seg.setGeometry(tolerance_area)
-    seg.setAttributes([f'{nav_type} Tolerance', distance_nm, rotate])
+    seg.setAttributes([f'{nav_type} Tolerance', distance_nm, rotate, dme_tolerance_nm])
     pr.addFeatures([seg])
     v_layer.updateExtents()
 

@@ -22,6 +22,7 @@ def _load_preview_docks(monkeypatch):
     monkeypatch.setattr(core, 'QgsCsException', type('QgsCsException', (Exception,), {}), raising=False)
     qt_core = sys.modules['qgis.PyQt.QtCore']
     qt_gui = sys.modules['qgis.PyQt.QtGui']
+    monkeypatch.setattr(qt_gui, 'QDoubleValidator', type('QDoubleValidator', (), {}), raising=False)
     uic = sys.modules['qgis.PyQt.uic']
     monkeypatch.setattr(
         qt_core, 'QRegularExpression', type('QRegularExpression', (), {}), raising=False
@@ -65,6 +66,7 @@ def _load_preview_docks(monkeypatch):
         'Q_Pansopy.dockwidgets.departures.qpansopy_sid_initial_dockwidget',
         'Q_Pansopy.dockwidgets.utilities.qpansopy_vss_dockwidget',
         'Q_Pansopy.dockwidgets.conv.qpansopy_radial_bearing_intersection_dockwidget',
+        'Q_Pansopy.dockwidgets.conv.qpansopy_overhead_tolerance_dockwidget',
     )
     loaded = []
     for name in modules:
@@ -92,6 +94,7 @@ def _dock_class(module):
     (3, '_clear_der_marker', '_update_der_marker'),
     (4, '_clear_direction_preview', '_update_direction_preview'),
     (5, '_stop_preview', '_start_preview'),
+    (6, '_stop_preview', '_start_preview'),
 ])
 def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     preview_docks, dock_index, clear_method, update_method
@@ -116,6 +119,7 @@ def test_visibility_change_clears_on_hide_and_refreshes_on_show(
     (3, '_update_der_marker', '_der_marker_band', 2),
     (4, '_update_direction_preview', '_direction_preview_band', 2),
     (5, '_update_preview', '_preview_band', 2),
+    (6, '_update_direction_preview', '_direction_preview_band', 2),
 ])
 def test_hidden_dock_updates_clear_rubberband_without_recomputing(
     preview_docks, dock_index, update_method, band_name, geometry_type
@@ -135,6 +139,9 @@ def test_hidden_dock_updates_clear_rubberband_without_recomputing(
         dock.pointLayerComboBox = MagicMock()
         if dock_index == 0:
             dock.fixLayerComboBox = MagicMock()
+    elif dock_index == 6:
+        dock.navaidLayerComboBox = MagicMock()
+        dock.trackLayerComboBox = MagicMock()
     else:
         dock.pointLayerComboBox = MagicMock()
         dock.referenceLayerComboBox = MagicMock()
@@ -153,6 +160,7 @@ def test_hidden_dock_updates_clear_rubberband_without_recomputing(
     for combo_name in (
         'pointLayerComboBox', 'fixLayerComboBox', 'runwayLayerComboBox',
         'referenceLayerComboBox',
+        'navaidLayerComboBox', 'trackLayerComboBox',
     ):
         combo = getattr(dock, combo_name, None)
         if combo is not None:
