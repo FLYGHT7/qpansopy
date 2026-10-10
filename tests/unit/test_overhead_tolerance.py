@@ -56,6 +56,18 @@ def test_inbound_nearest_endpoint_and_reverse(overhead):
     assert overhead.inbound_from_track((50, 0), vertices) == ((100, 0), True)
 
 
+@pytest.mark.parametrize('vertices,direction,tied', [
+    ([(-100, -100), (-10, -20), (0, 0)], (10, 20), False),
+    ([(0, 0), (20, 10), (100, 100)], (-20, -10), False),
+    ([(-10, 0), (-10, -10), (10, 0)], (20, 10), True),
+])
+def test_inbound_uses_adjacent_segment_on_multivertex_tracks(overhead, vertices, direction, tied):
+    assert overhead.inbound_from_track((0, 0), vertices) == (direction, tied)
+    assert overhead.inbound_from_track((0, 0), vertices, True) == (
+        tuple(-value for value in direction), tied,
+    )
+
+
 @pytest.mark.parametrize('height,navaid', [
     (0, 'VOR'), (-100, 'NDB'), (float('nan'), 'VOR'), (1000, 'ILS'),
 ])

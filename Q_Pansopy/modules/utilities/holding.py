@@ -559,21 +559,48 @@ def run_holding_pattern(iface, routing_layer, params: dict):
             iface.messageBar().pushMessage("QPANSOPY", "Routing segment must be a polyline with 2+ vertices", level=Qgis.Warning)
             return False
 
-        nominal = build_holding_nominal(pts, params)
-        start_pt = nominal.start_point
-        azimuth = nominal.azimuth
-        summary = nominal.summary
-        summary_text = nominal.summary_text
-        IAS = summary['IAS_kt']
-        altitude_ft = summary['Altitude_ft']
-        isa_var = summary['ISA_var_C']
-        bank_angle = summary['Bank_deg']
-        leg_time_min = summary['Leg_min']
-        turn = summary['Turn']
-        tas = summary['TAS_kt']
-        rate_of_turn = summary['Rate_deg_s']
-        radius_of_turn = summary['Radius_nm']
-        L_nm = summary['Leg_nm']
+        # Follow original script semantics
+        start_pt = QgsPoint(pts[-1])  # fix at end of selected polyline
+        end_pt = QgsPoint(pts[0])
+        angle0 = start_pt.azimuth(end_pt) + 180
+        azimuth = angle0  # original uses 'azimuth' variable
+
+        # Inputs
+        IAS = float(params.get('IAS', 195))
+        altitude_ft = _feet(float(params.get('altitude', 10000)), params.get('altitude_unit', 'ft'))
+        isa_var = float(params.get('isa_var', 15.0))
+        bank_angle = float(params.get('bank_angle', 25))
+        leg_time_min = float(params.get('leg_time_min', 1.0))
+        turn = params.get('turn', 'R').upper()
+        # side = -90 LEFT, +90 RIGHT  (angle_side = 90 - azimuth - side)
+        side = -90 if turn == 'L' else 90
+
+        # Compute TAS, rate and radius via shared helper
+        k, tas, rate_of_turn, radius_of_turn, wind = tas_calculation(IAS, altitude_ft, isa_var, bank_angle)
+
+        # Leg ground distance like original: v = tas/3600, t = time*60, L = v*t
+        v_nmps = tas / 3600.0
+        t_sec = leg_time_min * 60.0
+        L_nm = v_nmps * t_sec
+
+        summary = {
+            "IAS_kt": IAS,
+            "Altitude_ft": altitude_ft,
+            "ISA_var_C": isa_var,
+            "Bank_deg": bank_angle,
+            "Leg_min": leg_time_min,
+            "Turn": turn,
+            "K_factor": k,
+            "TAS_kt": tas,
+            "Rate_deg_s": rate_of_turn,
+            "Radius_nm": radius_of_turn,
+            "Leg_nm": L_nm,
+        }
+        summary_text = (
+            f"IAS {IAS:.1f} kt | Alt {altitude_ft:.0f} ft | ISA Δ {isa_var:.1f} °C | "
+            f"Bank {bank_angle:.1f} ° | Leg {leg_time_min:.2f} min ({L_nm:.2f} NM) | "
+            f"Turn {turn} | TAS {tas:.2f} kt | Rate {rate_of_turn:.3f} °/s | Radius {radius_of_turn:.3f} NM"
+        )
 
         # Build memory line layer (lines only, like original)
         crs = iface.mapCanvas().mapSettings().destinationCrs()

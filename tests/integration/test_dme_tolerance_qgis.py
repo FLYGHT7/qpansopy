@@ -1,4 +1,4 @@
-"""Runtime geometry and UI checks for non-collocated DME (issue #305)."""
+"""Runtime checks for non-collocated DME and tolerance attributes (#305, #326)."""
 
 import math
 
@@ -13,6 +13,7 @@ from qgis.core import (  # noqa: E402
     QgsVectorLayer,
 )
 from qgis.gui import QgsMapCanvas  # noqa: E402
+from qgis.PyQt.QtCore import QVariant  # noqa: E402
 from qgis.PyQt.QtWidgets import QMainWindow  # noqa: E402
 
 from Q_Pansopy.modules.conv.dme_tolerance import (  # noqa: E402
@@ -189,24 +190,46 @@ def test_invalid_sector_angles(da, rotate):
         _geometry((0, 0), (-1000, 0), (10000, 0), da, rotate)
 
 
-def test_runner_attributes_and_single_feature_fallback(points):
+@pytest.mark.parametrize('nav_type,rotate', [('VOR/DME', 5.2), ('NDB/DME', 6.9), ('LOC/DME', 2.4)])
+@pytest.mark.parametrize('non_collocated', [False, True], ids=['collocated', 'non-collocated'])
+def test_runner_attributes_and_single_feature_fallback(points, nav_type, rotate, non_collocated):
     dme, tracking, fix = points
     for layer in points:
         layer.removeSelection()
     iface = _Iface()
     assert run_dme_tolerance(iface, dme, fix, {
-        'nav_type': 'LOC/DME', 'rotate': 2.4, 'non_collocated_dme': True,
-    }, tracking_layer=tracking)
+        'nav_type': nav_type, 'rotate': rotate, 'non_collocated_dme': non_collocated,
+    }, tracking_layer=tracking if non_collocated else None)
     assert len(_outputs()) == 1
     output = _outputs()[0]
     feature = next(output.getFeatures())
     assert [field.name() for field in output.fields()] == [
-        'Symbol', 'Distance_NM', 'Sector_Angle']
-    assert feature['Symbol'] == 'LOC/DME Tolerance'
+        'Symbol', 'Distance_NM', 'Sector_Angle', 'DME_Tolerance_NM']
+    assert output.fields().field('DME_Tolerance_NM').type() == QVariant.Double
+    assert feature['Symbol'] == f'{nav_type} Tolerance'
     assert feature['Distance_NM'] == round(10000 / 1852, 3)
-    assert feature['Sector_Angle'] == 2.4
+    assert feature['Sector_Angle'] == rotate
+    # 10,000 m gives 588 m of one-sided tolerance. Distance_NM is already
+    # rounded to 5.400; deriving the tolerance from it would give 588.01 m.
+    assert feature['DME_Tolerance_NM'] == pytest.approx(588 / 1852, rel=0, abs=1e-12)
     assert output.crs() == iface.canvas.mapSettings().destinationCrs()
     assert feature.geometry().isGeosValid()
+
+
+@pytest.mark.parametrize('distance_nm,expected_tolerance_nm', [(5, 0.3125), (7, 0.3375)])
+@pytest.mark.parametrize('non_collocated', [False, True], ids=['collocated', 'non-collocated'])
+def test_runner_stores_exact_dme_tolerance(points, distance_nm, expected_tolerance_nm, non_collocated):
+    dme, tracking, fix = points
+    fix_feature = next(fix.getFeatures())
+    geometry = QgsGeometry.fromPointXY(QgsPointXY(500000 + distance_nm * 1852, 1600000))
+    assert fix.dataProvider().changeGeometryValues({fix_feature.id(): geometry})
+
+    assert run_dme_tolerance(_Iface(), dme, fix, {
+        'non_collocated_dme': non_collocated,
+    }, tracking_layer=tracking if non_collocated else None)
+    feature = next(_outputs()[0].getFeatures())
+    assert feature['Distance_NM'] == distance_nm
+    assert feature['DME_Tolerance_NM'] == pytest.approx(expected_tolerance_nm, rel=0, abs=1e-12)
 
 
 def test_runner_transforms_tracking_from_another_crs(points):
@@ -219,6 +242,8 @@ def test_runner_transforms_tracking_from_another_crs(points):
     tracking = _point_layer('WGS tracking', [(point.x(), point.y())], 'EPSG:4326')
     assert run_dme_tolerance(_Iface(), dme, fix, {'non_collocated_dme': True}, tracking)
     assert len(_outputs()) == 1
+    feature = next(_outputs()[0].getFeatures())
+    assert feature['DME_Tolerance_NM'] == pytest.approx(588 / 1852, rel=0, abs=1e-12)
 
 
 def test_runner_missing_tracking_creates_no_output(points):
