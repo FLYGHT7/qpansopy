@@ -29,7 +29,7 @@
             <Option name="type" type="QString" value="collection"/>
           </Option>
         </data_defined_properties>
-        <layer class="SimpleLine" enabled="1" id="{6a5835e4-36da-430b-82e5-0ac2a0972f37}" locked="0" pass="0">
+        <layer class="SimpleLine" enabled="1" id="{981553e7-6483-4701-a995-d986282984e4}" locked="0" pass="0">
           <Option type="Map">
             <Option name="align_dash_pattern" type="QString" value="0"/>
             <Option name="capstyle" type="QString" value="square"/>
@@ -41,7 +41,7 @@
             <Option name="dash_pattern_offset_unit" type="QString" value="MM"/>
             <Option name="draw_inside_polygon" type="QString" value="0"/>
             <Option name="joinstyle" type="QString" value="bevel"/>
-            <Option name="line_color" type="QString" value="183,72,75,255,rgb:0.7176471,0.282353,0.2941177,1"/>
+            <Option name="line_color" type="QString" value="125,139,143,255,rgb:0.4901961,0.5450981,0.5607843,1"/>
             <Option name="line_style" type="QString" value="solid"/>
             <Option name="line_width" type="QString" value="0.6"/>
             <Option name="line_width_unit" type="QString" value="MM"/>
@@ -78,15 +78,15 @@
             <Option name="type" type="QString" value="collection"/>
           </Option>
         </data_defined_properties>
-        <layer class="SimpleFill" enabled="1" id="{90546ac9-1061-4a2c-9e59-173a2665ae0d}" locked="0" pass="0">
+        <layer class="SimpleFill" enabled="1" id="{49cfdf81-8dc7-4626-bff6-02e341d44ab8}" locked="0" pass="0">
           <Option type="Map">
             <Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
-            <Option name="color" type="QString" value="183,72,75,255,rgb:0.7176471,0.282353,0.2941177,1"/>
+            <Option name="color" type="QString" value="125,139,143,255,rgb:0.4901961,0.5450981,0.5607843,1"/>
             <Option name="joinstyle" type="QString" value="bevel"/>
             <Option name="offset" type="QString" value="0,0"/>
             <Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
             <Option name="offset_unit" type="QString" value="MM"/>
-            <Option name="outline_color" type="QString" value="131,51,54,255,rgb:0.5125963,0.2016785,0.210071,1"/>
+            <Option name="outline_color" type="QString" value="89,99,102,255,rgb:0.3501335,0.3893492,0.4005493,1"/>
             <Option name="outline_style" type="QString" value="solid"/>
             <Option name="outline_width" type="QString" value="0.2"/>
             <Option name="outline_width_unit" type="QString" value="MM"/>
@@ -111,18 +111,18 @@
             <Option name="type" type="QString" value="collection"/>
           </Option>
         </data_defined_properties>
-        <layer class="SimpleMarker" enabled="1" id="{3c7a9ab7-901b-4049-be7c-41ed6d1ca277}" locked="0" pass="0">
+        <layer class="SimpleMarker" enabled="1" id="{be63a437-015c-42ce-bbff-1e77e8648123}" locked="0" pass="0">
           <Option type="Map">
             <Option name="angle" type="QString" value="0"/>
             <Option name="cap_style" type="QString" value="square"/>
-            <Option name="color" type="QString" value="183,72,75,255,rgb:0.7176471,0.282353,0.2941177,1"/>
+            <Option name="color" type="QString" value="125,139,143,255,rgb:0.4901961,0.5450981,0.5607843,1"/>
             <Option name="horizontal_anchor_point" type="QString" value="1"/>
             <Option name="joinstyle" type="QString" value="bevel"/>
             <Option name="name" type="QString" value="diamond"/>
             <Option name="offset" type="QString" value="0,0"/>
             <Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
             <Option name="offset_unit" type="QString" value="MM"/>
-            <Option name="outline_color" type="QString" value="131,51,54,255,rgb:0.5125963,0.2016785,0.210071,1"/>
+            <Option name="outline_color" type="QString" value="89,99,102,255,rgb:0.3501335,0.3893492,0.4005493,1"/>
             <Option name="outline_style" type="QString" value="solid"/>
             <Option name="outline_width" type="QString" value="0.2"/>
             <Option name="outline_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/>
@@ -144,7 +144,7 @@
       </symbol>
     </profileMarkerSymbol>
   </elevation>
-  <userNotes value="&lt;h3>Primary area obstacle assessment&lt;/h3>&lt;p>MOC: 300 m&lt;br>Tolerance override: disabled&lt;br>Data warnings: No obstacle data was evaluated inside the mask&lt;/p>"/>
+  <userNotes value="&lt;h3>Primary area obstacle assessment&lt;/h3>&lt;p>MOC: 300 m&lt;br>Area buffer: 8000 m&lt;br>Tolerance override: disabled&lt;br>OCA publication increment: 100 ft&lt;br>Data warnings: No survey data was evaluated inside the mask&lt;/p>"/>
   <renderer-v2 enableorderby="0" forceraster="0" referencescale="-1" symbollevels="0" type="singleSymbol">
     <symbols>
       <symbol alpha="1" clip_to_extent="1" force_rhr="0" frame_rate="10" is_animated="0" name="0" type="marker">
@@ -287,7 +287,7 @@
   </selection>
   <labeling type="simple">
     <settings calloutType="simple">
-      <text-style allowHtml="0" blendMode="0" capitalization="0" fieldName=" 'CONTROL OBSTACLE\n'||&quot;layer_type&quot; ||'\nOBS elev: '||&quot;elev&quot; ||' m\nMOCA: '||oca_ft||'ft' " fontFamily="Arial" fontItalic="0" fontKerning="1" fontLetterSpacing="0" fontSize="10" fontSizeMapUnitScale="3x:0,0,0,0,0,0" fontSizeUnit="Point" fontStrikeout="0" fontUnderline="0" fontWeight="700" fontWordSpacing="0" forcedBold="0" forcedItalic="0" isExpression="1" legendString="Aa" multilineHeight="1" multilineHeightUnit="Percentage" namedStyle="Bold" previewBkgrdColor="255,255,255,255,rgb:1,1,1,1" stretchFactor="100" tabStopDistance="80" tabStopDistanceMapUnitScale="3x:0,0,0,0,0,0" tabStopDistanceUnit="Point" textColor="255,0,21,255,hsv:0.98622220754623413,1,1,1" textOpacity="1" textOrientation="horizontal" useSubstitutions="0">
+      <text-style allowHtml="0" blendMode="0" capitalization="0" fieldName=" 'CONTROL OBSTACLE\n'||&quot;layer_type&quot; ||'\nOBS elev: '||&quot;elev&quot; ||' m\nMOCA pub: '||&quot;oca_pub_ft&quot;||' ft' " fontFamily="Arial" fontItalic="0" fontKerning="1" fontLetterSpacing="0" fontSize="10" fontSizeMapUnitScale="3x:0,0,0,0,0,0" fontSizeUnit="Point" fontStrikeout="0" fontUnderline="0" fontWeight="700" fontWordSpacing="0" forcedBold="0" forcedItalic="0" isExpression="1" legendString="Aa" multilineHeight="1" multilineHeightUnit="Percentage" namedStyle="Bold" previewBkgrdColor="255,255,255,255,rgb:1,1,1,1" stretchFactor="100" tabStopDistance="80" tabStopDistanceMapUnitScale="3x:0,0,0,0,0,0" tabStopDistanceUnit="Point" textColor="255,0,21,255,hsv:0.98622220754623413,1,1,1" textOpacity="1" textOrientation="horizontal" useSubstitutions="0">
         <families/>
         <text-buffer bufferBlendMode="0" bufferColor="250,250,250,255,rgb:0.9803922,0.9803922,0.9803922,1" bufferDraw="1" bufferJoinStyle="128" bufferNoFill="1" bufferOpacity="0.68200000000000005" bufferSize="2" bufferSizeMapUnitScale="3x:0,0,0,0,0,0" bufferSizeUnits="MM"/>
         <text-mask maskEnabled="0" maskJoinStyle="128" maskOpacity="1" maskSize="1.5" maskSize2="1.5" maskSizeMapUnitScale="3x:0,0,0,0,0,0" maskSizeUnits="MM" maskType="0" maskedSymbolLayers=""/>
@@ -422,15 +422,8 @@
   </labeling>
   <customproperties>
     <Option type="Map">
-      <Option name="dualview/previewExpressions" type="List">
-        <Option type="QString" value="COALESCE( &quot;id&quot;, '&lt;NULL>' )"/>
-        <Option type="QString" value=""/>
-        <Option type="QString" value="COALESCE( &quot;id&quot;, '&lt;NULL>' )"/>
-        <Option type="QString" value="COALESCE( &quot;id&quot;, '&lt;NULL>' )"/>
-        <Option type="invalid"/>
-      </Option>
       <Option name="embeddedWidgets/count" type="int" value="0"/>
-      <Option name="userNotes" type="QString" value="&lt;h3>Primary area obstacle assessment&lt;/h3>&lt;p>MOC: 300 m&lt;br>Tolerance override: disabled&lt;br>Data warnings: No obstacle data was evaluated inside the mask&lt;/p>"/>
+      <Option name="userNotes" type="QString" value="&lt;h3>Primary area obstacle assessment&lt;/h3>&lt;p>MOC: 300 m&lt;br>Area buffer: 8000 m&lt;br>Tolerance override: disabled&lt;br>OCA publication increment: 100 ft&lt;br>Data warnings: No survey data was evaluated inside the mask&lt;/p>"/>
       <Option name="variableNames"/>
       <Option name="variableValues"/>
     </Option>
@@ -518,6 +511,20 @@
         </config>
       </editWidget>
     </field>
+    <field configurationFlags="0" name="oca_pub_increment">
+      <editWidget type="Range">
+        <config>
+          <Option/>
+        </config>
+      </editWidget>
+    </field>
+    <field configurationFlags="0" name="oca_pub_ft">
+      <editWidget type="Range">
+        <config>
+          <Option/>
+        </config>
+      </editWidget>
+    </field>
   </fieldConfiguration>
   <aliases>
     <alias field="id" index="0" name=""/>
@@ -530,6 +537,8 @@
     <alias field="moc_m" index="7" name=""/>
     <alias field="oca_m" index="8" name=""/>
     <alias field="oca_ft" index="9" name=""/>
+    <alias field="oca_pub_increment" index="10" name=""/>
+    <alias field="oca_pub_ft" index="11" name=""/>
   </aliases>
   <defaults>
     <default applyOnUpdate="0" expression="" field="id"/>
@@ -542,6 +551,8 @@
     <default applyOnUpdate="0" expression="" field="moc_m"/>
     <default applyOnUpdate="0" expression="" field="oca_m"/>
     <default applyOnUpdate="0" expression="" field="oca_ft"/>
+    <default applyOnUpdate="0" expression="" field="oca_pub_increment"/>
+    <default applyOnUpdate="0" expression="" field="oca_pub_ft"/>
   </defaults>
   <constraints>
     <constraint constraints="0" exp_strength="0" field="id" notnull_strength="0" unique_strength="0"/>
@@ -554,6 +565,8 @@
     <constraint constraints="0" exp_strength="0" field="moc_m" notnull_strength="0" unique_strength="0"/>
     <constraint constraints="0" exp_strength="0" field="oca_m" notnull_strength="0" unique_strength="0"/>
     <constraint constraints="0" exp_strength="0" field="oca_ft" notnull_strength="0" unique_strength="0"/>
+    <constraint constraints="0" exp_strength="0" field="oca_pub_increment" notnull_strength="0" unique_strength="0"/>
+    <constraint constraints="0" exp_strength="0" field="oca_pub_ft" notnull_strength="0" unique_strength="0"/>
   </constraints>
   <constraintExpressions>
     <constraint desc="" exp="" field="id"/>
@@ -566,6 +579,8 @@
     <constraint desc="" exp="" field="moc_m"/>
     <constraint desc="" exp="" field="oca_m"/>
     <constraint desc="" exp="" field="oca_ft"/>
+    <constraint desc="" exp="" field="oca_pub_increment"/>
+    <constraint desc="" exp="" field="oca_pub_ft"/>
   </constraintExpressions>
   <expressionfields/>
   <attributeactions>
@@ -583,6 +598,8 @@
       <column hidden="0" name="moc_m" type="field" width="-1"/>
       <column hidden="0" name="oca_m" type="field" width="-1"/>
       <column hidden="0" name="oca_ft" type="field" width="-1"/>
+      <column hidden="0" name="oca_pub_increment" type="field" width="-1"/>
+      <column hidden="0" name="oca_pub_ft" type="field" width="-1"/>
       <column hidden="1" type="actions" width="-1"/>
     </columns>
   </attributetableconfig>
@@ -624,6 +641,8 @@ def my_form_open(dialog, layer, feature):
     <field editable="1" name="obstacle_type"/>
     <field editable="1" name="oca_ft"/>
     <field editable="1" name="oca_m"/>
+    <field editable="1" name="oca_pub_ft"/>
+    <field editable="1" name="oca_pub_increment"/>
     <field editable="1" name="tolerances"/>
   </editable>
   <labelOnTop>
@@ -636,6 +655,8 @@ def my_form_open(dialog, layer, feature):
     <field labelOnTop="0" name="obstacle_type"/>
     <field labelOnTop="0" name="oca_ft"/>
     <field labelOnTop="0" name="oca_m"/>
+    <field labelOnTop="0" name="oca_pub_ft"/>
+    <field labelOnTop="0" name="oca_pub_increment"/>
     <field labelOnTop="0" name="tolerances"/>
   </labelOnTop>
   <reuseLastValuePolicy>
@@ -648,6 +669,8 @@ def my_form_open(dialog, layer, feature):
     <field name="obstacle_type" reuseLastValuePolicy="NotAllowed"/>
     <field name="oca_ft" reuseLastValuePolicy="NotAllowed"/>
     <field name="oca_m" reuseLastValuePolicy="NotAllowed"/>
+    <field name="oca_pub_ft" reuseLastValuePolicy="NotAllowed"/>
+    <field name="oca_pub_increment" reuseLastValuePolicy="NotAllowed"/>
     <field name="tolerances" reuseLastValuePolicy="NotAllowed"/>
   </reuseLastValuePolicy>
   <dataDefinedFieldProperties/>
