@@ -135,9 +135,9 @@ _PAGE_TEMPLATE = """<html>
     .complete-table-card th, .complete-table-card td { word-break: normal; white-space: nowrap; }
     .table-view-selector { font-size: 12px; white-space: nowrap; }
     .table-view-selector select { margin-left: 4px; padding: 4px; }
-    .holding-complete-table { min-width: 1450px; overflow-x: auto; }
-    .holding-data { min-width: 700px !important; width: 82%; margin: 0 auto 16px; }
-    .holding-calculations { min-width: 1450px !important; table-layout: fixed; }
+    .holding-complete-table { min-width: 700px; overflow-x: auto; }
+    .holding-data { min-width: 400px !important; width: 82%; margin: 0 auto 16px; }
+    .holding-calculations { min-width: 700px !important; width: 100%; table-layout: fixed; }
     .holding-calculations th, .holding-calculations td { white-space: normal; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th, td { padding: 14px 18px; font-size: 14px; line-height: 1.5; word-break: break-all; }

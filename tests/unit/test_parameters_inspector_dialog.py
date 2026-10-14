@@ -514,7 +514,23 @@ def test_inspector_routes_holding_snapshot_to_named_views_and_keeps_legacy_json(
     assert calls[0][1] == []
     assert [name for name, _content in calls[0][2]['table_views']] == [
         'Complete', 'Short']
-    assert 'XE' in calls[0][2]['table_views'][0][1].html
+    complete_html = calls[0][2]['table_views'][0][1].html
+    complete_text = calls[0][2]['table_views'][0][1].text
+    assert 'XE' in complete_html
+    assert 'Calculations using non-SI units' in complete_html
+    assert 'Calculations using SI units' not in complete_html
+    assert 'V = K × IAS' not in complete_html
+    assert 'XE = ' not in complete_html
+    assert 'SI Formula' not in complete_text
+    assert 'SI Value' not in complete_text
+    assert 'Input\tNon-SI Units' in complete_text
+    assert 'Line\tParameter\tValue' in complete_text
+    assert 'V = K × IAS' not in complete_text
+    assert 'XE = ' not in complete_text
+    assert 'Calculations using SI units' not in complete_text
+    assert '.holding-complete-table { min-width: 700px;' in mod._PAGE_TEMPLATE
+    assert '.holding-data { min-width: 400px !important;' in mod._PAGE_TEMPLATE
+    assert '.holding-calculations { min-width: 700px !important; width: 100%;' in mod._PAGE_TEMPLATE
 
     layer.payload = {'IAS_kt': '195.0', 'TAS_kt': '247.89'}
     mod.show_parameters_inspector('layer', 2)
