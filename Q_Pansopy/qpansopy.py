@@ -48,6 +48,9 @@ try:
     from .dockwidgets.pbn.qpansopy_lnav_dockwidget import QPANSOPYLNAVDockWidget
     from .dockwidgets.pbn.qpansopy_gnss_waypoint_dockwidget import QPANSOPYGNSSWaypointDockWidget
     from .dockwidgets.pbn.qpansopy_pbn_target_dockwidget import QPANSOPYPBNTargetDockWidget
+    from .dockwidgets.pbn.qpansopy_dme_dme_coverage_dockwidget import (
+        QPANSOPYDMEDMECoverageDockWidget,
+    )
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
@@ -217,6 +220,14 @@ class Qpansopy:
                     "TOOLTIP": "Generate 15 NM and 30 NM ARP buffer rings for PBN procedure design",
                     "ICON": os.path.join(self.icons_dir, 'pbn_target.svg'),
                     "DOCK_WIDGET": QPANSOPYPBNTargetDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "DME_DME_COVERAGE": {
+                    "TITLE": "DME/DME Coverage Assessment",
+                    "TOOLBAR": "PBN",
+                    "TOOLTIP": "Assess theoretical dual-DME update coverage",
+                    "ICON": os.path.join(self.icons_dir, 'dme_dme_coverage.svg'),
+                    "DOCK_WIDGET": QPANSOPYDMEDMECoverageDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "GNSS_WAYPOINT": {
