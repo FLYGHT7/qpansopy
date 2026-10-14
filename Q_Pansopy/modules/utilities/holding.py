@@ -308,37 +308,30 @@ def format_holding_complete_table(summary):
     """Return the complete ICAO table as Word HTML and tab-separated text."""
     definitions, _input_data = _holding_complete_rows(summary)
     html_rows = []
-    text_rows = [
-        'Line\tParameter\tSI Formula\tSI Value\tNon-SI Formula\tNon-SI Value'
-    ]
+    text_rows = ['Line\tParameter\tValue']
     cell_style = (
         'border:1px solid #333;color:#111;background:#fff;padding:5px 7px;'
         'font-family:Calibri,Arial,sans-serif;font-size:10pt;vertical-align:middle;'
         'white-space:normal'
     )
-    for line, label, si_formula, non_si_formula, si_value, non_si_value, digits in definitions:
-        si_digits, non_si_digits = digits if isinstance(digits, tuple) else (digits, digits)
-        si_units = {'2': 'km/h', '3': 'km/s', '4': '°/s', '5': 'km',
-                    '7': 'km/h', '8': 'km/s', '9': 'km', '10': 's'}
+    for definition in definitions:
+        line, label = definition[:2]
+        non_si_value, digits = definition[5:7]
+        non_si_digits = digits[1] if isinstance(digits, tuple) else digits
         non_si_units = {'2': 'kt', '3': 'NM/s', '4': '°/s', '5': 'NM',
                         '7': 'kt', '8': 'NM/s', '9': 'NM', '10': 's'}
-        si_unit = si_units.get(line, 'km' if line not in ('1', '4', '6', '10') else '')
         non_si_unit = non_si_units.get(
             line, 'NM' if line not in ('1', '4', '6', '10') else '')
-        si_value_text = '{0:.{1}f}{2}'.format(si_value, si_digits, ' ' + si_unit if si_unit else '')
         non_si_value_text = '{0:.{1}f}{2}'.format(non_si_value, non_si_digits, ' ' + non_si_unit if non_si_unit else '')
         html_rows.append(
-            '<tr><td style="{6}">{0}</td><td style="{6}">{1}</td>'
-            '<td style="{6}">{2}</td><td style="{7}">{3}</td>'
-            '<td style="{6}">{4}</td><td style="{7}">{5}</td></tr>'.format(
-                html.escape(line), html.escape(label), html.escape(si_formula),
-                html.escape(si_value_text), html.escape(non_si_formula),
+            '<tr><td style="{3}">{0}</td><td style="{3}">{1}</td>'
+            '<td style="{4}">{2}</td></tr>'.format(
+                html.escape(line), html.escape(label),
                 html.escape(non_si_value_text), cell_style,
                 cell_style + ';text-align:center;white-space:nowrap'))
-        text_rows.append('\t'.join((line, label, si_formula, si_value_text,
-                                    non_si_formula, non_si_value_text)))
+        text_rows.append('\t'.join((line, label, non_si_value_text)))
 
-    _si_speed, _tas_kt, altitude_m, altitude_ft, leg_minutes, isa_var, bank = _input_data
+    altitude_ft, leg_minutes, isa_var, bank = _input_data[3:]
     isa_text = 'ISA {0:+.1f} °C'.format(float(isa_var))
     data_th = (
         'border:1px solid #333;background:#000;color:#fff;padding:6px;'
@@ -349,33 +342,28 @@ def format_holding_complete_table(summary):
         'font-family:Calibri,Arial,sans-serif;font-size:10pt'
     )
     data_html = (
-        '<table class="holding-data" style="width:82%;min-width:700px;margin:0 auto 16px;'
+        '<table class="holding-data" style="width:82%;min-width:400px;margin:0 auto 16px;'
         'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt">'
-        '<tr><th colspan="3" style="{0}">DATA</th></tr>'
-        '<tr><th style="{0}">Input</th><th style="{0}">SI Units</th>'
-        '<th style="{0}">Non-SI Units</th></tr>'
-        '<tr><td style="{1}">IAS</td><td style="{1}">{2:.2f} km/h</td>'
-        '<td style="{1}">{3:.2f} kt</td></tr>'
-        '<tr><td style="{1}">Altitude</td><td style="{1}">{4:.0f} m</td>'
-        '<td style="{1}">{5:.0f} ft</td></tr>'
-        '<tr><td style="{1}">T</td><td style="{1}">{6:.2f} min</td>'
-        '<td style="{1}">{6:.2f} min</td></tr>'
-        '<tr><td style="{1}">Temperature</td><td style="{1}">{7}</td>'
-        '<td style="{1}">{7}</td></tr>'
-        '<tr><td style="{1}">Bank angle</td><td style="{1}">{8:.1f}°</td>'
-        '<td style="{1}">{8:.1f}°</td></tr></table>'.format(
-            data_th, data_td, _si_speed, float(summary['IAS_kt']),
-            altitude_m, altitude_ft, leg_minutes, html.escape(isa_text), bank)
+        '<tr><th colspan="2" style="{0}">DATA</th></tr>'
+        '<tr><th style="{0}">Input</th><th style="{0}">Non-SI Units</th></tr>'
+        '<tr><td style="{1}">IAS</td><td style="{1}">{2:.2f} kt</td></tr>'
+        '<tr><td style="{1}">Altitude</td><td style="{1}">{3:.0f} ft</td></tr>'
+        '<tr><td style="{1}">T</td><td style="{1}">{4:.2f} min</td></tr>'
+        '<tr><td style="{1}">Temperature</td><td style="{1}">{5}</td></tr>'
+        '<tr><td style="{1}">Bank angle</td><td style="{1}">{6:.1f}°</td></tr>'
+        '</table>'.format(
+            data_th, data_td, float(summary['IAS_kt']), altitude_ft,
+            leg_minutes, html.escape(isa_text), bank)
     )
     plain_data = [
-        'DATA', 'Input\tSI Units\tNon-SI Units',
-        'IAS\t{0:.2f} km/h\t{1:.2f} kt'.format(_si_speed, float(summary['IAS_kt'])),
-        'Altitude\t{0:.0f} m\t{1:.0f} ft'.format(altitude_m, altitude_ft),
-        'T\t{0:.2f} min\t{0:.2f} min'.format(leg_minutes),
-        'Temperature\t{0}\t{0}'.format(isa_text),
-        'Bank angle\t{0:.1f}°\t{0:.1f}°'.format(bank),
+        'DATA', 'Input\tNon-SI Units',
+        'IAS\t{0:.2f} kt'.format(float(summary['IAS_kt'])),
+        'Altitude\t{0:.0f} ft'.format(altitude_ft),
+        'T\t{0:.2f} min'.format(leg_minutes),
+        'Temperature\t{0}'.format(isa_text),
+        'Bank angle\t{0:.1f}°'.format(bank),
         '',
-        'Line\tParameter\tSI Formula\tSI Value\tNon-SI Formula\tNon-SI Value',
+        'Line\tParameter\tValue',
     ]
     header_style = (
         'border:1px solid #333;background:#000;color:#fff;padding:7px 5px;'
@@ -383,19 +371,15 @@ def format_holding_complete_table(summary):
         'font-weight:bold;text-transform:none;letter-spacing:normal;width:auto'
     )
     table_html = (
-        '<div class="holding-complete-table" style="overflow-x:auto;min-width:1450px">{0}'
+        '<div class="holding-complete-table" style="overflow-x:auto;min-width:700px">{0}'
         '<table class="holding-calculations" border="1" cellpadding="0" '
-        'cellspacing="0" style="min-width:1450px;width:1450px;table-layout:fixed;'
+        'cellspacing="0" style="min-width:700px;width:100%;table-layout:fixed;'
         'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:10pt">'
-        '<colgroup><col style="width:5%"><col style="width:7%">'
-        '<col style="width:30%"><col style="width:8%">'
-        '<col style="width:42%"><col style="width:8%"></colgroup>'
-        '<thead><tr><th rowspan="2" style="{2}">Line</th>'
-        '<th rowspan="2" style="{2}">Parameter</th>'
-        '<th colspan="2" style="{2}">Calculations using SI units</th>'
-        '<th colspan="2" style="{2}">Calculations using non-SI units</th></tr>'
-        '<tr><th style="{2}">Formula</th><th style="{2}">Value</th>'
-        '<th style="{2}">Formula</th><th style="{2}">Value</th></tr></thead>'
+        '<colgroup><col style="width:7%"><col style="width:18%">'
+        '<col style="width:75%"></colgroup>'
+        '<thead><tr><th style="{2}">Line</th>'
+        '<th style="{2}">Parameter</th>'
+        '<th style="{2}">Calculations using non-SI units</th></tr></thead>'
         '<tbody>{1}</tbody></table></div>'.format(
             data_html, ''.join(html_rows), header_style)
     )
