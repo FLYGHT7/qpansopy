@@ -57,7 +57,7 @@ def test_output_fields_omit_coordinates(monkeypatch):
     assert module._output_fields() == [
         'id', 'layer_type', 'obstacle_type', 'elev', 'tolerances',
         'applied_tolerance', 'area_eval', 'moc_m', 'oca_m', 'oca_ft',
-        'oca_pub_ft',
+        'oca_pub_increment', 'oca_pub_ft',
     ]
 
 

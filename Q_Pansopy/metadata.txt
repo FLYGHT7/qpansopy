@@ -23,7 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
-    - Add theoretical DME/DME coverage assessment to the PBN tools
+    - Show only non-SI units in the complete Holding Pattern table
     - Include calculated DME tolerance in nautical miles in the output attribute table
     - Add Radial / Bearing Tolerance live preview with optional construction lines
     - Add optional construction lines layer to Radial / Bearing Tolerance
@@ -67,7 +67,8 @@ changelog=
 	- Remove stored coordinates from Primary Area Assessment 
 	- Store Primary Assessment publication increment
 	- Style all analyzed Primary Assessment obstacles
-	- Require a terrain or survey source in Primary Assessment 
+	- Require a terrain or survey source in Primary Assessment
+	- Straight Secondary Area Assessment with variable MOC from reference axis
     Version 0.5.1:
     - Qt6 reviews to reduce false positives
     Version 0.5.0:
