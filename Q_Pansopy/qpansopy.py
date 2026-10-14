@@ -42,6 +42,9 @@ try:
     from .dockwidgets.utilities.qpansopy_primary_area_assessment_dockwidget import (
         QPANSOPYPrimaryAreaAssessmentDockWidget,
     )
+    from .dockwidgets.utilities.qpansopy_secondary_area_assessment_dockwidget import (
+        QPANSOPYSecondaryAreaAssessmentDockWidget,
+    )
     from .dockwidgets.utilities.qpansopy_ama_grid_dockwidget import (
         QPANSOPYAMAGridDockWidget,
     )
@@ -291,6 +294,15 @@ class Qpansopy:
                     "TOOLTIP": "Evaluate terrain and obstacles in a primary area",
                     "ICON": "primary_area_assessment.svg",
                     "DOCK_WIDGET": QPANSOPYPrimaryAreaAssessmentDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "SecondaryAreaAssessment": {
+                    "TITLE": "Secondary Area Assessment",
+                    "MENU_CATEGORY": "GENERIC",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Evaluate terrain and obstacles in a straight secondary area",
+                    "ICON": "secondary_area_assessment.svg",
+                    "DOCK_WIDGET": QPANSOPYSecondaryAreaAssessmentDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "AMAGrid": {
