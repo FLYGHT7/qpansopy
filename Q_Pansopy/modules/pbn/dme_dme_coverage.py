@@ -140,11 +140,13 @@ def _style_layers(coverage, construction, excluded):
         styles = {
             "DOC_A": ("105,105,105,220", "solid"),
             "DOC_B": ("105,105,105,220", "solid"),
+            "D_A": ("34,197,94,230", "solid"),
+            "D_B": ("34,197,94,230", "solid"),
             "ANGLE_PLUS": ("37,99,235,230", "dash"),
             "ANGLE_MINUS": ("37,99,235,230", "dash"),
             "NO_UPDATE_A": ("185,28,28,255", "solid"),
             "NO_UPDATE_B": ("185,28,28,255", "solid"),
-            "BASELINE": ("31,41,55,180", "solid"),
+            "D": ("31,41,55,180", "solid"),
         }
         for role, (color, line_style) in styles.items():
             symbol = QgsLineSymbol.createSimple({
@@ -177,6 +179,8 @@ def _build_outputs(point_a, point_b, d_m, fid_a, fid_b,
 
     doc_a = _circle(point_a, doc_a_nm * NM_TO_M)
     doc_b = _circle(point_b, doc_b_nm * NM_TO_M)
+    distance_a = _circle(point_a, d)
+    distance_b = _circle(point_b, d)
     angle_plus = _circle(center_plus, d)
     angle_minus = _circle(center_minus, d)
     no_update_a = _circle(point_a, NM_TO_M)
@@ -186,7 +190,9 @@ def _build_outputs(point_a, point_b, d_m, fid_a, fid_b,
     angle_area = _checked_geometry(
         angle_plus.symDifference(angle_minus), "30/150-degree")
     doc_overlap = _checked_geometry(doc_a.intersection(doc_b), "dual-DOC")
-    valid_overlap = doc_overlap.intersection(angle_area)
+    distance_overlap = _checked_geometry(
+        distance_a.intersection(distance_b), "radius-D overlap")
+    valid_overlap = doc_overlap.intersection(distance_overlap).intersection(angle_area)
     if valid_overlap.isNull() or valid_overlap.isEmpty() or valid_overlap.area() <= 0:
         return None
     exclusions = _checked_geometry(
@@ -219,6 +225,8 @@ def _build_outputs(point_a, point_b, d_m, fid_a, fid_b,
     construction_roles = [
         ("DOC_A", point_a, doc_a_nm * NM_TO_M, doc_a_nm),
         ("DOC_B", point_b, doc_b_nm * NM_TO_M, doc_b_nm),
+        ("D_A", point_a, d, d / NM_TO_M),
+        ("D_B", point_b, d, d / NM_TO_M),
         ("ANGLE_PLUS", center_plus, d, d / NM_TO_M),
         ("ANGLE_MINUS", center_minus, d, d / NM_TO_M),
         ("NO_UPDATE_A", point_a, NM_TO_M, ANGLE_CIRCLE_RADII_NM),
@@ -240,7 +248,7 @@ def _build_outputs(point_a, point_b, d_m, fid_a, fid_b,
     baseline = QgsGeometry.fromPolylineXY([
         QgsPointXY(point_a), QgsPointXY(point_b)])
     line_features.append(_add_feature(
-        construction_layer, baseline, ["BASELINE", None]))
+        construction_layer, baseline, ["D", None]))
     construction_layer.dataProvider().addFeatures(line_features)
     construction_layer.updateExtents()
 
@@ -325,7 +333,7 @@ def run_dme_dme_coverage(iface, dme_layer, params=None) -> bool:
     log("DOC A: {0}; DOC B: {1}.".format(doc_a_note, doc_b_note))
     log("Created theoretical DME/DME coverage in local AEQD CRS.")
     if construction_enabled:
-        log("Added DOC, 30°/150°, 1 NM, baseline and excluded-area layers.")
+        log("Added DOC, radius-D, 30°/150°, 1 NM, D and excluded-area layers.")
     iface.messageBar().pushMessage(
         "QPANSOPY", "DME/DME theoretical coverage calculated successfully",
         level=Qgis.Success)
