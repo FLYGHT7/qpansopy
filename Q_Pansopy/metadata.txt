@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Complete DME/DME radius-D circles, constrain coverage to their overlap and label the station segment D
     - Show only non-SI units in the complete Holding Pattern table
     - Include calculated DME tolerance in nautical miles in the output attribute table
     - Add Radial / Bearing Tolerance live preview with optional construction lines

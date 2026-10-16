@@ -18,6 +18,7 @@ from qgis.core import (  # noqa: E402
     QgsGeometry,
     QgsPointXY,
     QgsProject,
+    QgsVariantUtils,
     QgsVectorLayer,
 )
 from qgis.PyQt.QtGui import QColor, QImage, QPainter  # noqa: E402
@@ -168,36 +169,95 @@ def test_coverage_builds_two_valid_lobes_and_optional_construction_layers():
         norms = math.hypot(*vector_a) * math.hypot(*vector_b)
         return math.degrees(math.acos(max(-1.0, min(1.0, dot / norms))))
 
-    for along_nm, cross_nm in [(0, 0), (0, 1), (0, 40), (-d / (2 * NM_TO_M), 0.5)]:
+    samples = [
+        (0, 0), (0, 1), (0, 10), (0, -10), (0, 25), (0, 40),
+        (-d / (2 * NM_TO_M), 0.5),
+        (-d / (2 * NM_TO_M), 2), (d / (2 * NM_TO_M), 2),
+        (-d / (2 * NM_TO_M) + 0.6, 0.4),
+    ]
+    for along_nm, cross_nm in samples:
         sample_point = sample(along_nm, cross_nm)
         angle_valid = 30 <= angle_at(along_nm, cross_nm) <= 150
         doc_valid = (
             sample_point.distance(point_a) < 150 * NM_TO_M
             and sample_point.distance(point_b) < 200 * NM_TO_M
         )
+        distance_valid = (
+            sample_point.distance(point_a) < d
+            and sample_point.distance(point_b) < d
+        )
         no_update = min(
             sample_point.distance(point_a), sample_point.distance(point_b)
         ) <= NM_TO_M
-        expected_inside = angle_valid and doc_valid and not no_update
+        expected_inside = (
+            angle_valid and doc_valid and distance_valid and not no_update
+        )
         actual_inside = result.geometry().contains(
             QgsGeometry.fromPointXY(sample_point))
         assert actual_inside is expected_inside
-    assert result.geometry().contains(QgsGeometry.fromPointXY(sample(
-        -d / (2 * NM_TO_M), 2)))
+    for vertex in result.geometry().vertices():
+        assert QgsPointXY(vertex).distance(point_a) <= d + 1e-6
+        assert QgsPointXY(vertex).distance(point_b) <= d + 1e-6
 
     construction = outputs["DME_DME_Construction"]
-    assert construction.featureCount() == 7
+    assert construction.featureCount() == 9
     assert construction.fields().names() == ["Role", "Radius_NM"]
     assert {feature["Role"] for feature in construction.getFeatures()} == {
-        "DOC_A", "DOC_B", "ANGLE_PLUS", "ANGLE_MINUS",
-        "NO_UPDATE_A", "NO_UPDATE_B", "BASELINE",
+        "DOC_A", "DOC_B", "D_A", "D_B", "ANGLE_PLUS", "ANGLE_MINUS",
+        "NO_UPDATE_A", "NO_UPDATE_B", "D",
     }
+    construction_features = {
+        feature["Role"]: feature for feature in construction.getFeatures()
+    }
+    for role, center in (("D_A", point_a), ("D_B", point_b)):
+        circle = construction_features[role]
+        assert math.isclose(circle["Radius_NM"], d / NM_TO_M, abs_tol=1e-9)
+        points = circle.geometry().asPolyline()
+        assert points[0] == points[-1]
+        assert all(math.isclose(point.distance(center), d, abs_tol=1e-6)
+                   for point in points)
+    assert construction_features["D"].geometry().asPolyline() == [point_a, point_b]
+    assert QgsVariantUtils.isNull(construction_features["D"]["Radius_NM"])
+    categories = {category.value(): category
+                  for category in construction.renderer().categories()}
+    assert "BASELINE" not in categories
+    assert categories["D_A"].symbol().color() == QColor(34, 197, 94, 230)
+    assert categories["D_B"].symbol().color() == QColor(34, 197, 94, 230)
     excluded = outputs["DME_DME_Excluded_Areas"]
     assert {feature["Role"] for feature in excluded.getFeatures()} == {
         "CENTRAL", "NO_UPDATE_A", "NO_UPDATE_B",
     }
     group = project.layerTreeRoot().children()[0]
     assert len(group.children()) == 3
+
+
+@pytest.mark.parametrize("docs", [(8.0, 200.0), (200.0, 8.0)])
+def test_small_doc_still_limits_coverage_inside_radius_d_circles(docs):
+    project = QgsProject.instance()
+    layer = _dme_layer(project, docs=docs)
+    assert run_dme_dme_coverage(_Iface(), layer, {"doc_field": "DOC_NM"})
+    coverage = _output_layers(project)["DME_DME_Coverage"]
+    geometry = next(coverage.getFeatures()).geometry()
+    stations = [
+        QgsCoordinateTransform(layer.crs(), coverage.crs(), project).transform(
+            feature.geometry().asPoint())
+        for feature in sorted(layer.getFeatures(), key=lambda item: item.id())
+    ]
+    distance = stations[0].distance(stations[1])
+    vertices = [QgsPointXY(vertex) for vertex in geometry.vertices()]
+    assert len(geometry.asMultiPolygon()) == 2
+    for station, doc in zip(stations, docs):
+        limit = min(distance, doc * NM_TO_M)
+        assert all(vertex.distance(station) <= limit + 1e-6 for vertex in vertices)
+        assert math.isclose(max(vertex.distance(station) for vertex in vertices),
+                            limit, abs_tol=1e-6)
+
+
+def test_doc_entirely_inside_no_update_zone_returns_no_output():
+    project = QgsProject.instance()
+    layer = _dme_layer(project, docs=(0.5, 200.0))
+    assert not run_dme_dme_coverage(_Iface(), layer, {"doc_field": "DOC_NM"})
+    assert not _output_layers(project)
 
 
 def test_construction_toggle_keeps_the_same_coverage_and_null_doc_defaults():
