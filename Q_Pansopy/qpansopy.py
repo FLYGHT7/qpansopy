@@ -45,6 +45,9 @@ try:
     from .dockwidgets.utilities.qpansopy_secondary_area_assessment_dockwidget import (
         QPANSOPYSecondaryAreaAssessmentDockWidget,
     )
+    from .dockwidgets.utilities.qpansopy_slope_primary_area_assessment_dockwidget import (
+        QPANSOPYSlopePrimaryAreaAssessmentDockWidget,
+    )
     from .dockwidgets.utilities.qpansopy_ama_grid_dockwidget import (
         QPANSOPYAMAGridDockWidget,
     )
@@ -305,6 +308,15 @@ class Qpansopy:
                     "TOOLTIP": "Evaluate terrain and obstacles in a primary area",
                     "ICON": "primary_area_assessment.svg",
                     "DOCK_WIDGET": QPANSOPYPrimaryAreaAssessmentDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "SlopePrimaryAreaAssessment": {
+                    "TITLE": "Slope Primary Area Assessment",
+                    "MENU_CATEGORY": "GENERIC",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Evaluate terrain and survey against a sloping surface",
+                    "ICON": "slope_primary_area_assessment.svg",
+                    "DOCK_WIDGET": QPANSOPYSlopePrimaryAreaAssessmentDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "SecondaryAreaAssessment": {
