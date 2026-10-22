@@ -70,6 +70,9 @@ try:
     from .dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import (
         QPANSOPYEnrouteVorVorDockWidget,
     )
+    from .dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
+        QPANSOPYEnrouteVorVorRefinedDockWidget,
+    )
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
