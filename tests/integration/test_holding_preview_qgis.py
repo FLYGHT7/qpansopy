@@ -175,7 +175,7 @@ def test_live_preview_matches_all_four_final_features(
 
 @pytest.mark.parametrize('control,value', [
     ('iasLineEdit', '240'), ('altitudeLineEdit', '12000'),
-    ('isaVarLineEdit', '15'), ('legTimeLineEdit', '1.5'),
+    ('isaVarLineEdit', '20'), ('legTimeLineEdit', '1.5'),
     ('altitudeUnitCombo', 'm'), ('leftTurnRadio', True),
 ])
 def test_preview_tracks_nominal_parameters(dock, control, value):
