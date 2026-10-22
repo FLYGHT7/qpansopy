@@ -23,6 +23,7 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Fix plugin initialization by restoring the refined VOR/VOR en-route dock import
     - Add simplified straight VOR/VOR en-route primary and buffer areas with optional construction lines
     - Restore Holding nominal geometry generation with consistent ISA parameters
     - Complete DME/DME radius-D circles, constrain coverage to their overlap and label the station segment D
