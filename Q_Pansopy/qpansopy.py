@@ -45,6 +45,9 @@ try:
     from .dockwidgets.utilities.qpansopy_secondary_area_assessment_dockwidget import (
         QPANSOPYSecondaryAreaAssessmentDockWidget,
     )
+    from .dockwidgets.utilities.qpansopy_slope_primary_area_assessment_dockwidget import (
+        QPANSOPYSlopePrimaryAreaAssessmentDockWidget,
+    )
     from .dockwidgets.utilities.qpansopy_ama_grid_dockwidget import (
         QPANSOPYAMAGridDockWidget,
     )
@@ -64,8 +67,8 @@ try:
     from .dockwidgets.conv.qpansopy_radial_bearing_intersection_dockwidget import (
         QPANSOPYRadialBearingIntersectionDockWidget,
     )
-    from .dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
-        QPANSOPYEnrouteVorVorRefinedDockWidget,
+    from .dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import (
+        QPANSOPYEnrouteVorVorDockWidget,
     )
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
@@ -301,6 +304,14 @@ class Qpansopy:
                     "DOCK_WIDGET": QPANSOPYRadialBearingIntersectionDockWidget,
                     "GUI_INSTANCE": None
                 },
+                "ENROUTE_VOR_VOR": {
+                    "TITLE": "Simplified ENR — VOR/VOR (straight)",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "Create simplified primary and buffer areas between two VOR stations",
+                    "ICON": "enroute_vor_vor.svg",
+                    "DOCK_WIDGET": QPANSOPYEnrouteVorVorDockWidget,
+                    "GUI_INSTANCE": None
+                },
                 "ObjectSelection": {
                     "TITLE": "Object Selection",
                     "TOOLBAR": "UTILITIES",
@@ -316,6 +327,15 @@ class Qpansopy:
                     "TOOLTIP": "Evaluate terrain and obstacles in a primary area",
                     "ICON": "primary_area_assessment.svg",
                     "DOCK_WIDGET": QPANSOPYPrimaryAreaAssessmentDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "SlopePrimaryAreaAssessment": {
+                    "TITLE": "Slope Primary Area Assessment",
+                    "MENU_CATEGORY": "GENERIC",
+                    "TOOLBAR": "UTILITIES",
+                    "TOOLTIP": "Evaluate terrain and survey against a sloping surface",
+                    "ICON": "slope_primary_area_assessment.svg",
+                    "DOCK_WIDGET": QPANSOPYSlopePrimaryAreaAssessmentDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "SecondaryAreaAssessment": {

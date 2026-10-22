@@ -1,0 +1,431 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>QPANSOPYSlopePrimaryAreaAssessmentDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYSlopePrimaryAreaAssessmentDockWidget">
+  <property name="minimumSize">
+   <size>
+    <width>340</width>
+    <height>260</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Slope Primary Area Assessment</string>
+  </property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="margin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <property name="horizontalScrollBarPolicy">
+       <enum>Qt::ScrollBarAsNeeded</enum>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAsNeeded</enum>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <layout class="QVBoxLayout" name="scrollLayout">
+        <property name="spacing">
+         <number>4</number>
+        </property>
+        <property name="margin">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="QGroupBox" name="inputGroup">
+          <property name="title">
+           <string>Input layers</string>
+          </property>
+          <property name="flat">
+           <bool>true</bool>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 7px; font-weight: bold; }</string>
+          </property>
+          <layout class="QFormLayout" name="inputFormLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="areaLabel">
+             <property name="text">
+              <string>Primary area:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QgsMapLayerComboBox" name="areaLayerComboBox" />
+           </item>
+           <item row="1" column="1">
+            <widget class="QCheckBox" name="useSelectedAreaCheckBox">
+             <property name="text">
+              <string>Use selected areas</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="areaBufferLabel">
+             <property name="text">
+              <string>Buffer:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QWidget" name="areaBufferWidget" native="true">
+             <layout class="QHBoxLayout" name="areaBufferLayout">
+              <property name="spacing">
+               <number>4</number>
+              </property>
+              <property name="margin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QDoubleSpinBox" name="areaBufferDoubleSpinBox">
+                <property name="decimals">
+                 <number>3</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>99999.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="areaBufferUnitComboBox">
+                <item>
+                 <property name="text">
+                  <string>NM</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>m</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="terrainLabel">
+             <property name="text">
+              <string>Terrain (optional):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QgsMapLayerComboBox" name="terrainLayerComboBox" />
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="obstacleLabel">
+             <property name="text">
+              <string>Survey (optional):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QgsMapLayerComboBox" name="obstacleLayerComboBox" />
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="referenceLabel">
+             <property name="text">
+              <string>Reference line:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QgsMapLayerComboBox" name="referenceLayerComboBox">
+             <property name="toolTip">
+              <string>Select one straight line. Perpendicular distances use its extension beyond both endpoints.</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QgsCollapsibleGroupBoxBasic" name="fieldMappingGroup">
+          <property name="title">
+           <string>Survey field mapping</string>
+          </property>
+          <property name="collapsed" stdset="0">
+           <bool>false</bool>
+          </property>
+          <property name="flat">
+           <bool>true</bool>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 7px; font-weight: bold; }</string>
+          </property>
+          <layout class="QFormLayout" name="fieldFormLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="idFieldLabel">
+             <property name="text">
+              <string>ID:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="idFieldComboBox" />
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="typeFieldLabel">
+             <property name="text">
+              <string>Obstacle type:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="typeFieldComboBox" />
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="elevationFieldLabel">
+             <property name="text">
+              <string>Elevation (m):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QComboBox" name="elevationFieldComboBox" />
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="toleranceFieldLabel">
+             <property name="text">
+              <string>Tolerance (m):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QComboBox" name="toleranceFieldComboBox" />
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="paramsGroup">
+          <property name="title">
+           <string>Assessment parameters</string>
+          </property>
+          <property name="flat">
+           <bool>true</bool>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 7px; font-weight: bold; }</string>
+          </property>
+          <layout class="QFormLayout" name="paramsFormLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="surfaceElevationLabel">
+             <property name="text">
+              <string>Surface elevation (m):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="surfaceElevationDoubleSpinBox">
+             <property name="decimals">
+              <number>3</number>
+             </property>
+             <property name="maximum">
+              <double>99999.000000000000000</double>
+             </property>
+             <property name="value">
+              <double>0.0</double>
+             </property>
+             <property name="minimum">
+              <double>-99999.0</double>
+             </property>
+             <property name="toolTip">
+              <string>Surface elevation at the reference line, in metres.</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="terrainToleranceLabel">
+             <property name="text">
+              <string>Terrain tolerance (m):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QDoubleSpinBox" name="terrainToleranceDoubleSpinBox">
+             <property name="decimals">
+              <number>3</number>
+             </property>
+             <property name="maximum">
+              <double>99999.000000000000000</double>
+             </property>
+             <property name="value">
+              <double>50.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="overrideToleranceCheckBox">
+             <property name="text">
+              <string>Override survey obstacle tolerance</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QDoubleSpinBox" name="overrideToleranceDoubleSpinBox">
+             <property name="decimals">
+              <number>3</number>
+             </property>
+             <property name="maximum">
+              <double>99999.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="slopeAngleLabel">
+             <property name="text">
+              <string>Slope angle (°):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QDoubleSpinBox" name="slopeAngleDoubleSpinBox">
+             <property name="decimals">
+              <number>4</number>
+             </property>
+             <property name="minimum">
+              <double>-89.9999</double>
+             </property>
+             <property name="maximum">
+              <double>89.9999</double>
+             </property>
+             <property name="singleStep">
+              <double>0.01</double>
+             </property>
+             <property name="value">
+              <double>0.0</double>
+             </property>
+             <property name="toolTip">
+              <string>Positive angles rise away from the reference line; negative angles descend. Distances are absolute on both sides.</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="outputGroup">
+          <property name="title">
+           <string>Output</string>
+          </property>
+          <layout class="QVBoxLayout" name="outputLayout">
+           <item>
+            <widget class="QLabel" name="outputDescriptionLabel">
+             <property name="text">
+              <string>All evaluated points will be added to the project, classified as clear or penetrates.</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="actionGroup">
+          <property name="title">
+           <string>Action</string>
+          </property>
+          <layout class="QVBoxLayout" name="actionLayout">
+           <item>
+            <widget class="QPushButton" name="calculateButton">
+             <property name="text">
+              <string>Evaluate slope primary area</string>
+             </property>
+             <property name="default">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="logGroup">
+          <property name="title">
+           <string>Log</string>
+          </property>
+          <layout class="QVBoxLayout" name="logLayout">
+           <item>
+            <widget class="QTextEdit" name="logTextEdit">
+             <property name="minimumHeight">
+              <number>90</number>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgsmaplayercombobox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsCollapsibleGroupBoxBasic</class>
+   <extends>QGroupBox</extends>
+   <header>qgis.gui</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>
