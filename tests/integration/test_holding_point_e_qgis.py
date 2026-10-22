@@ -67,6 +67,26 @@ def _run(routing, turn='R', show_circles=False, iface=None):
     })
 
 
+@pytest.mark.parametrize('isa_override,expected_isa', [(None, 15.0), (-5.0, -5.0)])
+def test_nominal_geometry_matches_the_isa_stored_in_output(routing, isa_override, expected_isa):
+    params = {'show_circles': False}
+    if isa_override is not None:
+        params['isa_var'] = isa_override
+    iface = _Iface()
+    result = holding.run_holding_pattern(iface, routing, params)
+
+    assert result, iface.messages
+    assert result['layer'].featureCount() == 4
+    first = next(result['layer'].getFeatures())
+    outbound, fix = first.geometry().asPolyline()
+    expected_leg_m = holding.tas_calculation(195, 10000, expected_isa, 25)[1] / 60 * 1852
+    assert result['summary']['ISA_var_C'] == expected_isa
+    assert first['isa_var_c'] == expected_isa
+    assert fix == QgsPointXY(501000, 1600000)
+    assert outbound.x() == pytest.approx(fix.x() - expected_leg_m)
+    assert outbound.y() == pytest.approx(fix.y())
+
+
 def test_point_e_and_construction_layers_use_actual_table_values(routing):
     result = _run(routing, show_circles=False)
     assert result

@@ -64,6 +64,9 @@ try:
     from .dockwidgets.conv.qpansopy_radial_bearing_intersection_dockwidget import (
         QPANSOPYRadialBearingIntersectionDockWidget,
     )
+    from .dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
+        QPANSOPYEnrouteVorVorRefinedDockWidget,
+    )
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
@@ -280,6 +283,14 @@ class Qpansopy:
                     "TOOLTIP": "VOR/NDB overhead facility fix tolerance",
                     "ICON": os.path.join(self.icons_dir, 'overhead_tolerance.svg'),
                     "DOCK_WIDGET": QPANSOPYOverheadToleranceDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "ENROUTE_VOR_VOR_REFINED": {
+                    "TITLE": "Refined ENR — VOR/VOR (straight)",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "Create refined primary and secondary areas between two VOR stations",
+                    "ICON": os.path.join(self.icons_dir, 'enroute_vor_vor_refined.svg'),
+                    "DOCK_WIDGET": QPANSOPYEnrouteVorVorRefinedDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "RADIAL_BEARING_TOL": {

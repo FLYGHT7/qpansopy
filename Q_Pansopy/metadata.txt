@@ -23,6 +23,8 @@ deprecated=False
 
 changelog=
     Version 0.5.2:
+    - Add refined straight VOR/VOR en-route primary and secondary areas with optional construction lines
+    - Restore Holding nominal geometry generation with consistent ISA parameters
     - Complete DME/DME radius-D circles, constrain coverage to their overlap and label the station segment D
     - Show only non-SI units in the complete Holding Pattern table
     - Include calculated DME tolerance in nautical miles in the output attribute table
