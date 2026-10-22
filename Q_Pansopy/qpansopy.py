@@ -288,6 +288,14 @@ class Qpansopy:
                     "DOCK_WIDGET": QPANSOPYOverheadToleranceDockWidget,
                     "GUI_INSTANCE": None
                 },
+                "ENROUTE_VOR_VOR_REFINED": {
+                    "TITLE": "Refined ENR — VOR/VOR (straight)",
+                    "TOOLBAR": "CONV",
+                    "TOOLTIP": "Create refined primary and secondary areas between two VOR stations",
+                    "ICON": os.path.join(self.icons_dir, 'enroute_vor_vor_refined.svg'),
+                    "DOCK_WIDGET": QPANSOPYEnrouteVorVorRefinedDockWidget,
+                    "GUI_INSTANCE": None
+                },
                 "RADIAL_BEARING_TOL": {
                     "TITLE": "Radial / Bearing Tolerance",
                     "TOOLBAR": "CONV",
