@@ -383,3 +383,127 @@ def test_plugin_registers_the_tool_in_generic_menu_and_utilities_toolbar(qgis_ap
         window.close()
         window.deleteLater()
         qgis_app.processEvents()
+
+
+@pytest.fixture
+def slope_dock(qgis_app):
+    from qgis.PyQt import QtWidgets
+    from qgis.core import QgsProject
+    from qgis.gui import QgsMessageBar
+    from Q_Pansopy.dockwidgets.utilities.qpansopy_slope_primary_area_assessment_dockwidget import (
+        QPANSOPYSlopePrimaryAreaAssessmentDockWidget,
+    )
+
+    window = QtWidgets.QMainWindow()
+    bar = QgsMessageBar(window)
+    area, reference, survey = _area(), _reference(), _survey()
+    QgsProject.instance().addMapLayers([area, reference, survey])
+    iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: area)
+    widget = QPANSOPYSlopePrimaryAreaAssessmentDockWidget(iface)
+    widget.areaLayerComboBox.setLayer(area)
+    widget.referenceLayerComboBox.setLayer(reference)
+    widget.obstacleLayerComboBox.setLayer(survey)
+    widget.surfaceElevationDoubleSpinBox.setValue(1008.0)
+    widget._confirm_missing = lambda warnings: True
+    yield widget
+    widget.close()
+    window.close()
+    widget.deleteLater()
+    window.deleteLater()
+    qgis_app.processEvents()
+
+
+def _evaluate_dock(widget):
+    from qgis.core import QgsProject
+
+    project = QgsProject.instance()
+    before = set(project.mapLayers())
+    widget.calculate()
+    layers = [layer for key, layer in project.mapLayers().items() if key not in before]
+    assert len(layers) == 1, widget.logTextEdit.toPlainText()
+    return next(layers[0].getFeatures()), layers[0]
+
+
+def test_slope_units_default_to_degrees_and_preserve_existing_precision(slope_dock):
+    assert slope_dock.slopeUnitComboBox.currentText() == '°'
+    assert slope_dock.slopeAngleDoubleSpinBox.value() == 0.0
+    assert slope_dock.slopeAngleDoubleSpinBox.decimals() == 4
+    assert slope_dock.slopeAngleDoubleSpinBox.minimum() == -89.9999
+    assert slope_dock.slopeAngleDoubleSpinBox.maximum() == 89.9999
+
+
+@pytest.mark.parametrize('angle,percent', [(45.0, 100.0), (-45.0, -100.0), (0.0, 0.0)])
+def test_slope_unit_switch_converts_the_visible_value(slope_dock, angle, percent):
+    slope_dock.slopeAngleDoubleSpinBox.setValue(angle)
+    slope_dock.slopeUnitComboBox.setCurrentText('%')
+    assert slope_dock.slopeAngleDoubleSpinBox.value() == percent
+    slope_dock.slopeUnitComboBox.setCurrentText('°')
+    assert slope_dock.slopeAngleDoubleSpinBox.value() == angle
+
+
+@pytest.mark.parametrize('percent', [100.0, -100.0, 200.0])
+def test_percent_runs_the_complete_assessment_and_records_both_units(slope_dock, percent):
+    from qgis.core import QgsLayerNotesUtils
+
+    slope_dock.slopeUnitComboBox.setCurrentText('%')
+    slope_dock.slopeAngleDoubleSpinBox.setValue(percent)
+    feature, layer = _evaluate_dock(slope_dock)
+    expected_surface = 1008.0 + 4679.075 * percent / 100.0
+    assert feature['surface_z'] == pytest.approx(expected_surface, abs=1e-9)
+    assert feature['clearance'] == pytest.approx(expected_surface - 1106.0, abs=1e-9)
+    assert feature['penetrates'] == ('penetrates' if expected_surface < 1106.0 else 'clear')
+    notes = QgsLayerNotesUtils.layerNotes(layer)
+    assert f'Slope gradient: {percent:g} %' in notes
+    assert 'Slope angle:' in notes and 'degrees' in notes
+
+
+@pytest.mark.parametrize('unit,value', [('°', 1.88), ('%', 3.3)])
+def test_repeated_unit_switches_preserve_the_unrounded_assessment(slope_dock, unit, value):
+    slope_dock.slopeUnitComboBox.setCurrentText(unit)
+    slope_dock.slopeAngleDoubleSpinBox.setValue(value)
+    first, _ = _evaluate_dock(slope_dock)
+    for _ in range(10):
+        slope_dock.slopeUnitComboBox.setCurrentText('%')
+        slope_dock.slopeUnitComboBox.setCurrentText('°')
+    second, _ = _evaluate_dock(slope_dock)
+    for field in ('x_dist', 'surface_z', 'clearance', 'penetrates'):
+        assert second[field] == first[field]
+
+
+def test_switching_units_cannot_flip_a_near_zero_penetration(slope_dock):
+    # Rounding 1.88 degrees to 3.2824 percent would incorrectly clear this point.
+    elevation = 1008.0 + 4679.075 * math.tan(math.radians(1.88)) + 0.00001
+    survey = _survey([('POINT (1500 4679.075)', elevation, 0.0)])
+    from qgis.core import QgsProject
+
+    QgsProject.instance().addMapLayer(survey)
+    slope_dock.obstacleLayerComboBox.setLayer(survey)
+    slope_dock.slopeAngleDoubleSpinBox.setValue(1.88)
+    first, _ = _evaluate_dock(slope_dock)
+    slope_dock.slopeUnitComboBox.setCurrentText('%')
+    assert slope_dock.slopeAngleDoubleSpinBox.value() == 3.2824
+    second, _ = _evaluate_dock(slope_dock)
+    assert first['penetrates'] == second['penetrates'] == 'penetrates'
+    assert first['clearance'] == second['clearance']
+    assert second['clearance'] < 0
+
+
+def test_editing_percent_after_conversion_updates_the_canonical_slope(slope_dock):
+    slope_dock.slopeAngleDoubleSpinBox.setValue(45.0)
+    slope_dock.slopeUnitComboBox.setCurrentText('%')
+    slope_dock.slopeAngleDoubleSpinBox.setValue(25.0)
+    slope_dock.slopeUnitComboBox.setCurrentText('°')
+    assert slope_dock.slopeAngleDoubleSpinBox.value() == pytest.approx(14.0362)
+    feature, _ = _evaluate_dock(slope_dock)
+    assert feature['surface_z'] == pytest.approx(1008.0 + 4679.075 * 0.25, abs=1e-9)
+
+
+@pytest.mark.parametrize('angle', [-89.9999, 89.9999])
+def test_unit_switch_keeps_the_existing_angular_limits(slope_dock, angle):
+    slope_dock.slopeAngleDoubleSpinBox.setValue(angle)
+    slope_dock.slopeUnitComboBox.setCurrentText('%')
+    assert slope_dock.slopeAngleDoubleSpinBox.value() == pytest.approx(
+        100.0 * math.tan(math.radians(angle)), abs=0.00005,
+    )
+    slope_dock.slopeUnitComboBox.setCurrentText('°')
+    assert slope_dock.slopeAngleDoubleSpinBox.value() == angle

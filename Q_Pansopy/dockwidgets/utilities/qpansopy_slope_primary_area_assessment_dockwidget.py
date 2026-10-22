@@ -4,7 +4,7 @@ import os
 import traceback
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt.QtCore import QSignalBlocker, pyqtSignal
 from qgis.core import Qgis
 
 from ...qt_compat import (
@@ -54,6 +54,10 @@ class QPANSOPYSlopePrimaryAreaAssessmentDockWidget(
         self._assessing = False
         self._processing_message = None
         self._align_form_fields()
+        self._slope_angle_deg = self.slopeAngleDoubleSpinBox.value()
+        self._slope_angle_limit_deg = self.slopeAngleDoubleSpinBox.maximum()
+        self.slopeAngleDoubleSpinBox.valueChanged.connect(self._update_slope_value)
+        self.slopeUnitComboBox.currentTextChanged.connect(self._update_slope_unit)
 
         self.areaLayerComboBox.setFilters(MLPM_PolygonLayer)
         self.referenceLayerComboBox.setFilters(MLPM_LineLayer)
@@ -78,6 +82,20 @@ class QPANSOPYSlopePrimaryAreaAssessmentDockWidget(
         self.calculateButton.clicked.connect(self.calculate)
         self._populate_field_choices(None)
         self._update_tolerance_controls(False)
+
+    def _update_slope_value(self, value: float):
+        from ...modules.utilities.slope_primary_area_assessment import slope_to_degrees
+
+        self._slope_angle_deg = slope_to_degrees(value, self.slopeUnitComboBox.currentText())
+
+    def _update_slope_unit(self, unit: str):
+        from ...modules.utilities.slope_primary_area_assessment import slope_from_degrees
+
+        # Keep the unrounded angle: the displayed conversion has only four decimals.
+        limit = slope_from_degrees(self._slope_angle_limit_deg, unit)
+        with QSignalBlocker(self.slopeAngleDoubleSpinBox):
+            self.slopeAngleDoubleSpinBox.setRange(-limit, limit)
+            self.slopeAngleDoubleSpinBox.setValue(slope_from_degrees(self._slope_angle_deg, unit))
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
@@ -289,7 +307,7 @@ class QPANSOPYSlopePrimaryAreaAssessmentDockWidget(
                     obstacle_layer=obstacle_layer,
                     field_mapping=mapping,
                     surface_elevation_m=self.surfaceElevationDoubleSpinBox.value(),
-                    slope_angle_deg=self.slopeAngleDoubleSpinBox.value(),
+                    slope_angle_deg=self._slope_angle_deg,
                     terrain_tolerance_m=(
                         self.terrainToleranceDoubleSpinBox.value()
                     ),
