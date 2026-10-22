@@ -89,3 +89,58 @@ def test_invalid_source_values_are_rejected(elevation, tolerance):
 
     with pytest.raises(ValueError):
         evaluate_point(_record(elevation, tolerance), 0.0, 0.0, 0.0)
+
+
+@pytest.mark.parametrize('value,unit,expected', [
+    (0.0, '°', 0.0), (0.0, '%', 0.0),
+    (45.0, '°', 45.0), (100.0, '%', 45.0),
+    (-100.0, '%', -45.0), (3.3, '%', 1.8900748258989577),
+])
+def test_slope_input_converts_to_degrees(value, unit, expected):
+    from Q_Pansopy.modules.utilities.slope_primary_area_assessment import slope_to_degrees
+
+    assert slope_to_degrees(value, unit) == pytest.approx(expected, abs=1e-12)
+
+
+@pytest.mark.parametrize('angle,unit,expected', [
+    (0.0, '°', 0.0), (0.0, '%', 0.0),
+    (45.0, '°', 45.0), (45.0, '%', 100.0), (-45.0, '%', -100.0),
+    (1.88, '%', 3.2823970647582175),
+    (89.9999, '%', 57295779.51043443),
+])
+def test_degrees_convert_to_the_selected_display_unit(angle, unit, expected):
+    from Q_Pansopy.modules.utilities.slope_primary_area_assessment import slope_from_degrees
+
+    assert slope_from_degrees(angle, unit) == pytest.approx(expected, rel=1e-12, abs=1e-12)
+
+
+@pytest.mark.parametrize('value,unit', [
+    (float('nan'), '°'), (float('inf'), '°'),
+    (float('nan'), '%'), (float('inf'), '%'),
+    (-90.0, '°'), (90.0, '°'), (91.0, '°'),
+    (3.0, 'unknown'),
+])
+def test_slope_input_rejects_invalid_values_and_units(value, unit):
+    from Q_Pansopy.modules.utilities.slope_primary_area_assessment import slope_to_degrees
+
+    with pytest.raises(ValueError):
+        slope_to_degrees(value, unit)
+
+
+@pytest.mark.parametrize('angle,unit', [
+    (float('nan'), '%'), (float('inf'), '%'),
+    (-90.0, '%'), (90.0, '%'), (1.0, 'unknown'),
+])
+def test_slope_display_rejects_invalid_angles_and_units(angle, unit):
+    from Q_Pansopy.modules.utilities.slope_primary_area_assessment import slope_from_degrees
+
+    with pytest.raises(ValueError):
+        slope_from_degrees(angle, unit)
+
+
+def test_one_hundred_percent_rises_one_hundred_metres_over_one_hundred_metres():
+    from Q_Pansopy.modules.utilities.slope_primary_area_assessment import evaluate_point, slope_to_degrees
+
+    result = evaluate_point(_record(elevation=200.0), 100.0, 200.0, slope_to_degrees(100.0, '%'))
+    assert result.surface_z == pytest.approx(300.0)
+    assert result.clearance == pytest.approx(100.0)

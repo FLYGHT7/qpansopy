@@ -49,13 +49,37 @@ class SlopeAssessmentResult:
     buffer_layer: Optional[QgsVectorLayer] = None
 
 
+def slope_to_degrees(value: float, unit: Literal['°', '%'] = '°') -> float:
+    """Normalize a slope input to the existing angular calculation contract."""
+    slope = float(value)
+    if not math.isfinite(slope):
+        raise ValueError('Slope must be finite')
+    if unit == '°':
+        angle = slope
+    elif unit == '%':
+        angle = math.degrees(math.atan(slope / 100.0))
+    else:
+        raise ValueError('Slope unit must be ° or %')
+    if not math.isfinite(angle) or not -90.0 < angle < 90.0:
+        raise ValueError('Slope angle must be finite and strictly between -90 and 90 degrees')
+    return angle
+
+
+def slope_from_degrees(angle_deg: float, unit: Literal['°', '%'] = '°') -> float:
+    """Express an angular slope in the selected display unit."""
+    angle = slope_to_degrees(angle_deg)
+    if unit == '°':
+        return angle
+    if unit == '%':
+        return 100.0 * math.tan(math.radians(angle))
+    raise ValueError('Slope unit must be ° or %')
+
+
 def _surface_parameters(elevation_m: float, angle_deg: float) -> Tuple[float, float]:
     elevation = float(elevation_m)
     if not math.isfinite(elevation):
         raise ValueError('Surface elevation must be finite')
-    angle = float(angle_deg)
-    if not math.isfinite(angle) or not -90.0 < angle < 90.0:
-        raise ValueError('Slope angle must be finite and strictly between -90 and 90 degrees')
+    angle = slope_to_degrees(angle_deg)
     return elevation, math.tan(math.radians(angle))
 
 
@@ -216,6 +240,7 @@ def run_slope_primary_area_assessment(
         '<h3>Slope primary-area assessment</h3><p>'
         f'Surface elevation: {elevation:g} m<br>'
         f'Slope angle: {float(slope_angle_deg):g} degrees<br>'
+        f'Slope gradient: {gradient * 100:g} %<br>'
         f'Reference line: {escape(reference_layer.name())}<br>'
         'Absolute perpendicular distance to the extended reference line.<br>'
         'Positive angles rise away from the line; negative angles descend.<br>'
