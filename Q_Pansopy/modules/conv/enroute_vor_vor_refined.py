@@ -171,24 +171,16 @@ def _construction_layer(lines, crs):
 
 
 def _output_group(project, vor_layer, layers, feature_a_id, feature_b_id):
-    """Insert below the input stations in both tree and custom drawing order."""
+    """Place results first in the tree while drawing them below the VOR."""
     root = project.layerTreeRoot()
-    custom_order = root.hasCustomLayerOrder()
     previous_order = list(root.layerOrder())
-    station_node = root.findLayer(vor_layer.id())
-    anchor = station_node
-    parent = anchor.parent() if anchor is not None else root
-    while parent is not root and parent.isMutuallyExclusive():
-        anchor = parent
-        parent = anchor.parent()
-    index = parent.children().index(anchor) + 1 if anchor is not None else 0
     project.addMapLayers(layers, False)
-    group = parent.insertGroup(index, f'Refined ENR VOR/VOR — A {feature_a_id}, B {feature_b_id}')
+    group = root.insertGroup(0, f'Refined ENR VOR/VOR — A {feature_a_id}, B {feature_b_id}')
     for layer in layers:
         group.addLayer(layer).setItemVisibilityChecked(True)
-    if custom_order:
-        index = previous_order.index(vor_layer) + 1 if vor_layer in previous_order else len(previous_order)
-        root.setCustomLayerOrder(previous_order[:index] + layers + previous_order[index:])
+    index = previous_order.index(vor_layer) + 1 if vor_layer in previous_order else len(previous_order)
+    root.setCustomLayerOrder(previous_order[:index] + layers + previous_order[index:])
+    root.setHasCustomLayerOrder(True)
     return group
 
 
