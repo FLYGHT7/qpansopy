@@ -34,7 +34,7 @@
         <item><widget class="QGroupBox" name="outputGroup">
          <property name="title"><string>Output</string></property>
          <layout class="QVBoxLayout" name="outputLayout">
-          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary area and Secondary area will be added as separate layers. Case 1 ≤ 75 NM; Case 2 &gt; 75 NM — selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary Area and Secondary Area will be added as two features in one layer. Case 1 ≤ 75 NM; Case 2 &gt; 75 NM — selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
          </layout>
         </widget></item>
         <item><widget class="QGroupBox" name="actionGroup">

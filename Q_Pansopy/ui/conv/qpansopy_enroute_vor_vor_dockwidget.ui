@@ -34,7 +34,7 @@
         <item><widget class="QGroupBox" name="outputGroup">
          <property name="title"><string>Output</string></property>
          <layout class="QVBoxLayout" name="outputLayout">
-          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary area and Buffer area will be added as separate layers. The case is selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary Area and Buffer Area will be added as two features in one layer. The case is selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
          </layout>
         </widget></item>
         <item><widget class="QGroupBox" name="actionGroup">
