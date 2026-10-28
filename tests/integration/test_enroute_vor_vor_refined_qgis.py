@@ -412,6 +412,7 @@ def test_vor_stays_visible_above_opaque_areas_in_existing_drawing_order(placemen
         root.setCustomLayerOrder(list(reversed(root.layerOrder())))
         root.setHasCustomLayerOrder(True)
     previous_order = list(root.layerOrder())
+    previous_children = list(root.children())
     station_node = root.findLayer(pair.id())
     station_parent = station_node.parent()
     pair.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple({
@@ -426,9 +427,9 @@ def test_vor_stays_visible_above_opaque_areas_in_existing_drawing_order(placemen
     ordered_outputs = [node.layer() for node in group.children()]
     index = previous_order.index(pair) + 1
     assert root.layerOrder() == previous_order[:index] + ordered_outputs + previous_order[index:]
-    assert root.hasCustomLayerOrder() == custom_order
+    assert root.hasCustomLayerOrder()
 
-    # Rendering the real tree order must preserve the source symbols over opaque fills.
+    # Render the effective drawing order: VOR symbols must remain above opaque fills.
     pair.removeSelection()
     settings = QgsMapSettings()
     settings.setDestinationCrs(areas.crs())
@@ -447,6 +448,54 @@ def test_vor_stays_visible_above_opaque_areas_in_existing_drawing_order(placemen
         point = transform.transform(feature.geometry().asPoint())
         pixel = settings.mapToPixel().transform(point)
         assert rendered.pixelColor(round(pixel.x()), round(pixel.y())).name() == '#ff0000'
+
+
+@pytest.mark.parametrize('include_construction', [False, True])
+def test_repeated_runs_keep_latest_group_first_and_previous_results(include_construction):
+    from qgis.core import QgsProject
+
+    pair = _pair(160000)
+    project = QgsProject.instance()
+    root = project.layerTreeRoot()
+    first_outputs = _run(pair, include_construction)
+    first_group = root.children()[0]
+    previous_children = list(root.children())
+    previous_order = list(root.layerOrder())
+
+    outputs = _run(pair, include_construction)
+    group = root.findLayer(outputs['Primary area'].id()).parent()
+    assert group != first_group
+    assert root.children() == [group] + previous_children
+    assert {node.layer().id() for node in first_group.children()} == {
+        layer.id() for layer in first_outputs.values()
+    }
+    assert all(project.mapLayer(layer.id()) == layer for layer in first_outputs.values())
+    index = previous_order.index(pair) + 1
+    ordered_outputs = [node.layer() for node in group.children()]
+    assert root.layerOrder() == previous_order[:index] + ordered_outputs + previous_order[index:]
+    layer_ids = [layer.id() for layer in root.layerOrder()]
+    assert len(layer_ids) == len(set(layer_ids)) == len(project.mapLayers())
+    assert root.hasCustomLayerOrder()
+
+
+def test_outputs_follow_existing_order_when_vor_is_not_in_custom_order():
+    from qgis.core import QgsProject, QgsVectorLayer
+
+    pair = _pair(160000)
+    project = QgsProject.instance()
+    root = project.layerTreeRoot()
+    background = QgsVectorLayer('Point?crs=EPSG:4326', 'Other input', 'memory')
+    project.addMapLayer(background)
+    root.setCustomLayerOrder([background])
+    root.setHasCustomLayerOrder(True)
+    assert root.layerOrder() == [background]
+    previous_children = list(root.children())
+
+    outputs = _run(pair)
+    group = root.findLayer(outputs['Primary area'].id()).parent()
+    assert root.children() == [group] + previous_children
+    assert root.layerOrder() == [background] + [node.layer() for node in group.children()]
+    assert root.hasCustomLayerOrder()
 
 
 def test_dock_explains_automatic_case_selection(qgis_app):
