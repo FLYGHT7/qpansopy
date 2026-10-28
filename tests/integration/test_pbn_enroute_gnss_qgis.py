@@ -140,6 +140,9 @@ def test_dock_all_specs(qgis_app):
     iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: layer)
     dock = QPANSOPYPBNEnrouteGNSSDockWidget(iface)
     try:
+        assert 'How to verify' in dock.measurementTitleLabel.text()
+        assert '±5.77 NM, not ±5 NM' in dock.measurementHintLabel.text()
+        assert 'Cartesian' in dock.measurementHintLabel.text()
         assert dock.specComboBox.count() == 8
         assert dock.specComboBox.currentData() == 'rnav5'
         dock.routingLayerComboBox.setLayer(layer)
@@ -239,3 +242,47 @@ def test_nonfinite_geometry_coordinates(value):
     from Q_Pansopy.modules.pbn.pbn_enroute_gnss import build_enroute_geometry
     with pytest.raises(ValueError, match='finite'):
         build_enroute_geometry((value, 0), (1000, 0), 'rnav5')
+
+
+
+@pytest.mark.parametrize('points', [((-87, 14), (-86, 14.5)),
+                                  ((-86.8, 15), (-86, 15.3)),
+                                  ((-86.5, 15.7), (-86.3, 16.3))])
+@pytest.mark.parametrize('identifier,expected', [('rnav2', 9260.0), ('rnav5', 10686.04)])
+@pytest.mark.parametrize('fraction', [0.0, 0.5, 1.0])
+def test_local_width_and_utm_measurement_are_distinct(points, identifier, expected, fraction):
+    import math
+    from qgis.core import (QgsCoordinateTransform, QgsCoordinateReferenceSystem,
+                           QgsProject, QgsPointXY, QgsLayerNotesUtils)
+    source = route(points=points)
+    output = run(source, identifier)
+    transform = QgsCoordinateTransform(source.crs(), output.crs(), QgsProject.instance())
+    a, b = [transform.transform(p) for p in next(source.getFeatures()).geometry().asPolyline()]
+    position = QgsPointXY(a.x() + fraction * (b.x() - a.x()), a.y() + fraction * (b.y() - a.y()))
+    dx, dy = b.x() - a.x(), b.y() - a.y()
+    length = math.hypot(dx, dy)
+    primary, left, right = [f.geometry() for f in output.getFeatures()]
+
+    def edge_point(geometry, start_index, end_index):
+        ring = geometry.asPolygon()[0]
+        first, last = ring[start_index], ring[end_index]
+        return QgsPointXY(first.x() + fraction * (last.x() - first.x()),
+                          first.y() + fraction * (last.y() - first.y()))
+
+    # Sample actual longitudinal polygon edges, including their endpoint vertices.
+    boundaries = ((edge_point(primary, 0, 1), expected / 2),
+                  (edge_point(primary, 3, 2), expected / 2),
+                  (edge_point(left, 3, 2), expected),
+                  (edge_point(right, 0, 1), expected))
+    for point, nominal in boundaries:
+        px, py = point.x() - position.x(), point.y() - position.y()
+        assert math.hypot(px, py) == pytest.approx(nominal, abs=1e-6)
+        assert abs((px * dx + py * dy) / length) < 1e-6
+    corner = boundaries[2][0]
+    utm = QgsCoordinateTransform(output.crs(), QgsCoordinateReferenceSystem('EPSG:32616'),
+                                 QgsProject.instance())
+    grid_a, grid_corner = utm.transform(position), utm.transform(corner)
+    grid_width = math.hypot(grid_corner.x() - grid_a.x(), grid_corner.y() - grid_a.y())
+    assert 0.1 < abs(grid_width - expected) < 10
+    notes = QgsLayerNotesUtils.layerNotes(output)
+    assert 'local AEQD CRS' in notes and 'Cartesian' in notes

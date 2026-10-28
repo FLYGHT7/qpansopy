@@ -28,6 +28,7 @@ def _create_enroute_area_layer(
     case: int,
     distance_nm: float,
     crs: QgsCoordinateReferenceSystem,
+    method: Literal["Simplified", "Refined"],
 ) -> QgsVectorLayer:
     """Create one categorized layer containing primary and outer areas."""
     from qgis.PyQt.QtCore import QVariant
@@ -43,10 +44,14 @@ def _create_enroute_area_layer(
     if outer_area_type not in ("Secondary area", "Buffer area"):
         raise ValueError("outer_area_type must be 'Secondary area' or 'Buffer area'")
 
+    if method not in ("Simplified", "Refined"):
+        raise ValueError("Unsupported ENR method")
+
     layer = _new_layer("Polygon", name, crs, [
         QgsField("area_type", QVariant.String),
         QgsField("case", QVariant.Int),
         QgsField("distance_nm", QVariant.Double),
+        QgsField("method", QVariant.String),
     ])
 
     message, loaded = layer.loadNamedStyle(
@@ -95,7 +100,7 @@ def _create_enroute_area_layer(
     ):
         feature = QgsFeature(layer.fields())
         feature.setGeometry(geometry)
-        feature.setAttributes([area_type, case, distance_nm])
+        feature.setAttributes([area_type, case, distance_nm, method])
         features.append(feature)
     success, _ = layer.dataProvider().addFeatures(features)
     if not success:

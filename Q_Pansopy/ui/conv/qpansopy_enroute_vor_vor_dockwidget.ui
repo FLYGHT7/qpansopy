@@ -2,7 +2,7 @@
 <ui version="4.0">
  <class>QPANSOPYEnrouteVorVorDockWidget</class>
  <widget class="QDockWidget" name="QPANSOPYEnrouteVorVorDockWidget">
-  <property name="windowTitle"><string>Simplified ENR — VOR/VOR (straight)</string></property>
+  <property name="windowTitle"><string>ENR — VOR/VOR (straight)</string></property>
   <property name="minimumSize"><size><width>320</width><height>260</height></size></property>
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QVBoxLayout" name="dockLayout">
@@ -20,9 +20,11 @@
         <item><widget class="QGroupBox" name="inputGroup">
          <property name="title"><string>Input</string></property>
          <layout class="QFormLayout" name="inputLayout">
-          <item row="0" column="0"><widget class="QLabel" name="vorLayerLabel"><property name="text"><string>VOR point layer:</string></property></widget></item>
-          <item row="0" column="1"><widget class="QgsMapLayerComboBox" name="vorLayerComboBox"/></item>
-          <item row="1" column="0" colspan="2"><widget class="QLabel" name="selectionHintLabel"><property name="text"><string>Select exactly two VOR stations in this layer.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+          <item row="0" column="0"><widget class="QLabel" name="methodLabel"><property name="text"><string>Method:</string></property><property name="buddy"><cstring>methodComboBox</cstring></property></widget></item>
+          <item row="0" column="1"><widget class="QComboBox" name="methodComboBox"/></item>
+          <item row="1" column="0"><widget class="QLabel" name="vorLayerLabel"><property name="text"><string>VOR point layer:</string></property></widget></item>
+          <item row="1" column="1"><widget class="QgsMapLayerComboBox" name="vorLayerComboBox"/></item>
+          <item row="2" column="0" colspan="2"><widget class="QLabel" name="selectionHintLabel"><property name="text"><string>Select exactly two VOR stations in this layer.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
          </layout>
         </widget></item>
         <item><widget class="QGroupBox" name="paramsGroup">

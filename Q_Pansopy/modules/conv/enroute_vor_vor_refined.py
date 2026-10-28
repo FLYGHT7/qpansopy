@@ -198,7 +198,7 @@ def run_enroute_vor_vor_refined(iface, vor_layer, params=None) -> bool:
     areas = _create_enroute_area_layer(
         'Refined ENR VOR/VOR areas', result.primary, result.secondary,
         'Secondary area', result.profile.case,
-        result.profile.distance_m / NM_TO_M, crs,
+        result.profile.distance_m / NM_TO_M, crs, 'Refined',
     )
     construction = None
     if params.get('include_construction_lines', False):

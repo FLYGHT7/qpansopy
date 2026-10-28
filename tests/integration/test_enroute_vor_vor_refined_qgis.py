@@ -151,15 +151,16 @@ def test_single_area_layer_has_categorized_primary_secondary_and_optional_constr
 
     outputs = _run(_pair(distance), include)
     expected = {'Refined ENR VOR/VOR areas'}
-    if include and case == 2:
+    if include:
         expected.add('VOR/VOR construction lines')
     assert set(outputs) == expected
     areas = outputs['Refined ENR VOR/VOR areas']
     assert areas.featureCount() == 2
-    assert areas.fields().names() == ['area_type', 'case', 'distance_nm']
+    assert areas.fields().names() == ['area_type', 'case', 'distance_nm', 'method']
     features = {feature['area_type']: feature for feature in areas.getFeatures()}
     assert set(features) == {'Primary area', 'Secondary area'}
     for feature in features.values():
+        assert feature['method'] == 'Refined'
         assert feature['case'] == case
         assert feature['distance_nm'] == pytest.approx(distance / 1852, abs=1e-8)
         assert feature.geometry().isGeosValid()
@@ -180,7 +181,7 @@ def test_single_area_layer_has_categorized_primary_secondary_and_optional_constr
         lines = outputs['VOR/VOR construction lines']
         assert lines.featureCount() == (1 if case == 1 else 9)
         if case == 2:
-            assert sum(f['splay_pct'] == 10 for f in lines.getFeatures()) == 4
+            assert sum(f['splay_pct'] == 10 for f in lines.getFeatures()) == (0 if case == 1 else 4)
             assert sum(f['splay_pct'] == 16 for f in lines.getFeatures()) == 4
 
 
@@ -277,15 +278,16 @@ def test_invalid_station_inputs_create_no_outputs(invalid):
 def test_dock_creates_one_area_output_and_restores_its_controls(qgis_app):
     from qgis.PyQt import QtWidgets
     from qgis.gui import QgsMessageBar
-    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
-        QPANSOPYEnrouteVorVorRefinedDockWidget,
+    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import (
+        QPANSOPYEnrouteVorVorDockWidget,
     )
 
     pair = _pair()
     window = QtWidgets.QMainWindow()
     bar = QgsMessageBar(window)
     iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: pair)
-    widget = QPANSOPYEnrouteVorVorRefinedDockWidget(iface)
+    widget = QPANSOPYEnrouteVorVorDockWidget(iface)
+    widget.methodComboBox.setCurrentIndex(1)
     try:
         assert not widget.constructionCheckBox.isChecked()
         assert widget.formScrollArea.widgetResizable()
@@ -307,49 +309,6 @@ def test_dock_creates_one_area_output_and_restores_its_controls(qgis_app):
         widget.close()
         window.close()
         widget.deleteLater()
-        window.deleteLater()
-        qgis_app.processEvents()
-
-
-def test_conv_menu_and_toolbar_open_the_registered_dock(qgis_app, monkeypatch):
-    from qgis.PyQt import QtWidgets
-    from qgis.gui import QgsMessageBar
-    import Q_Pansopy.qpansopy as plugin_module
-
-    assert not plugin_module._IMPORT_ERRORS
-    window = QtWidgets.QMainWindow()
-    bar = QgsMessageBar(window)
-
-    def toolbar(name):
-        result = QtWidgets.QToolBar(name, window)
-        window.addToolBar(result)
-        return result
-
-    def fail_dialog(*args):
-        pytest.fail(str(args))
-
-    monkeypatch.setattr(plugin_module.QMessageBox, 'critical', fail_dialog)
-    iface = SimpleNamespace(
-        mainWindow=lambda: window, addToolBar=toolbar, messageBar=lambda: bar,
-        activeLayer=lambda: None, addDockWidget=window.addDockWidget,
-        removeDockWidget=window.removeDockWidget,
-    )
-    plugin = plugin_module.Qpansopy(iface)
-    try:
-        plugin.initGui()
-        action = next(a for a in plugin.submenus['CONV'].actions()
-                      if a.text() == 'Refined ENR — VOR/VOR (straight)')
-        assert action in plugin.toolbars['CONV'].actions()
-        assert not action.icon().isNull()
-        action.trigger()
-        widget = plugin.modules['ENROUTE_VOR_VOR_REFINED']['GUI_INSTANCE']
-        assert isinstance(widget, plugin_module.QPANSOPYEnrouteVorVorRefinedDockWidget)
-        assert not widget.constructionCheckBox.isChecked()
-        widget.close()
-        assert plugin.modules['ENROUTE_VOR_VOR_REFINED']['GUI_INSTANCE'] is None
-    finally:
-        plugin.unload()
-        window.close()
         window.deleteLater()
         qgis_app.processEvents()
 
@@ -426,7 +385,8 @@ def test_vor_stays_visible_above_opaque_areas_in_existing_drawing_order(placemen
     outputs = _run(pair, True)
     areas = outputs['Refined ENR VOR/VOR areas']
     group = root.findLayer(areas.id()).parent()
-    assert group.parent() == (root if placement in ('root', 'exclusive') else source_group)
+    assert group.parent() == root
+    assert root.children()[0] is group
     assert station_node.parent() == station_parent and station_node.isVisible()
     assert all(node.isVisible() for node in group.children())
     ordered_outputs = [node.layer() for node in group.children()]
@@ -468,7 +428,7 @@ def test_repeated_runs_keep_latest_group_first_and_previous_results(include_cons
     previous_order = list(root.layerOrder())
 
     outputs = _run(pair, include_construction)
-    group = root.findLayer(outputs['Primary area'].id()).parent()
+    group = root.findLayer(outputs['Refined ENR VOR/VOR areas'].id()).parent()
     assert group != first_group
     assert root.children() == [group] + previous_children
     assert {node.layer().id() for node in first_group.children()} == {
@@ -497,7 +457,7 @@ def test_outputs_follow_existing_order_when_vor_is_not_in_custom_order():
     previous_children = list(root.children())
 
     outputs = _run(pair)
-    group = root.findLayer(outputs['Primary area'].id()).parent()
+    group = root.findLayer(outputs['Refined ENR VOR/VOR areas'].id()).parent()
     assert root.children() == [group] + previous_children
     assert root.layerOrder() == [background] + [node.layer() for node in group.children()]
     assert root.hasCustomLayerOrder()
@@ -505,13 +465,14 @@ def test_outputs_follow_existing_order_when_vor_is_not_in_custom_order():
 
 def test_dock_explains_automatic_case_selection(qgis_app):
     from qgis.PyQt import QtWidgets
-    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
-        QPANSOPYEnrouteVorVorRefinedDockWidget,
+    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import (
+        QPANSOPYEnrouteVorVorDockWidget,
     )
 
     window = QtWidgets.QMainWindow()
     iface = SimpleNamespace(mainWindow=lambda: window, activeLayer=lambda: None)
-    widget = QPANSOPYEnrouteVorVorRefinedDockWidget(iface)
+    widget = QPANSOPYEnrouteVorVorDockWidget(iface)
+    widget.methodComboBox.setCurrentIndex(1)
     try:
         hint = widget.outputDescriptionLabel.text()
         assert '75 NM' in hint and 'Case 1' in hint and 'Case 2' in hint and 'automatically' in hint
@@ -554,7 +515,7 @@ def test_case_one_construction_layer_matches_station_centers(crs):
     pair = _pair(100000, crs=crs, bearing=37)
     outputs = _run(pair, True)
     lines = outputs['VOR/VOR construction lines']
-    assert lines.crs() == outputs['Primary area'].crs()
+    assert lines.crs() == outputs['Refined ENR VOR/VOR areas'].crs()
     assert lines.crs().mapUnits().name == 'Meters'
     assert lines.featureCount() == 1
     feature = next(lines.getFeatures())
@@ -572,13 +533,14 @@ def test_case_one_construction_layer_matches_station_centers(crs):
 def test_case_one_dock_loads_centerline(qgis_app):
     from qgis.PyQt import QtWidgets
     from qgis.gui import QgsMessageBar
-    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import QPANSOPYEnrouteVorVorRefinedDockWidget
+    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import QPANSOPYEnrouteVorVorDockWidget
 
     pair = _pair(100000)
     window = QtWidgets.QMainWindow()
     bar = QgsMessageBar(window)
     iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: pair)
-    widget = QPANSOPYEnrouteVorVorRefinedDockWidget(iface)
+    widget = QPANSOPYEnrouteVorVorDockWidget(iface)
+    widget.methodComboBox.setCurrentIndex(1)
     try:
         assert not widget.constructionCheckBox.isChecked()
         assert widget.constructionCheckBox.text() == 'Load construction lines'

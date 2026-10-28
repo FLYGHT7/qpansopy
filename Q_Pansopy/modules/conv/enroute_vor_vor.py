@@ -182,7 +182,7 @@ def run_enroute_vor_vor(iface, vor_layer, params=None) -> bool:
     result = build_enroute_geometry((a.x(), a.y()), (b.x(), b.y()), distance_m)
     areas = _create_enroute_area_layer(
         'ENR VOR/VOR areas', result.primary, result.buffer, 'Buffer area',
-        result.profile.case, result.profile.distance_m / NM_TO_M, crs,
+        result.profile.case, result.profile.distance_m / NM_TO_M, crs, 'Simplified',
     )
     construction = None
     if params.get('include_construction_lines', False):
