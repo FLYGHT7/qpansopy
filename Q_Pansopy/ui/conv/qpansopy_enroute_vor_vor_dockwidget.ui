@@ -28,13 +28,13 @@
         <item><widget class="QGroupBox" name="paramsGroup">
          <property name="title"><string>Parameters</string></property>
          <layout class="QVBoxLayout" name="paramsLayout">
-          <item><widget class="QCheckBox" name="constructionCheckBox"><property name="text"><string>Load construction lines (case 2)</string></property><property name="checked"><bool>false</bool></property></widget></item>
+          <item><widget class="QCheckBox" name="constructionCheckBox"><property name="text"><string>Load construction lines</string></property><property name="toolTip"><string>Case 1: centerline only. Case 2: axis and eight 10%/16% segments.</string></property><property name="checked"><bool>false</bool></property></widget></item>
          </layout>
         </widget></item>
         <item><widget class="QGroupBox" name="outputGroup">
          <property name="title"><string>Output</string></property>
          <layout class="QVBoxLayout" name="outputLayout">
-          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary area and Buffer area will be added as separate layers. The case is selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary Area and Buffer Area will be added as two features in one layer. The case is selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
          </layout>
         </widget></item>
         <item><widget class="QGroupBox" name="actionGroup">
