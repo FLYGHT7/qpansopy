@@ -18,7 +18,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class QPANSOPYEnrouteVorVorRefinedDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
-    """Collect two selected stations and create the primary and secondary layers."""
+    """Collect two stations and create one primary/secondary area layer."""
 
     closingPlugin = pyqtSignal()
 
