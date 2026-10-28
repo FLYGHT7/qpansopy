@@ -129,6 +129,11 @@ def run_pbn_enroute_gnss(iface, routing_layer, params=None) -> bool:
     notes = ('GNSS only; outer semi-width {0:g} NM; primary '
              'semi-width {1:g} NM; flat ends.').format(
                  spec.half_width_nm, spec.half_width_nm / 2)
+    notes += (' Widths are Cartesian in the output layer local AEQD CRS. '
+              'To verify: set the project CRS to this layer CRS, use Cartesian '
+              'measurement and snap perpendicular to the track. UTM Cartesian '
+              'and WGS84 ellipsoidal measurements may differ. Construction CRS: '
+              + crs.toProj())
     QgsLayerNotesUtils.setLayerNotes(layer, notes)
     project.addMapLayer(layer, False)
     group = project.layerTreeRoot().insertGroup(
@@ -137,5 +142,6 @@ def run_pbn_enroute_gnss(iface, routing_layer, params=None) -> bool:
     params.get('log', lambda message: None)(
         '{0}; distance {1:.6f} NM; outer ±{2:g} NM; primary ±{3:g} NM.'.format(
             spec.label, length / 1852.0, spec.half_width_nm, spec.half_width_nm / 2))
+    params.get('log', lambda message: None)('Construction CRS (metres): ' + crs.toProj())
     iface.messageBar().pushMessage('QPANSOPY', 'PBN ENR GNSS areas created', level=Qgis.Success)
     return True

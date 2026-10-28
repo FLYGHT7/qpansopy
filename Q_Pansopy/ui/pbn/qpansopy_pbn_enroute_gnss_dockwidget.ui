@@ -35,7 +35,9 @@
         <item><widget class="QGroupBox" name="outputGroup">
          <property name="title"><string>Output</string></property>
          <layout class="QVBoxLayout" name="outputLayout">
-          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary area and Buffer area will be added as separate layers. The case is selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>One layer with Primary Area and two Secondary Areas.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+          <item><widget class="QLabel" name="measurementTitleLabel"><property name="text"><string>How to verify the width</string></property></widget></item>
+          <item><widget class="QLabel" name="measurementHintLabel"><property name="text"><string>Widths are outer semi-widths in the output layer local CRS. RNAV 5 uses ±5.77 NM, not ±5 NM. To verify: set the project CRS to the output layer CRS, select Cartesian measurement and snap perpendicular to the track. UTM Cartesian and WGS84 ellipsoidal measurements may differ.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
          </layout>
         </widget></item>
         <item><widget class="QGroupBox" name="actionGroup">
