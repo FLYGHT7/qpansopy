@@ -118,6 +118,8 @@ def build_enroute_geometry(
                 tip = map_point(middle, sign * percentage / 100 * profile.distance_m / 2)
                 for station, point in (('A', point_a), ('B', point_b)):
                     construction.append(ConstructionLine(f'{station}_{side}', percentage, point, tip))
+    else:
+        construction.append(ConstructionLine('Axis', 0, point_a, point_b))
     primary = _checked_geometry(primary, 'Primary area')
     exterior = _checked_geometry(exterior, 'exterior envelope')
     buffer = _checked_geometry(exterior.difference(primary), 'Buffer area')
@@ -183,7 +185,7 @@ def run_enroute_vor_vor(iface, vor_layer, params=None) -> bool:
         result.profile.case, result.profile.distance_m / NM_TO_M, crs,
     )
     construction = None
-    if result.profile.case == 2 and params.get('include_construction_lines', False):
+    if params.get('include_construction_lines', False):
         construction = _construction_layer(result.construction_lines, crs)
     notes = (
         '<h3>Simplified ENR — VOR/VOR (straight)</h3><p>'
@@ -205,6 +207,9 @@ def run_enroute_vor_vor(iface, vor_layer, params=None) -> bool:
     log(f'Case {result.profile.case}; distance: {distance_m / NM_TO_M:.6f} NM ({distance_m / 1000:.6f} km).')
     log('Created Primary area and Buffer area in one layer with exact kilometre widths.')
     if construction is not None:
-        log('Loaded the axis and eight 10%/16% construction segments.')
+        if result.profile.case == 1:
+            log('Loaded the centerline between the two VOR stations.')
+        else:
+            log('Loaded the axis and eight 10%/16% construction segments.')
     iface.messageBar().pushMessage('QPANSOPY', 'Simplified VOR/VOR areas created', level=Qgis.Success)
     return True
