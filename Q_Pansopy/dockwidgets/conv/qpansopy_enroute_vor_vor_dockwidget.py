@@ -41,7 +41,7 @@ class QPANSOPYEnrouteVorVorDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         outer = 'Secondary' if refined else 'Buffer'
         limit = '75' if refined else '99.6'
         self.outputDescriptionLabel.setText(
-            f'Primary area and {outer} area will be added as separate layers. '
+            f'Primary area and {outer} area will be added as two features in one layer. '
             f'Case 1 ≤ {limit} NM; Case 2 > {limit} NM — selected automatically '
             'from the station distance.')
 

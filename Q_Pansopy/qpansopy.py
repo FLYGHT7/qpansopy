@@ -57,6 +57,9 @@ try:
     from .dockwidgets.pbn.qpansopy_dme_dme_coverage_dockwidget import (
         QPANSOPYDMEDMECoverageDockWidget,
     )
+    from .dockwidgets.pbn.qpansopy_pbn_enroute_gnss_dockwidget import (
+        QPANSOPYPBNEnrouteGNSSDockWidget,
+    )
     from .dockwidgets.conv.qpansopy_vor_dockwidget import QPANSOPYVORDockWidget
     from .dockwidgets.conv.qpansopy_ndb_dockwidget import QPANSOPYNDBDockWidget
     from .dockwidgets.conv.qpansopy_conv_initial_dockwidget import QPANSOPYConvInitialDockWidget
@@ -237,6 +240,14 @@ class Qpansopy:
                     "TOOLTIP": "Assess theoretical dual-DME update coverage",
                     "ICON": os.path.join(self.icons_dir, 'dme_dme_coverage.svg'),
                     "DOCK_WIDGET": QPANSOPYDMEDMECoverageDockWidget,
+                    "GUI_INSTANCE": None
+                },
+                "PBN_ENROUTE_GNSS": {
+                    "TITLE": "ENR — PBN GNSS (straight)",
+                    "TOOLBAR": "PBN",
+                    "TOOLTIP": "Create constant-width GNSS en-route protection areas",
+                    "ICON": "pbn_enroute_gnss.svg",
+                    "DOCK_WIDGET": QPANSOPYPBNEnrouteGNSSDockWidget,
                     "GUI_INSTANCE": None
                 },
                 "GNSS_WAYPOINT": {

@@ -79,7 +79,9 @@ def test_case_one_has_exact_capsule_radii_and_disjoint_buffer():
     primary, buffer = result.primary, result.buffer
     exterior = primary.combine(buffer)
     assert result.profile.case == 1
-    assert result.construction_lines == ()
+    assert len(result.construction_lines) == 1
+    axis = result.construction_lines[0]
+    assert (axis.role, axis.splay_pct, axis.start, axis.end) == ('Axis', 0, (0, 0), (150000, 0))
     for geometry, radius in ((primary, 9300), (exterior, 18500)):
         bounds = geometry.boundingBox()
         assert bounds.xMinimum() == pytest.approx(-radius)
@@ -141,59 +143,81 @@ def test_geometry_is_symmetric_under_station_reversal_and_rotation(angle):
     (200000, 2, False), (200000, 2, True),
     (99.6 * 1852 - 0.1, 1, False), (99.6 * 1852 + 0.1, 2, True),
 ])
-def test_two_separate_layers_and_optional_case_two_construction(distance, case, include):
+def test_single_area_layer_has_categorized_primary_buffer_and_optional_construction(
+    distance, case, include
+):
     from qgis.core import QgsLayerNotesUtils, QgsProject
 
     outputs = _run(_pair(distance), include)
-    expected = {'Primary area', 'Buffer area'}
-    if include and case == 2:
+    expected = {'ENR VOR/VOR areas'}
+    if include:
         expected.add('VOR/VOR construction lines')
     assert set(outputs) == expected
-    primary, buffer = outputs['Primary area'], outputs['Buffer area']
-    for name, layer in (('Primary area', primary), ('Buffer area', buffer)):
-        assert layer.featureCount() == 1
-        feature = next(layer.getFeatures())
+    areas = outputs['ENR VOR/VOR areas']
+    assert areas.featureCount() == 2
+    assert areas.fields().names() == ['area_type', 'case', 'distance_nm', 'method']
+    features = {feature['area_type']: feature for feature in areas.getFeatures()}
+    assert set(features) == {'Primary area', 'Buffer area'}
+    for name, feature in features.items():
         assert feature['method'] == 'Simplified'
-        assert layer.fields().field('method').typeName().lower() in ('string', 'text')
-        assert feature['area_type'] == name
         assert feature['case'] == case
         assert feature['distance_nm'] == pytest.approx(distance / 1852, abs=1e-8)
         assert feature.geometry().isGeosValid()
-        assert '9300/18500' in QgsLayerNotesUtils.layerNotes(layer)
-    assert primary.renderer().symbol().color().name() == '#ffffff'
-    assert buffer.renderer().symbol().color().name() == '#cdcdcd'
+    assert all('9300/18500' in QgsLayerNotesUtils.layerNotes(layer) for layer in outputs.values())
+    renderer = areas.renderer()
+    assert renderer.classAttribute() == 'area_type'
+    categories = {category.value(): category for category in renderer.categories()}
+    assert set(categories) == {'Primary area', 'Buffer area'}
+    assert categories['Primary area'].label() == 'Primary Area'
+    assert categories['Buffer area'].label() == 'Buffer Area'
+    assert categories['Primary area'].symbol().symbolLayerCount() == 1
+    assert [categories['Buffer area'].symbol().symbolLayer(index).layerType()
+            for index in range(categories['Buffer area'].symbol().symbolLayerCount())] == [
+                'PointPatternFill', 'SimpleFill',
+            ]
     assert all(node.isVisible() for node in QgsProject.instance().layerTreeRoot().children()[0].children())
-    if include and case == 2:
+    if include:
         lines = outputs['VOR/VOR construction lines']
-        assert lines.fields().names() == ['role', 'splay_pct']
-        assert lines.featureCount() == 9
-        assert sum(f['splay_pct'] == 10 for f in lines.getFeatures()) == 4
+        assert lines.featureCount() == (1 if case == 1 else 9)
+        if case == 2:
+            assert sum(f['splay_pct'] == 10 for f in lines.getFeatures()) == (0 if case == 1 else 4)
+            assert sum(f['splay_pct'] == 16 for f in lines.getFeatures()) == 4
 
 
-def test_construction_option_does_not_change_output_polygons():
-    pair = _pair()
+@pytest.mark.parametrize('distance', [150000, 200000])
+def test_construction_option_does_not_change_output_polygons(distance):
+    pair = _pair(distance)
     without = _run(pair, False)
     with_lines = _run(pair, True)
-    for name in ('Primary area', 'Buffer area'):
-        first = next(without[name].getFeatures()).geometry()
-        second = next(with_lines[name].getFeatures()).geometry()
-        assert first.asWkb() == second.asWkb()
+    def geometries(outputs):
+        return {
+            feature['area_type']: feature.geometry()
+            for feature in outputs['ENR VOR/VOR areas'].getFeatures()
+        }
+
+    without_areas = geometries(without)
+    with_line_areas = geometries(with_lines)
+    assert without_areas.keys() == with_line_areas.keys()
+    for area_type in without_areas:
+        assert without_areas[area_type].asWkb() == with_line_areas[area_type].asWkb()
 
 
 @pytest.mark.parametrize('crs', ['EPSG:4326', 'EPSG:32616', 'EPSG:3857', 'EPSG:2227'])
 def test_input_crs_does_not_change_geodesic_distance_or_criteria(crs):
     outputs = _run(_pair(crs=crs))
-    feature = next(outputs['Primary area'].getFeatures())
+    areas = outputs['ENR VOR/VOR areas']
+    feature = next(areas.getFeatures())
     assert feature['distance_nm'] == pytest.approx(200000 / 1852, abs=1e-7)
     assert feature['case'] == 2
-    assert outputs['Primary area'].crs().isValid()
-    assert outputs['Primary area'].crs().mapUnits().name == 'Meters'
+    assert areas.crs().isValid()
+    assert areas.crs().mapUnits().name == 'Meters'
 
 
 @pytest.mark.parametrize('origin,bearing', [((179.5, 10), 90), ((30, 75), 130)])
 def test_local_crs_handles_antimeridian_and_high_latitude_routes(origin, bearing):
     outputs = _run(_pair(origin=origin, bearing=bearing))
-    assert next(outputs['Primary area'].getFeatures())['distance_nm'] == pytest.approx(200000 / 1852, abs=1e-7)
+    areas = outputs['ENR VOR/VOR areas']
+    assert next(areas.getFeatures())['distance_nm'] == pytest.approx(200000 / 1852, abs=1e-7)
 
 
 @pytest.mark.parametrize('selection', [[], [0]])
@@ -250,7 +274,7 @@ def test_invalid_station_inputs_create_no_outputs(invalid):
     assert not QgsProject.instance().layerTreeRoot().findGroups()
 
 
-def test_dock_creates_both_outputs_and_restores_its_controls(qgis_app):
+def test_dock_creates_one_area_output_and_restores_its_controls(qgis_app):
     from qgis.PyQt import QtWidgets
     from qgis.gui import QgsMessageBar
     from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import QPANSOPYEnrouteVorVorDockWidget
@@ -265,7 +289,7 @@ def test_dock_creates_both_outputs_and_restores_its_controls(qgis_app):
         assert widget.formScrollArea.widgetResizable()
         widget.vorLayerComboBox.setLayer(pair)
         widget.calculate()
-        assert set(_outputs()) == {'Primary area', 'Buffer area'}, widget.logTextEdit.toPlainText()
+        assert set(_outputs()) == {'ENR VOR/VOR areas'}, widget.logTextEdit.toPlainText()
         assert 'Case 2' in widget.logTextEdit.toPlainText()
         assert widget.calculateButton.isEnabled() and not widget._calculating
         assert QtWidgets.QApplication.overrideCursor() is None
@@ -340,6 +364,81 @@ def test_conv_menu_and_toolbar_open_the_registered_dock(qgis_app, monkeypatch):
         qgis_app.processEvents()
 
 
+
+@pytest.mark.parametrize('reverse', [False, True])
+def test_case_one_centerline_follows_oblique_station_order(reverse):
+    from Q_Pansopy.modules.conv.enroute_vor_vor import build_enroute_geometry
+
+    a, b = (500000, 1600000), (560000, 1680000)
+    if reverse:
+        a, b = b, a
+    result = build_enroute_geometry(a, b)
+    assert result.profile.case == 1
+    assert len(result.construction_lines) == 1
+    axis = result.construction_lines[0]
+    assert (axis.role, axis.splay_pct, axis.start, axis.end) == ('Axis', 0, a, b)
+
+
+@pytest.mark.parametrize('offset,case,count', [(0, 1, 1), (0.1, 2, 9)])
+def test_construction_at_case_boundary(offset, case, count):
+    from Q_Pansopy.modules.conv.enroute_vor_vor import CASE_ONE_LIMIT_M, build_enroute_geometry
+
+    result = build_enroute_geometry((0, 0), (CASE_ONE_LIMIT_M + offset, 0))
+    assert result.profile.case == case
+    assert len(result.construction_lines) == count
+
+
+@pytest.mark.parametrize('crs', ['EPSG:4326', 'EPSG:32616'])
+def test_case_one_construction_layer_matches_station_centers(crs):
+    from qgis.core import QgsCoordinateTransform, QgsProject
+
+    pair = _pair(150000, crs=crs, bearing=37)
+    outputs = _run(pair, True)
+    lines = outputs['VOR/VOR construction lines']
+    assert lines.crs() == outputs['ENR VOR/VOR areas'].crs()
+    assert lines.crs().mapUnits().name == 'Meters'
+    assert lines.featureCount() == 1
+    feature = next(lines.getFeatures())
+    assert feature['role'] == 'Axis' and feature['splay_pct'] == 0
+    vertices = feature.geometry().asPolyline()
+    assert len(vertices) == 2
+    transform = QgsCoordinateTransform(pair.crs(), lines.crs(), QgsProject.instance())
+    stations = sorted(pair.selectedFeatures(), key=lambda station: station.id())
+    for vertex, station in zip(vertices, stations):
+        expected = transform.transform(station.geometry().asPoint())
+        assert vertex.x() == pytest.approx(expected.x(), abs=1e-4)
+        assert vertex.y() == pytest.approx(expected.y(), abs=1e-4)
+
+
+def test_case_one_dock_loads_centerline(qgis_app):
+    from qgis.PyQt import QtWidgets
+    from qgis.gui import QgsMessageBar
+    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import QPANSOPYEnrouteVorVorDockWidget
+
+    pair = _pair(150000)
+    window = QtWidgets.QMainWindow()
+    bar = QgsMessageBar(window)
+    iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: pair)
+    widget = QPANSOPYEnrouteVorVorDockWidget(iface)
+    try:
+        assert not widget.constructionCheckBox.isChecked()
+        assert widget.constructionCheckBox.text() == 'Load construction lines'
+        widget.vorLayerComboBox.setLayer(pair)
+        widget.constructionCheckBox.setChecked(True)
+        widget.calculate()
+        assert _outputs()['VOR/VOR construction lines'].featureCount() == 1
+        assert 'Loaded the centerline between the two VOR stations.' in widget.logTextEdit.toPlainText()
+        assert 'eight 10%/16%' not in widget.logTextEdit.toPlainText()
+        assert widget.calculateButton.isEnabled() and not widget._calculating
+        assert QtWidgets.QApplication.overrideCursor() is None
+    finally:
+        widget.close()
+        window.close()
+        widget.deleteLater()
+        window.deleteLater()
+        qgis_app.processEvents()
+
+
 def test_unified_dock_switches_method_and_records_area_provenance(qgis_app):
     from qgis.PyQt import QtWidgets
     from qgis.core import QgsProject
@@ -370,7 +469,7 @@ def test_unified_dock_switches_method_and_records_area_provenance(qgis_app):
             widget.calculate()
             layers = [layer for key, layer in QgsProject.instance().mapLayers().items() if key not in before]
             areas = [layer for layer in layers if 'area_type' in layer.fields().names()]
-            assert len(areas) == 2, widget.logTextEdit.toPlainText()
+            assert len(areas) == 1, widget.logTextEdit.toPlainText()
             assert {feature['method'] for layer in areas for feature in layer.getFeatures()} == {method}
             assert {feature['case'] for layer in areas for feature in layer.getFeatures()} == {case}
             for layer in layers:

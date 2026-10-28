@@ -118,32 +118,12 @@ def build_enroute_geometry(
                 tip = map_point(middle, sign * percentage / 100 * profile.distance_m / 2)
                 for station, point in (('A', point_a), ('B', point_b)):
                     construction.append(ConstructionLine(f'{station}_{side}', percentage, point, tip))
+    else:
+        construction.append(ConstructionLine('Axis', 0, point_a, point_b))
     primary = _checked_geometry(primary, 'Primary area')
     exterior = _checked_geometry(exterior, 'exterior envelope')
     buffer = _checked_geometry(exterior.difference(primary), 'Buffer area')
     return EnrouteAreas(profile, primary, buffer, tuple(construction))
-
-
-def _area_layer(name, geometry, profile, crs):
-    from qgis.PyQt.QtCore import QVariant
-    from qgis.core import QgsFeature, QgsField, QgsFillSymbol, QgsSingleSymbolRenderer
-    from ..pbn.dme_dme_coverage import _new_layer
-
-    layer = _new_layer('Polygon', name, crs, [
-        QgsField('area_type', QVariant.String), QgsField('case', QVariant.Int),
-        QgsField('distance_nm', QVariant.Double), QgsField('method', QVariant.String),
-    ])
-    feature = QgsFeature(layer.fields())
-    feature.setGeometry(geometry)
-    feature.setAttributes([name, profile.case, profile.distance_m / NM_TO_M, 'Simplified'])
-    if not layer.dataProvider().addFeatures([feature])[0]:
-        raise RuntimeError(f'Could not populate {name}')
-    layer.updateExtents()
-    layer.setRenderer(QgsSingleSymbolRenderer(QgsFillSymbol.createSimple({
-        'color': '255,255,255,255' if name == 'Primary area' else '205,205,205,255',
-        'outline_color': '45,45,45,255', 'outline_width': '0.35',
-    })))
-    return layer
 
 
 def _construction_layer(lines, crs):
@@ -174,6 +154,7 @@ def run_enroute_vor_vor(iface, vor_layer, params=None) -> bool:
     from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsCoordinateTransform
     from qgis.core import QgsDistanceArea, QgsLayerNotesUtils, QgsProject
     from ..pbn.dme_dme_coverage import _local_crs, _point_wgs84
+    from ._enroute_output import _create_enroute_area_layer
 
     params = {} if params is None else params
     log = params.get('log', lambda _message: None)
@@ -199,10 +180,12 @@ def run_enroute_vor_vor(iface, vor_layer, params=None) -> bool:
     transform = QgsCoordinateTransform(QgsCoordinateReferenceSystem('EPSG:4326'), crs, project)
     a, b = transform.transform(wgs_a), transform.transform(wgs_b)
     result = build_enroute_geometry((a.x(), a.y()), (b.x(), b.y()), distance_m)
-    primary = _area_layer('Primary area', result.primary, result.profile, crs)
-    buffer = _area_layer('Buffer area', result.buffer, result.profile, crs)
+    areas = _create_enroute_area_layer(
+        'ENR VOR/VOR areas', result.primary, result.buffer, 'Buffer area',
+        result.profile.case, result.profile.distance_m / NM_TO_M, crs, 'Simplified',
+    )
     construction = None
-    if result.profile.case == 2 and params.get('include_construction_lines', False):
+    if params.get('include_construction_lines', False):
         construction = _construction_layer(result.construction_lines, crs)
     notes = (
         '<h3>Simplified ENR — VOR/VOR (straight)</h3><p>'
@@ -211,9 +194,10 @@ def run_enroute_vor_vor(iface, vor_layer, params=None) -> bool:
         'Case 1 limit: 99.6 NM, inclusive; 1 NM = 1852 m.<br>'
         'Exact primary/exterior radii: 9300/18500 m.<br>'
         'Case 2 splays: 10% and 16%; perpendicular exterior margin: 3700 m.<br>'
-        'Buffer area excludes Primary area. Construction uses a local midpoint AEQD CRS.</p>'
+        'Buffer area excludes Primary area. Both areas are features in one layer. '
+        'Construction uses a local midpoint AEQD CRS.</p>'
     )
-    layers = [primary, buffer] if construction is None else [construction, primary, buffer]
+    layers = [areas] if construction is None else [construction, areas]
     for layer in layers:
         QgsLayerNotesUtils.setLayerNotes(layer, notes)
     project.addMapLayers(layers, False)
@@ -221,8 +205,11 @@ def run_enroute_vor_vor(iface, vor_layer, params=None) -> bool:
     for layer in layers:
         group.addLayer(layer).setItemVisibilityChecked(True)
     log(f'Case {result.profile.case}; distance: {distance_m / NM_TO_M:.6f} NM ({distance_m / 1000:.6f} km).')
-    log('Created Primary area and Buffer area with exact kilometre widths.')
+    log('Created Primary area and Buffer area in one layer with exact kilometre widths.')
     if construction is not None:
-        log('Loaded the axis and eight 10%/16% construction segments.')
+        if result.profile.case == 1:
+            log('Loaded the centerline between the two VOR stations.')
+        else:
+            log('Loaded the axis and eight 10%/16% construction segments.')
     iface.messageBar().pushMessage('QPANSOPY', 'Simplified VOR/VOR areas created', level=Qgis.Success)
     return True
