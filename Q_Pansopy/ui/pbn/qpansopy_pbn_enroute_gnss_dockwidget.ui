@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QPANSOPYPBNEnrouteGNSSDockWidget</class>
+ <widget class="QDockWidget" name="QPANSOPYPBNEnrouteGNSSDockWidget">
+  <property name="windowTitle"><string>ENR — PBN GNSS (straight)</string></property>
+  <property name="minimumSize"><size><width>320</width><height>260</height></size></property>
+  <widget class="QWidget" name="dockWidgetContents">
+   <layout class="QVBoxLayout" name="dockLayout">
+    <property name="leftMargin"><number>0</number></property>
+    <property name="topMargin"><number>0</number></property>
+    <property name="rightMargin"><number>0</number></property>
+    <property name="bottomMargin"><number>0</number></property>
+    <item>
+     <widget class="QScrollArea" name="formScrollArea">
+      <property name="widgetResizable"><bool>true</bool></property>
+      <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+      <property name="verticalScrollBarPolicy"><enum>Qt::ScrollBarAsNeeded</enum></property>
+      <widget class="QWidget" name="formContents">
+       <layout class="QVBoxLayout" name="formLayout">
+        <item><widget class="QGroupBox" name="inputGroup">
+         <property name="title"><string>Input</string></property>
+         <layout class="QFormLayout" name="inputLayout">
+          <item row="0" column="0"><widget class="QLabel" name="vorLayerLabel"><property name="text"><string>Routing line layer:</string></property></widget></item>
+          <item row="0" column="1"><widget class="QgsMapLayerComboBox" name="routingLayerComboBox"/></item>
+          <item row="1" column="0" colspan="2"><widget class="QLabel" name="selectionHintLabel"><property name="text"><string>Select exactly one straight LineString with two vertices. GNSS only.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+         </layout>
+        </widget></item>
+        <item><widget class="QGroupBox" name="paramsGroup">
+         <property name="title"><string>Parameters</string></property>
+         <layout class="QVBoxLayout" name="paramsLayout">
+          <item><widget class="QLabel" name="specLabel"><property name="text"><string>Navigation specification:</string></property><property name="buddy"><cstring>specComboBox</cstring></property></widget></item>
+          <item><widget class="QComboBox" name="specComboBox"/></item>
+         </layout>
+        </widget></item>
+        <item><widget class="QGroupBox" name="outputGroup">
+         <property name="title"><string>Output</string></property>
+         <layout class="QVBoxLayout" name="outputLayout">
+          <item><widget class="QLabel" name="outputDescriptionLabel"><property name="text"><string>Primary area and Buffer area will be added as separate layers. The case is selected automatically from the station distance.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+         </layout>
+        </widget></item>
+        <item><widget class="QGroupBox" name="actionGroup">
+         <property name="title"><string>Action</string></property>
+         <layout class="QVBoxLayout" name="actionLayout">
+          <item><widget class="QPushButton" name="calculateButton"><property name="text"><string>Create PBN ENR areas</string></property></widget></item>
+         </layout>
+        </widget></item>
+        <item><widget class="QGroupBox" name="logGroup">
+         <property name="title"><string>Log</string></property>
+         <layout class="QVBoxLayout" name="logLayout">
+          <item><widget class="QTextEdit" name="logTextEdit"><property name="minimumHeight"><number>90</number></property><property name="readOnly"><bool>true</bool></property></widget></item>
+         </layout>
+        </widget></item>
+        <item><spacer name="verticalSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets><customwidget><class>QgsMapLayerComboBox</class><extends>QComboBox</extends><header>qgsmaplayercombobox.h</header></customwidget></customwidgets>
+ <resources/>
+ <connections/>
+</ui>
