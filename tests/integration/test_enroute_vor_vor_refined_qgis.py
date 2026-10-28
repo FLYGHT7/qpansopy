@@ -142,25 +142,37 @@ def test_geometry_is_symmetric_under_station_reversal_and_rotation(angle):
     (200000, 2, False), (200000, 2, True),
     (75 * 1852 - 0.1, 1, False), (75 * 1852 + 0.1, 2, True),
 ])
-def test_two_separate_layers_and_optional_case_two_construction(distance, case, include):
+def test_single_area_layer_has_categorized_primary_secondary_and_optional_construction(
+    distance, case, include
+):
     from qgis.core import QgsLayerNotesUtils, QgsProject
 
     outputs = _run(_pair(distance), include)
-    expected = {'Primary area', 'Secondary area'}
+    expected = {'Refined ENR VOR/VOR areas'}
     if include and case == 2:
         expected.add('VOR/VOR construction lines')
     assert set(outputs) == expected
-    primary, secondary = outputs['Primary area'], outputs['Secondary area']
-    for name, layer in (('Primary area', primary), ('Secondary area', secondary)):
-        assert layer.featureCount() == 1
-        feature = next(layer.getFeatures())
-        assert feature['area_type'] == name
+    areas = outputs['Refined ENR VOR/VOR areas']
+    assert areas.featureCount() == 2
+    assert areas.fields().names() == ['area_type', 'case', 'distance_nm']
+    features = {feature['area_type']: feature for feature in areas.getFeatures()}
+    assert set(features) == {'Primary area', 'Secondary area'}
+    for feature in features.values():
         assert feature['case'] == case
         assert feature['distance_nm'] == pytest.approx(distance / 1852, abs=1e-8)
         assert feature.geometry().isGeosValid()
-        assert '7400/14800' in QgsLayerNotesUtils.layerNotes(layer)
-    assert primary.renderer().symbol().color().name() == '#ffffff'
-    assert secondary.renderer().symbol().color().name() == '#cdcdcd'
+    assert '7400/14800' in QgsLayerNotesUtils.layerNotes(areas)
+    renderer = areas.renderer()
+    assert renderer.classAttribute() == 'area_type'
+    categories = {category.value(): category for category in renderer.categories()}
+    assert set(categories) == {'Primary area', 'Secondary area'}
+    assert categories['Primary area'].label() == 'Primary Area'
+    assert categories['Secondary area'].label() == 'Secondary Area'
+    assert categories['Primary area'].symbol().symbolLayerCount() == 1
+    assert [categories['Secondary area'].symbol().symbolLayer(index).layerType()
+            for index in range(categories['Secondary area'].symbol().symbolLayerCount())] == [
+                'PointPatternFill', 'SimpleFill',
+            ]
     assert all(node.isVisible() for node in QgsProject.instance().layerTreeRoot().findGroups()[0].children())
     if include and case == 2:
         lines = outputs['VOR/VOR construction lines']
@@ -172,26 +184,35 @@ def test_construction_option_does_not_change_output_polygons():
     pair = _pair()
     without = _run(pair, False)
     with_lines = _run(pair, True)
-    for name in ('Primary area', 'Secondary area'):
-        first = next(without[name].getFeatures()).geometry()
-        second = next(with_lines[name].getFeatures()).geometry()
-        assert first.asWkb() == second.asWkb()
+    def geometries(outputs):
+        return {
+            feature['area_type']: feature.geometry()
+            for feature in outputs['Refined ENR VOR/VOR areas'].getFeatures()
+        }
+
+    without_areas = geometries(without)
+    with_line_areas = geometries(with_lines)
+    assert without_areas.keys() == with_line_areas.keys()
+    for area_type in without_areas:
+        assert without_areas[area_type].asWkb() == with_line_areas[area_type].asWkb()
 
 
 @pytest.mark.parametrize('crs', ['EPSG:4326', 'EPSG:32616', 'EPSG:3857', 'EPSG:2227'])
 def test_input_crs_does_not_change_geodesic_distance_or_criteria(crs):
     outputs = _run(_pair(crs=crs))
-    feature = next(outputs['Primary area'].getFeatures())
+    areas = outputs['Refined ENR VOR/VOR areas']
+    feature = next(areas.getFeatures())
     assert feature['distance_nm'] == pytest.approx(200000 / 1852, abs=1e-7)
     assert feature['case'] == 2
-    assert outputs['Primary area'].crs().isValid()
-    assert outputs['Primary area'].crs().mapUnits().name == 'Meters'
+    assert areas.crs().isValid()
+    assert areas.crs().mapUnits().name == 'Meters'
 
 
 @pytest.mark.parametrize('origin,bearing', [((179.5, 10), 90), ((30, 75), 130)])
 def test_local_crs_handles_antimeridian_and_high_latitude_routes(origin, bearing):
     outputs = _run(_pair(origin=origin, bearing=bearing))
-    assert next(outputs['Primary area'].getFeatures())['distance_nm'] == pytest.approx(200000 / 1852, abs=1e-7)
+    areas = outputs['Refined ENR VOR/VOR areas']
+    assert next(areas.getFeatures())['distance_nm'] == pytest.approx(200000 / 1852, abs=1e-7)
 
 
 @pytest.mark.parametrize('selection', [[], [0]])
@@ -248,7 +269,7 @@ def test_invalid_station_inputs_create_no_outputs(invalid):
     assert not QgsProject.instance().layerTreeRoot().findGroups()
 
 
-def test_dock_creates_both_outputs_and_restores_its_controls(qgis_app):
+def test_dock_creates_one_area_output_and_restores_its_controls(qgis_app):
     from qgis.PyQt import QtWidgets
     from qgis.gui import QgsMessageBar
     from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
@@ -265,7 +286,7 @@ def test_dock_creates_both_outputs_and_restores_its_controls(qgis_app):
         assert widget.formScrollArea.widgetResizable()
         widget.vorLayerComboBox.setLayer(pair)
         widget.calculate()
-        assert set(_outputs()) == {'Primary area', 'Secondary area'}, widget.logTextEdit.toPlainText()
+        assert set(_outputs()) == {'Refined ENR VOR/VOR areas'}, widget.logTextEdit.toPlainText()
         assert 'Case 2' in widget.logTextEdit.toPlainText()
         assert widget.calculateButton.isEnabled() and not widget._calculating
         assert QtWidgets.QApplication.overrideCursor() is None
@@ -398,9 +419,9 @@ def test_vor_stays_visible_above_opaque_areas_in_existing_drawing_order(placemen
         'name': 'square', 'color': '255,0,0,255', 'outline_style': 'no', 'size': '7',
     })))
     outputs = _run(pair, True)
-    group = root.findLayer(outputs['Primary area'].id()).parent()
-    assert group.parent() == root
-    assert root.children() == [group] + previous_children
+    areas = outputs['Refined ENR VOR/VOR areas']
+    group = root.findLayer(areas.id()).parent()
+    assert group.parent() == (root if placement in ('root', 'exclusive') else source_group)
     assert station_node.parent() == station_parent and station_node.isVisible()
     assert all(node.isVisible() for node in group.children())
     ordered_outputs = [node.layer() for node in group.children()]
@@ -411,11 +432,11 @@ def test_vor_stays_visible_above_opaque_areas_in_existing_drawing_order(placemen
     # Render the effective drawing order: VOR symbols must remain above opaque fills.
     pair.removeSelection()
     settings = QgsMapSettings()
-    settings.setDestinationCrs(outputs['Primary area'].crs())
+    settings.setDestinationCrs(areas.crs())
     settings.setLayers(root.layerOrder())
     settings.setOutputSize(QSize(800, 320))
     settings.setBackgroundColor(QColor('white'))
-    extent = outputs['Secondary area'].extent()
+    extent = areas.extent()
     extent.scale(1.1)
     settings.setExtent(extent)
     job = QgsMapRendererParallelJob(settings)
