@@ -153,6 +153,8 @@ def test_two_separate_layers_and_optional_case_two_construction(distance, case, 
     for name, layer in (('Primary area', primary), ('Buffer area', buffer)):
         assert layer.featureCount() == 1
         feature = next(layer.getFeatures())
+        assert feature['method'] == 'Simplified'
+        assert layer.fields().field('method').typeName().lower() in ('string', 'text')
         assert feature['area_type'] == name
         assert feature['case'] == case
         assert feature['distance_nm'] == pytest.approx(distance / 1852, abs=1e-8)
@@ -163,6 +165,7 @@ def test_two_separate_layers_and_optional_case_two_construction(distance, case, 
     assert all(node.isVisible() for node in QgsProject.instance().layerTreeRoot().children()[0].children())
     if include and case == 2:
         lines = outputs['VOR/VOR construction lines']
+        assert lines.fields().names() == ['role', 'splay_pct']
         assert lines.featureCount() == 9
         assert sum(f['splay_pct'] == 10 for f in lines.getFeatures()) == 4
 
@@ -309,17 +312,79 @@ def test_conv_menu_and_toolbar_open_the_registered_dock(qgis_app, monkeypatch):
     try:
         plugin.initGui()
         action = next(a for a in plugin.submenus['CONV'].actions()
-                      if a.text() == 'Simplified ENR — VOR/VOR (straight)')
+                      if a.text() == 'ENR — VOR/VOR (straight)')
+        assert 'ENROUTE_VOR_VOR_REFINED' not in plugin.modules
+        assert sum('ENR' in a.text() for a in plugin.submenus['CONV'].actions()) == 1
+        assert sum('ENR' in a.text() for a in plugin.toolbars['CONV'].actions()) == 1
         assert action in plugin.toolbars['CONV'].actions()
         assert not action.icon().isNull()
         action.trigger()
         widget = plugin.modules['ENROUTE_VOR_VOR']['GUI_INSTANCE']
         assert isinstance(widget, plugin_module.QPANSOPYEnrouteVorVorDockWidget)
         assert not widget.constructionCheckBox.isChecked()
+        widget.methodComboBox.setCurrentIndex(1)
+        action.trigger()
+        action.trigger()
+        assert plugin.modules['ENROUTE_VOR_VOR']['GUI_INSTANCE'] is widget
+        assert widget.methodComboBox.currentData() == 'refined'
         widget.close()
         assert plugin.modules['ENROUTE_VOR_VOR']['GUI_INSTANCE'] is None
+        action.trigger()
+        reopened = plugin.modules['ENROUTE_VOR_VOR']['GUI_INSTANCE']
+        assert reopened is not widget
+        assert reopened.methodComboBox.currentData() == 'simplified'
     finally:
         plugin.unload()
         window.close()
+        window.deleteLater()
+        qgis_app.processEvents()
+
+
+def test_unified_dock_switches_method_and_records_area_provenance(qgis_app):
+    from qgis.PyQt import QtWidgets
+    from qgis.core import QgsProject
+    from qgis.gui import QgsMessageBar
+    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import QPANSOPYEnrouteVorVorDockWidget
+
+    pair = _pair(160000)
+    window = QtWidgets.QMainWindow()
+    bar = QgsMessageBar(window)
+    iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: pair)
+    widget = QPANSOPYEnrouteVorVorDockWidget(iface)
+    try:
+        assert widget.methodComboBox.currentData() == 'simplified'
+        assert widget.inputLayout.getWidgetPosition(widget.methodComboBox)[0] == 0
+        widget.vorLayerComboBox.setLayer(pair)
+        widget.constructionCheckBox.setChecked(True)
+        for index, method, case, outer, limit in (
+            (0, 'Simplified', 1, 'Buffer', '99.6'),
+            (1, 'Refined', 2, 'Secondary', '75'),
+            (0, 'Simplified', 1, 'Buffer', '99.6'),
+        ):
+            widget.methodComboBox.setCurrentIndex(index)
+            hint = widget.outputDescriptionLabel.text()
+            assert outer in hint and f'{limit} NM' in hint
+            assert widget.vorLayerComboBox.currentLayer() == pair
+            assert widget.constructionCheckBox.isChecked()
+            before = set(QgsProject.instance().mapLayers())
+            widget.calculate()
+            layers = [layer for key, layer in QgsProject.instance().mapLayers().items() if key not in before]
+            areas = [layer for layer in layers if 'area_type' in layer.fields().names()]
+            assert len(areas) == 2, widget.logTextEdit.toPlainText()
+            assert {feature['method'] for layer in areas for feature in layer.getFeatures()} == {method}
+            assert {feature['case'] for layer in areas for feature in layer.getFeatures()} == {case}
+            for layer in layers:
+                if layer not in areas:
+                    assert layer.fields().names() == ['role', 'splay_pct']
+            assert widget.methodComboBox.isEnabled()
+        pair.removeSelection()
+        widget.calculate()
+        assert 'exactly two' in widget.logTextEdit.toPlainText()
+        assert widget.methodComboBox.isEnabled() and widget.calculateButton.isEnabled()
+        assert QtWidgets.QApplication.overrideCursor() is None
+    finally:
+        widget.close()
+        window.close()
+        widget.deleteLater()
         window.deleteLater()
         qgis_app.processEvents()

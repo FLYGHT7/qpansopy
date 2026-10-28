@@ -1,4 +1,4 @@
-"""Inputs and progress for simplified straight VOR/VOR en-route areas."""
+"""Inputs and progress for straight VOR/VOR en-route areas."""
 
 import os
 import traceback
@@ -18,7 +18,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class QPANSOPYEnrouteVorVorDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
-    """Collect two selected stations and create the primary and buffer layers."""
+    """Collect two stations and dispatch the selected ENR method."""
 
     closingPlugin = pyqtSignal()
 
@@ -27,10 +27,23 @@ class QPANSOPYEnrouteVorVorDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
         self.setupUi(self)
         self._calculating = False
+        self.methodComboBox.addItem('Simplified', 'simplified')
+        self.methodComboBox.addItem('Refined', 'refined')
+        self.methodComboBox.currentIndexChanged.connect(self._update_method_description)
+        self._update_method_description()
         self.vorLayerComboBox.setFilters(MLPM_PointLayer)
         self.vorLayerComboBox.setAllowEmptyLayer(True)
         preseed_active_layer(iface, self.vorLayerComboBox, Qgis_GeomType_Point)
         self.calculateButton.clicked.connect(self.calculate)
+
+    def _update_method_description(self, *_args):
+        refined = self.methodComboBox.currentData() == 'refined'
+        outer = 'Secondary' if refined else 'Buffer'
+        limit = '75' if refined else '99.6'
+        self.outputDescriptionLabel.setText(
+            f'Primary area and {outer} area will be added as separate layers. '
+            f'Case 1 ≤ {limit} NM; Case 2 > {limit} NM — selected automatically '
+            'from the station distance.')
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
@@ -45,16 +58,22 @@ class QPANSOPYEnrouteVorVorDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         self._calculating = True
         self.calculateButton.setEnabled(False)
+        self.methodComboBox.setEnabled(False)
         QtWidgets.QApplication.setOverrideCursor(Qt_WaitCursor)
         try:
-            from ...modules.conv.enroute_vor_vor import run_enroute_vor_vor
-
-            self.log('Calculating simplified VOR/VOR en-route areas...')
-            QtWidgets.QApplication.processEvents()
-            run_enroute_vor_vor(self.iface, self.vorLayerComboBox.currentLayer(), {
+            method = self.methodComboBox.currentData()
+            if method == 'refined':
+                from ...modules.conv.enroute_vor_vor_refined import run_enroute_vor_vor_refined as runner
+            else:
+                from ...modules.conv.enroute_vor_vor import run_enroute_vor_vor as runner
+            layer = self.vorLayerComboBox.currentLayer()
+            params = {
                 'include_construction_lines': self.constructionCheckBox.isChecked(),
                 'log': self.log,
-            })
+            }
+            self.log(f'Calculating {method} VOR/VOR en-route areas...')
+            QtWidgets.QApplication.processEvents()
+            runner(self.iface, layer, params)
         except Exception as error:
             self.log(f'Error: {error}')
             if not isinstance(error, ValueError):
@@ -63,4 +82,5 @@ class QPANSOPYEnrouteVorVorDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
             self.calculateButton.setEnabled(True)
+            self.methodComboBox.setEnabled(True)
             self._calculating = False

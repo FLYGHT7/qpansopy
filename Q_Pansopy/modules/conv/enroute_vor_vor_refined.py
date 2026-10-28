@@ -132,11 +132,11 @@ def _area_layer(name, geometry, profile, crs):
 
     layer = _new_layer('Polygon', name, crs, [
         QgsField('area_type', QVariant.String), QgsField('case', QVariant.Int),
-        QgsField('distance_nm', QVariant.Double),
+        QgsField('distance_nm', QVariant.Double), QgsField('method', QVariant.String),
     ])
     feature = QgsFeature(layer.fields())
     feature.setGeometry(geometry)
-    feature.setAttributes([name, profile.case, profile.distance_m / NM_TO_M])
+    feature.setAttributes([name, profile.case, profile.distance_m / NM_TO_M, 'Refined'])
     if not layer.dataProvider().addFeatures([feature])[0]:
         raise RuntimeError(f'Could not populate {name}')
     layer.updateExtents()

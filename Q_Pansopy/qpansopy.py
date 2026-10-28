@@ -70,9 +70,6 @@ try:
     from .dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import (
         QPANSOPYEnrouteVorVorDockWidget,
     )
-    from .dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
-        QPANSOPYEnrouteVorVorRefinedDockWidget,
-    )
     from .dockwidgets.departures.qpansopy_sid_initial_dockwidget import QPANSOPYSIDInitialDockWidget
     from .dockwidgets.departures.qpansopy_omnidirectional_dockwidget import QPANSOPYOmnidirectionalDockWidget
     from .settings_dialog import SettingsDialog  # Import settings dialog
@@ -291,14 +288,6 @@ class Qpansopy:
                     "DOCK_WIDGET": QPANSOPYOverheadToleranceDockWidget,
                     "GUI_INSTANCE": None
                 },
-                "ENROUTE_VOR_VOR_REFINED": {
-                    "TITLE": "Refined ENR — VOR/VOR (straight)",
-                    "TOOLBAR": "CONV",
-                    "TOOLTIP": "Create refined primary and secondary areas between two VOR stations",
-                    "ICON": os.path.join(self.icons_dir, 'enroute_vor_vor_refined.svg'),
-                    "DOCK_WIDGET": QPANSOPYEnrouteVorVorRefinedDockWidget,
-                    "GUI_INSTANCE": None
-                },
                 "RADIAL_BEARING_TOL": {
                     "TITLE": "Radial / Bearing Tolerance",
                     "TOOLBAR": "CONV",
@@ -308,9 +297,9 @@ class Qpansopy:
                     "GUI_INSTANCE": None
                 },
                 "ENROUTE_VOR_VOR": {
-                    "TITLE": "Simplified ENR — VOR/VOR (straight)",
+                    "TITLE": "ENR — VOR/VOR (straight)",
                     "TOOLBAR": "CONV",
-                    "TOOLTIP": "Create simplified primary and buffer areas between two VOR stations",
+                    "TOOLTIP": "Create Simplified or Refined en-route areas between two VOR stations",
                     "ICON": "enroute_vor_vor.svg",
                     "DOCK_WIDGET": QPANSOPYEnrouteVorVorDockWidget,
                     "GUI_INSTANCE": None

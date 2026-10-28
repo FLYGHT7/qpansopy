@@ -154,6 +154,8 @@ def test_two_separate_layers_and_optional_case_two_construction(distance, case, 
     for name, layer in (('Primary area', primary), ('Secondary area', secondary)):
         assert layer.featureCount() == 1
         feature = next(layer.getFeatures())
+        assert feature['method'] == 'Refined'
+        assert layer.fields().field('method').typeName().lower() in ('string', 'text')
         assert feature['area_type'] == name
         assert feature['case'] == case
         assert feature['distance_nm'] == pytest.approx(distance / 1852, abs=1e-8)
@@ -164,6 +166,7 @@ def test_two_separate_layers_and_optional_case_two_construction(distance, case, 
     assert all(node.isVisible() for node in QgsProject.instance().layerTreeRoot().findGroups()[0].children())
     if include and case == 2:
         lines = outputs['VOR/VOR construction lines']
+        assert lines.fields().names() == ['role', 'splay_pct']
         assert lines.featureCount() == 9
         assert sum(f['splay_pct'] == 10 for f in lines.getFeatures()) == 4
 
@@ -251,15 +254,16 @@ def test_invalid_station_inputs_create_no_outputs(invalid):
 def test_dock_creates_both_outputs_and_restores_its_controls(qgis_app):
     from qgis.PyQt import QtWidgets
     from qgis.gui import QgsMessageBar
-    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
-        QPANSOPYEnrouteVorVorRefinedDockWidget,
+    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import (
+        QPANSOPYEnrouteVorVorDockWidget,
     )
 
     pair = _pair()
     window = QtWidgets.QMainWindow()
     bar = QgsMessageBar(window)
     iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: pair)
-    widget = QPANSOPYEnrouteVorVorRefinedDockWidget(iface)
+    widget = QPANSOPYEnrouteVorVorDockWidget(iface)
+    widget.methodComboBox.setCurrentIndex(1)
     try:
         assert not widget.constructionCheckBox.isChecked()
         assert widget.formScrollArea.widgetResizable()
@@ -281,49 +285,6 @@ def test_dock_creates_both_outputs_and_restores_its_controls(qgis_app):
         widget.close()
         window.close()
         widget.deleteLater()
-        window.deleteLater()
-        qgis_app.processEvents()
-
-
-def test_conv_menu_and_toolbar_open_the_registered_dock(qgis_app, monkeypatch):
-    from qgis.PyQt import QtWidgets
-    from qgis.gui import QgsMessageBar
-    import Q_Pansopy.qpansopy as plugin_module
-
-    assert not plugin_module._IMPORT_ERRORS
-    window = QtWidgets.QMainWindow()
-    bar = QgsMessageBar(window)
-
-    def toolbar(name):
-        result = QtWidgets.QToolBar(name, window)
-        window.addToolBar(result)
-        return result
-
-    def fail_dialog(*args):
-        pytest.fail(str(args))
-
-    monkeypatch.setattr(plugin_module.QMessageBox, 'critical', fail_dialog)
-    iface = SimpleNamespace(
-        mainWindow=lambda: window, addToolBar=toolbar, messageBar=lambda: bar,
-        activeLayer=lambda: None, addDockWidget=window.addDockWidget,
-        removeDockWidget=window.removeDockWidget,
-    )
-    plugin = plugin_module.Qpansopy(iface)
-    try:
-        plugin.initGui()
-        action = next(a for a in plugin.submenus['CONV'].actions()
-                      if a.text() == 'Refined ENR — VOR/VOR (straight)')
-        assert action in plugin.toolbars['CONV'].actions()
-        assert not action.icon().isNull()
-        action.trigger()
-        widget = plugin.modules['ENROUTE_VOR_VOR_REFINED']['GUI_INSTANCE']
-        assert isinstance(widget, plugin_module.QPANSOPYEnrouteVorVorRefinedDockWidget)
-        assert not widget.constructionCheckBox.isChecked()
-        widget.close()
-        assert plugin.modules['ENROUTE_VOR_VOR_REFINED']['GUI_INSTANCE'] is None
-    finally:
-        plugin.unload()
-        window.close()
         window.deleteLater()
         qgis_app.processEvents()
 
@@ -429,13 +390,14 @@ def test_vor_stays_visible_above_opaque_areas_in_existing_drawing_order(placemen
 
 def test_dock_explains_automatic_case_selection(qgis_app):
     from qgis.PyQt import QtWidgets
-    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_refined_dockwidget import (
-        QPANSOPYEnrouteVorVorRefinedDockWidget,
+    from Q_Pansopy.dockwidgets.conv.qpansopy_enroute_vor_vor_dockwidget import (
+        QPANSOPYEnrouteVorVorDockWidget,
     )
 
     window = QtWidgets.QMainWindow()
     iface = SimpleNamespace(mainWindow=lambda: window, activeLayer=lambda: None)
-    widget = QPANSOPYEnrouteVorVorRefinedDockWidget(iface)
+    widget = QPANSOPYEnrouteVorVorDockWidget(iface)
+    widget.methodComboBox.setCurrentIndex(1)
     try:
         hint = widget.outputDescriptionLabel.text()
         assert '75 NM' in hint and 'Case 1' in hint and 'Case 2' in hint and 'automatically' in hint
