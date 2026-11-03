@@ -3,7 +3,7 @@ name=qPansopy
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 description=QPANSOPY Plugin for QGIS - Procedure Analysis and Obstacle Protection Surfaces (PANSOPS)
-version=0.5.2
+version=0.5.3
 author=FLYGHT7
 email=info@flyght7.com
 
@@ -22,6 +22,38 @@ experimental=True
 deprecated=False
 
 changelog=
+    Version 0.5.3:
+    - Radial/bearing intersection fix tolerance
+	- Expose Holding Point E and construction layers
+	- Non-collocated VOR/NDB/LOC DME fix tolerance
+	- Initial SID allow four decimal places for IAS
+	- Add option to reverse VSS/OCS construction direction
+	- Improve initial SID ISA temperature by entering in the calculator dialog
+	- Preview Initial SID direction at the DER
+	- Radial and Bearing Tolerance construction lines and simpler UI
+	- VSS and OCS live construction direction preview
+	- VSS and OCS default OCH units to feet 
+	- Radial and Bearing Tolerance live preview 
+	- VSS and OCS runway reference line at THR
+	- Calculated DME tolerance in the attribute table
+	- Overhead Tolerance live direction triangle
+	- Holding default ISA variation to 15 degrees
+	- Explicit selection indication in Overhead Tolerance
+	- Holding live nominal preview
+	- Show only non-SI units in the Holding table
+	- Straight Secondary Area Assessment (Generic) 
+	- Slope Primary Area Assessment (Generic)
+	- Update Primary Area Assessment control obstacle style
+	- DME/DME Coverage Assessment
+	- Secondary Assessment clip perpendicular distances to AOI
+	- CONV Simplified ENR Criteria: VOR/VOR (straight)
+	- CONV Refined ENR Criteria: VOR/VOR (straight)
+	- Slope Primary Area Assessment: degree/percent inputs
+	- Single styled layer for ENR VOR/VOR areas
+	- Show Refined ENR results at the top of the layer tree
+	- Add case 1 ENR construction centerline
+	- Combine ENR tools into one method-selectable dock
+	- Add GNSS-only PBN en-route corridors
     Version 0.5.2:
     - Combine ENR tools in one method-selectable dock and record the method on area features
     - Combine each ENR primary and secondary/buffer area in one categorized layer using the shared PBN style
