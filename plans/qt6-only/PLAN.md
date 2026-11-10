@@ -132,6 +132,16 @@ y avance de una herramienta. Mensajes:
 - 01: `test(qt6): prepare runtime validation`
 - Restantes: `refactor(qt6): migrate <slug>`
 
+Al terminar cada etapa, redactar `docs/pyqt-migration/pr-NN-<slug>.md`
+con el estilo de los borradores existentes de `docs/`: título `# PR — ...`,
+problema y resultado, Changes, Verification y Local delivery. Describir solo
+el delta de la etapa contra su rama padre; incluir pruebas realmente ejecutadas,
+fallos previos, limitaciones y dependencia/base de la rama. No inventar issues
+ni `Closes #...`. Guardar el borrador antes del commit y actualizarlo después
+con el SHA resultante. Los borradores permanecen locales e ignorados como el
+resto de docs/; no publicarlos ni añadirlos al índice. El campo `pr_draft` del
+catálogo fija la ruta de cada etapa. Se añadieron retrospectivamente los de 00/01.
+
 Todos llevan un párrafo trailer `Qt6-Batch: NN`. No hacer commits en main,
 configurar tracking, publicar ramas, abrir PR ni hacer merge durante estas
 invocaciones. Las decisiones de esta tarea fueron autorizadas expresamente y

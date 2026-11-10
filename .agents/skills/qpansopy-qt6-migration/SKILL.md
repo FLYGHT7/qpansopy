@@ -55,13 +55,20 @@ el contexto: usa `--batch NN`, `--audit` o `--json` y filtra antes de mostrar.
    que revisaste, limitaciones y pruebas nuevas. Usa `done` al verificar cambios,
    o `verified_unchanged` si ya cumplía los requisitos y lo comprobaste.
    Este estado solo queda consolidado al crear el commit correspondiente.
-7. Revisa `git diff --check`, el diff y los archivos staged. Añade rutas
+7. Redacta el borrador indicado en `pr_draft` del registro:
+   `docs/pyqt-migration/pr-NN-<slug>.md`, siguiendo los PR existentes en docs/.
+   Usa título `# PR — ...`, Summary (problema y resultado), Changes,
+   Verification (resultados reales, fallos previos y límites) y Local delivery
+   (rama, base, dependencia de la etapa anterior). Describe el delta de esta
+   etapa contra su rama padre; no inventes issues ni números de pruebas.
+   Estos borradores quedan locales e ignorados: no añadas docs/ al índice.
+8. Revisa `git diff --check`, el diff y los archivos staged. Añade rutas
    explícitas, nunca `git add .`. Haz un commit local con código/UI/pruebas y
    registro juntos. Usa `refactor(qt6): migrate <slug>` y el trailer
    `Qt6-Batch: NN`; para 00 usa `chore(qt6): add migration workflow` y para 01
    `test(qt6): prepare runtime validation`.
-8. Reejecuta el helper: debe reconocer el commit y mostrar la siguiente etapa.
-   Termina indicando rama, SHA, resultados y siguiente paso. **No empieces otra
+9. Actualiza el borrador PR con el SHA del commit creado. Reejecuta el helper: debe reconocer el commit y mostrar la siguiente etapa.
+   Termina indicando rama, SHA, resultados, enlace al borrador PR y siguiente paso. **No empieces otra
    etapa**, no publiques, no abras PR ni hagas merge.
 
 Si una prueba falla por una regresión de esta etapa, corrígela antes del commit.

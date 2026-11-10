@@ -61,8 +61,11 @@
         "Flake8 de errores de los helpers/tests con --jobs 1: sin hallazgos; guard de compliance existente pasa dentro de la suite.",
         "Etapa 00 no modifica código funcional Q_Pansopy."
       ],
-      "notes": [],
-      "python_lines": 0
+      "notes": [
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-00-workflow.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 0,
+      "pr_draft": "docs/pyqt-migration/pr-00-workflow.md"
     },
     {
       "id": "01",
@@ -108,9 +111,11 @@
       "notes": [
         "Actualizar stubs a enums Qt6; corregir QgsRubberBand faltante sin alterar producción.",
         "Crear tests/integration/test_qt6_plugin_runtime.py con carga UI, ciclo de docks y registro de las 27 herramientas; añadirlo a runtime_tests de las etapas siguientes.",
-        "El runtime compartido usa una única QgsApplication por proceso. El runner ya aísla archivos."
+        "El runtime compartido usa una única QgsApplication por proceso. El runner ya aísla archivos.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-01-test-harness.md; no añadir docs/ al commit."
       ],
-      "python_lines": 0
+      "python_lines": 0,
+      "pr_draft": "docs/pyqt-migration/pr-01-test-harness.md"
     },
     {
       "id": "02",
@@ -153,9 +158,11 @@
         "Rechazar QGIS 3/Qt5 desde classFactory antes de importar el plugin completo.",
         "Simplificar shim a qgis.PyQt/Qt6 manteniendo temporalmente sus exports.",
         "Mover preseed_active_layer a utils y reexportarlo temporalmente desde el shim.",
-        "Verificar inicializadores y constantes aunque no necesiten cambios."
+        "Verificar inicializadores y constantes aunque no necesiten cambios.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-02-foundation.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1152
+      "python_lines": 1152,
+      "pr_draft": "docs/pyqt-migration/pr-02-foundation.md"
     },
     {
       "id": "03",
@@ -185,9 +192,11 @@
       "evidence": [],
       "notes": [
         "Mantener fallback QTextBrowser cuando no hay WebEngine; probar ambas rutas.",
-        "Retirar fallback QgsAction antiguo y método exec_ del diálogo de extracción."
+        "Retirar fallback QgsAction antiguo y método exec_ del diálogo de extracción.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-03-shared-dialogs.md; no añadir docs/ al commit."
       ],
-      "python_lines": 908
+      "python_lines": 908,
+      "pr_draft": "docs/pyqt-migration/pr-03-shared-dialogs.md"
     },
     {
       "id": "04",
@@ -212,9 +221,11 @@
       "evidence": [],
       "notes": [
         "QAction desde QtGui; enums canónicos; comprobar _IMPORT_ERRORS vacío y registro completo.",
-        "Preservar gestión de docks, anclaje, tamaño, settings y señales."
+        "Preservar gestión de docks, anclaje, tamaño, settings y señales.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-04-plugin-shell.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1513
+      "python_lines": 1513,
+      "pr_draft": "docs/pyqt-migration/pr-04-plugin-shell.md"
     },
     {
       "id": "05",
@@ -239,9 +250,11 @@
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
         "No importar este script para comprobar carga: ejecuta operaciones en import time.",
-        "Crear tests/integration/test_legacy_gnss_waypoint_qgis.py con iface/datos controlados y añadirlo a runtime_tests."
+        "Crear tests/integration/test_legacy_gnss_waypoint_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-05-legacy-gnss-waypoint.md; no añadir docs/ al commit."
       ],
-      "python_lines": 101
+      "python_lines": 101,
+      "pr_draft": "docs/pyqt-migration/pr-05-legacy-gnss-waypoint.md"
     },
     {
       "id": "06",
@@ -269,9 +282,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-06-pbn-target.md; no añadir docs/ al commit."
       ],
-      "python_lines": 118
+      "python_lines": 118,
+      "pr_draft": "docs/pyqt-migration/pr-06-pbn-target.md"
     },
     {
       "id": "07",
@@ -296,9 +311,11 @@
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
         "No importar este script para comprobar carga: ejecuta operaciones en import time.",
-        "Crear tests/integration/test_legacy_conv_initial_straight_qgis.py con iface/datos controlados y añadirlo a runtime_tests."
+        "Crear tests/integration/test_legacy_conv_initial_straight_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-07-legacy-conv-initial-straight.md; no añadir docs/ al commit."
       ],
-      "python_lines": 202
+      "python_lines": 202,
+      "pr_draft": "docs/pyqt-migration/pr-07-legacy-conv-initial-straight.md"
     },
     {
       "id": "08",
@@ -324,9 +341,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-08-ndb.md; no añadir docs/ al commit."
       ],
-      "python_lines": 203
+      "python_lines": 203,
+      "pr_draft": "docs/pyqt-migration/pr-08-ndb.md"
     },
     {
       "id": "09",
@@ -356,9 +375,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-09-vor.md; no añadir docs/ al commit."
       ],
-      "python_lines": 203
+      "python_lines": 203,
+      "pr_draft": "docs/pyqt-migration/pr-09-vor.md"
     },
     {
       "id": "10",
@@ -384,9 +405,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-10-pbn-enroute-gnss.md; no añadir docs/ al commit."
       ],
-      "python_lines": 225
+      "python_lines": 225,
+      "pr_draft": "docs/pyqt-migration/pr-10-pbn-enroute-gnss.md"
     },
     {
       "id": "11",
@@ -412,9 +435,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-11-gnss-waypoint.md; no añadir docs/ al commit."
       ],
-      "python_lines": 272
+      "python_lines": 272,
+      "pr_draft": "docs/pyqt-migration/pr-11-gnss-waypoint.md"
     },
     {
       "id": "12",
@@ -439,9 +464,11 @@
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
         "No importar este script para comprobar carga: ejecuta operaciones en import time.",
-        "Crear tests/integration/test_legacy_holding_navaid_qgis.py con iface/datos controlados y añadirlo a runtime_tests."
+        "Crear tests/integration/test_legacy_holding_navaid_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-12-legacy-holding-navaid.md; no añadir docs/ al commit."
       ],
-      "python_lines": 285
+      "python_lines": 285,
+      "pr_draft": "docs/pyqt-migration/pr-12-legacy-holding-navaid.md"
     },
     {
       "id": "13",
@@ -466,9 +493,11 @@
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
         "No importar este script para comprobar carga: ejecuta operaciones en import time.",
-        "Crear tests/integration/test_legacy_rnav_missed_qgis.py con iface/datos controlados y añadirlo a runtime_tests."
+        "Crear tests/integration/test_legacy_rnav_missed_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-13-legacy-rnav-missed.md; no añadir docs/ al commit."
       ],
-      "python_lines": 305
+      "python_lines": 305,
+      "pr_draft": "docs/pyqt-migration/pr-13-legacy-rnav-missed.md"
     },
     {
       "id": "14",
@@ -497,9 +526,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-14-ama-grid.md; no añadir docs/ al commit."
       ],
-      "python_lines": 331
+      "python_lines": 331,
+      "pr_draft": "docs/pyqt-migration/pr-14-ama-grid.md"
     },
     {
       "id": "15",
@@ -527,9 +558,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-15-object-selection.md; no añadir docs/ al commit."
       ],
-      "python_lines": 385
+      "python_lines": 385,
+      "pr_draft": "docs/pyqt-migration/pr-15-object-selection.md"
     },
     {
       "id": "16",
@@ -556,9 +589,11 @@
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
         "Verificar acción directa activa y también dock/UI antiguos incluidos en el paquete.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-16-feature-merge.md; no añadir docs/ al commit."
       ],
-      "python_lines": 395
+      "python_lines": 395,
+      "pr_draft": "docs/pyqt-migration/pr-16-feature-merge.md"
     },
     {
       "id": "17",
@@ -584,9 +619,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-17-dme-tolerance.md; no añadir docs/ al commit."
       ],
-      "python_lines": 408
+      "python_lines": 408,
+      "pr_draft": "docs/pyqt-migration/pr-17-dme-tolerance.md"
     },
     {
       "id": "18",
@@ -612,9 +649,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-18-dme-dme-coverage.md; no añadir docs/ al commit."
       ],
-      "python_lines": 409
+      "python_lines": 409,
+      "pr_draft": "docs/pyqt-migration/pr-18-dme-dme-coverage.md"
     },
     {
       "id": "19",
@@ -640,9 +679,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-19-conv-initial.md; no añadir docs/ al commit."
       ],
-      "python_lines": 429
+      "python_lines": 429,
+      "pr_draft": "docs/pyqt-migration/pr-19-conv-initial.md"
     },
     {
       "id": "20",
@@ -670,9 +711,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-20-overhead-tolerance.md; no añadir docs/ al commit."
       ],
-      "python_lines": 471
+      "python_lines": 471,
+      "pr_draft": "docs/pyqt-migration/pr-20-overhead-tolerance.md"
     },
     {
       "id": "21",
@@ -698,9 +741,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-21-point-filter.md; no añadir docs/ al commit."
       ],
-      "python_lines": 480
+      "python_lines": 480,
+      "pr_draft": "docs/pyqt-migration/pr-21-point-filter.md"
     },
     {
       "id": "22",
@@ -728,9 +773,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-22-radial-bearing.md; no añadir docs/ al commit."
       ],
-      "python_lines": 552
+      "python_lines": 552,
+      "pr_draft": "docs/pyqt-migration/pr-22-radial-bearing.md"
     },
     {
       "id": "23",
@@ -762,9 +809,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-23-enroute-vor-vor.md; no añadir docs/ al commit."
       ],
-      "python_lines": 638
+      "python_lines": 638,
+      "pr_draft": "docs/pyqt-migration/pr-23-enroute-vor-vor.md"
     },
     {
       "id": "24",
@@ -794,9 +843,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-24-circling.md; no añadir docs/ al commit."
       ],
-      "python_lines": 718
+      "python_lines": 718,
+      "pr_draft": "docs/pyqt-migration/pr-24-circling.md"
     },
     {
       "id": "25",
@@ -825,9 +876,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-25-basic-ils.md; no añadir docs/ al commit."
       ],
-      "python_lines": 903
+      "python_lines": 903,
+      "pr_draft": "docs/pyqt-migration/pr-25-basic-ils.md"
     },
     {
       "id": "26",
@@ -855,9 +908,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-26-sid-initial.md; no añadir docs/ al commit."
       ],
-      "python_lines": 996
+      "python_lines": 996,
+      "pr_draft": "docs/pyqt-migration/pr-26-sid-initial.md"
     },
     {
       "id": "27",
@@ -886,9 +941,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-27-wind-spiral.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1016
+      "python_lines": 1016,
+      "pr_draft": "docs/pyqt-migration/pr-27-wind-spiral.md"
     },
     {
       "id": "28",
@@ -916,9 +973,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-28-omnidirectional-sid.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1035
+      "python_lines": 1035,
+      "pr_draft": "docs/pyqt-migration/pr-28-omnidirectional-sid.md"
     },
     {
       "id": "29",
@@ -948,9 +1007,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-29-primary-assessment.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1078
+      "python_lines": 1078,
+      "pr_draft": "docs/pyqt-migration/pr-29-primary-assessment.md"
     },
     {
       "id": "30",
@@ -979,9 +1040,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Depende de Primary ya migrado; justificar excepción al orden por tamaño."
+        "Depende de Primary ya migrado; justificar excepción al orden por tamaño.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-30-slope-assessment.md; no añadir docs/ al commit."
       ],
-      "python_lines": 623
+      "python_lines": 623,
+      "pr_draft": "docs/pyqt-migration/pr-30-slope-assessment.md"
     },
     {
       "id": "31",
@@ -1008,9 +1071,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Depende de Primary ya migrado; justificar excepción al orden por tamaño."
+        "Depende de Primary ya migrado; justificar excepción al orden por tamaño.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-31-secondary-assessment.md; no añadir docs/ al commit."
       ],
-      "python_lines": 876
+      "python_lines": 876,
+      "pr_draft": "docs/pyqt-migration/pr-31-secondary-assessment.md"
     },
     {
       "id": "32",
@@ -1044,9 +1109,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Revalidar helpers TAS compartidos con Wind Spiral, migrado en 27."
+        "Revalidar helpers TAS compartidos con Wind Spiral, migrado en 27.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-32-holding.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1113
+      "python_lines": 1113,
+      "pr_draft": "docs/pyqt-migration/pr-32-holding.md"
     },
     {
       "id": "33",
@@ -1074,9 +1141,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-33-oas-ils.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1133
+      "python_lines": 1133,
+      "pr_draft": "docs/pyqt-migration/pr-33-oas-ils.md"
     },
     {
       "id": "34",
@@ -1106,9 +1175,11 @@
       ],
       "evidence": [],
       "notes": [
-        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas."
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-34-vss.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1320
+      "python_lines": 1320,
+      "pr_draft": "docs/pyqt-migration/pr-34-vss.md"
     },
     {
       "id": "35",
@@ -1140,9 +1211,11 @@
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
-        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta."
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-35-lnav.md; no añadir docs/ al commit."
       ],
-      "python_lines": 1423
+      "python_lines": 1423,
+      "pr_draft": "docs/pyqt-migration/pr-35-lnav.md"
     },
     {
       "id": "36",
@@ -1169,9 +1242,11 @@
       "notes": [
         "Eliminar qt_compat.py y registrar deleted_files aquí; retirar stubs/imports operativos del shim.",
         "Auditar todos los archivos, incluyendo import *, getattr y accesos dinámicos que el detector no cubre.",
-        "Cargar las 27 herramientas y formularios; ejecutar suite runtime por archivo y documentar fallos previos."
+        "Cargar las 27 herramientas y formularios; ejecutar suite runtime por archivo y documentar fallos previos.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-36-cleanup.md; no añadir docs/ al commit."
       ],
-      "python_lines": 0
+      "python_lines": 0,
+      "pr_draft": "docs/pyqt-migration/pr-36-cleanup.md"
     }
   ]
 }
