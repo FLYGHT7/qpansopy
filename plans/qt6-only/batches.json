@@ -184,10 +184,10 @@
       "id": "03",
       "slug": "shared-dialogs",
       "title": "Diálogos compartidos",
-      "status": "pending",
+      "status": "done",
       "branch": "refactor/qt6-03-shared-dialogs",
       "parent_branch": "refactor/qt6-02-foundation",
-      "base_commit": null,
+      "base_commit": "fc2aae0d2ed8aea53248dee5fbc60cc94194fc92",
       "depends_on": [
         "02"
       ],
@@ -197,15 +197,29 @@
         "Q_Pansopy/parameters_inspector_dialog.py",
         "Q_Pansopy/settings_dialog.py"
       ],
-      "support_files": [],
+      "support_files": [
+        "tests/unit/test_parameters_inspector_dialog.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
       "unit_tests": [
         "tests/unit/test_parameters_inspector_dialog.py",
         "tests/unit/test_isa_calculation.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
-      "evidence": [],
+      "evidence": [
+        "ISA/Settings use direct qgis.PyQt imports and scoped alignment/button enums; no shim imports remain in the four dialogs.",
+        "Inspector uses QgsAction.ActionType.GenericPython exclusively; unit fake updated to scoped namespace. Optional WebEngine import fallback retained.",
+        "Extraction placeholder now initializes QDialog and exposes exec(), preserving immediate False/cancel behavior.",
+        "35 targeted inspector/ISA tests passed, including mocked WebEngine/fallback dispatch and custom content forwarding.",
+        "Real runtime: 7 shared-dialog tests + 59 plugin/form/dock gates passed. Settings/ISA accept+cancel, real action scopes, fallback theme/rendering and clipboard, native ClipboardBridge, extraction cancellation.",
+        "Runtime logs: /tmp/qpansopy-qt6-tests-mrn4cgw2/. QGIS4.2.3/Qt6.12.0/PyQt6.12.0/Python3.14.9 offscreen. Chromium rendering not exercised.",
+        "Full non-runtime suite: 468 passed, 14 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected.",
+        "Changed production Flake8 clean, existing compliance guards pass, stage AST findings zero and inventory remains complete.",
+        "PR draft: docs/pyqt-migration/pr-03-shared-dialogs.md."
+      ],
       "notes": [
         "Mantener fallback QTextBrowser cuando no hay WebEngine; probar ambas rutas.",
         "Retirar fallback QgsAction antiguo y método exec_ del diálogo de extracción.",
@@ -232,7 +246,8 @@
       "unit_tests": [],
       "runtime_tests": [
         "tests/integration/test_dock_sizing_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -260,7 +275,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -293,7 +309,8 @@
         "tests/unit/test_pbn_target.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -321,7 +338,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -352,7 +370,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -387,7 +406,8 @@
       "runtime_tests": [
         "tests/integration/test_enroute_vor_vor_qgis.py",
         "tests/integration/test_enroute_vor_vor_refined_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -417,7 +437,8 @@
       "unit_tests": [],
       "runtime_tests": [
         "tests/integration/test_pbn_enroute_gnss_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -446,7 +467,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -474,7 +496,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -503,7 +526,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -537,7 +561,8 @@
         "tests/unit/test_ama_grid.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -570,7 +595,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_selection_of_objects_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -599,7 +625,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -631,7 +658,8 @@
       "unit_tests": [],
       "runtime_tests": [
         "tests/integration/test_dme_tolerance_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -661,7 +689,8 @@
       "unit_tests": [],
       "runtime_tests": [
         "tests/integration/test_dme_dme_coverage_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -690,7 +719,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -723,7 +753,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_overhead_tolerance_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -752,7 +783,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -785,7 +817,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_radial_bearing_intersection_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -821,7 +854,8 @@
       "runtime_tests": [
         "tests/integration/test_enroute_vor_vor_qgis.py",
         "tests/integration/test_enroute_vor_vor_refined_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -854,7 +888,8 @@
         "tests/unit/test_circling_ui_defaults.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -887,7 +922,8 @@
         "tests/unit/test_basic_ils_missed_approach.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -920,7 +956,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_sid_initial_marker_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -952,7 +989,8 @@
         "tests/unit/test_wind_spiral_parameters.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -984,7 +1022,8 @@
         "tests/unit/test_omnidirectional_sid_parameters.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1019,7 +1058,8 @@
       "runtime_tests": [
         "tests/integration/test_primary_area_assessment_qgis.py",
         "tests/integration/test_slope_primary_area_assessment_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1051,7 +1091,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_slope_primary_area_assessment_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1082,7 +1123,8 @@
       "unit_tests": [],
       "runtime_tests": [
         "tests/integration/test_secondary_area_assessment_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1120,7 +1162,8 @@
       "runtime_tests": [
         "tests/integration/test_holding_point_e_qgis.py",
         "tests/integration/test_holding_preview_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1152,7 +1195,8 @@
         "tests/integration/test_oas_ils_table.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1187,7 +1231,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_vss_reversal_qgis.py",
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1222,7 +1267,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
@@ -1252,7 +1298,8 @@
       ],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
       "evidence": [],
       "notes": [
