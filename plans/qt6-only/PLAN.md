@@ -144,7 +144,9 @@ completada; nunca crear un commit que oculte una regresión como éxito.
 Baseline investigada en main: 435 passed, 12 skipped, 1 failed, 4 errors en la
 suite sin runtime. CAT E de Circling difiere de su expectativa: informar ese
 fallo previo y conservar el comportamiento; corregirlo requiere otra tarea.
-Los cuatro errores SID son stubs incompletos y se resuelven en 01. No añadir
+Los cuatro errores SID eran stubs incompletos y quedaron resueltos en 01.
+Después de 01: 457 passed, 13 skipped, 1 failed (CAT E), cero errores.
+El nuevo gate runtime compartido valida 56 casos y se ejecuta en cada etapa. No añadir
 xfail/skip ni cambiar expectativas para esconder regresiones.
 
 QGIS disponible: 4.2.3, Qt/PyQt 6.12.0, Python 3.14.9. Verificados por archivo:

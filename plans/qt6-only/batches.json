@@ -68,28 +68,43 @@
       "id": "01",
       "slug": "test-harness",
       "title": "Pruebas Qt6 y stubs",
-      "status": "pending",
+      "status": "done",
       "branch": "refactor/qt6-01-test-harness",
       "parent_branch": "refactor/qt6-00-workflow",
-      "base_commit": null,
+      "base_commit": "e67d054dc8d7330e3293ee39545f026d6a9b57a1",
       "depends_on": [
         "00"
       ],
       "source_files": [],
       "support_files": [
         "tests/conftest.py",
-        "tests/unit/test_sid_initial_isa_dialog.py"
+        "tests/unit/test_sid_initial_isa_dialog.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/unit/test_qt6_stubs.py",
+        "plans/qt6-only/PLAN.md"
       ],
       "unit_tests": [
         "tests/unit/test_sid_initial_isa_dialog.py",
-        "tests/unit/test_preview_dock_lifecycle.py"
+        "tests/unit/test_preview_dock_lifecycle.py",
+        "tests/unit/test_qt6_stubs.py"
       ],
       "runtime_tests": [
         "tests/integration/test_dme_tolerance_qgis.py",
         "tests/integration/test_dme_dme_coverage_qgis.py",
-        "tests/integration/test_dock_sizing_qgis.py"
+        "tests/integration/test_dock_sizing_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
-      "evidence": [],
+      "evidence": [
+        "Stubs: namespaces Qt6/QGIS4 y tipos de campos disponibles; retirados módulos simulados PyQt5. Aliases planos temporales preservados para consumidores aún pendientes.",
+        "Corregidos QgsRubberBand y Qgis_GeomType_Polygon faltantes: los cuatro casos SID pasan, junto a los 14 de lifecycle.",
+        "Dos pruebas nuevas verifican enums scoped y restauración de módulos opcionales tras stubs anidados.",
+        "Runtime nuevo: 56 passed en 14.05s; registro 27 herramientas, 26 ciclos completos de docks por QAction, 27 UI con uic, Feature Merge directo con 2 features y dock antiguo.",
+        "Logs runtime nuevo: /tmp/qpansopy-qt6-tests-esgnaat4/00-test_qt6_plugin_runtime.log (sin Traceback).",
+        "Runtime existente por archivo: DME 45, DME/DME 17, sizing 4 pasan; logs /tmp/qpansopy-qt6-tests-xfy53i1y/. Total runtime validado: 120 casos.",
+        "Suite sin runtime: 457 passed, 13 skipped, 1 failed, cero errores, 240 deselected. Único fallo: CAT E preexistente de Circling. Guard Flake8 existente pasa dentro de esta suite.",
+        "20 pruebas dirigidas de stubs/SID/lifecycle pasan. Flake8 errores en archivos cambiados y git diff --check limpios.",
+        "Código funcional Q_Pansopy sin cambios; pruebas nominales de salida por herramienta siguen asignadas a 05–35."
+      ],
       "notes": [
         "Actualizar stubs a enums Qt6; corregir QgsRubberBand faltante sin alterar producción.",
         "Crear tests/integration/test_qt6_plugin_runtime.py con carga UI, ciclo de docks y registro de las 27 herramientas; añadirlo a runtime_tests de las etapas siguientes.",
@@ -130,7 +145,9 @@
         "tests/unit/test_utils_calc.py",
         "tests/unit/test_isa_calculation.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Rechazar QGIS 3/Qt5 desde classFactory antes de importar el plugin completo.",
@@ -162,7 +179,9 @@
         "tests/unit/test_parameters_inspector_dialog.py",
         "tests/unit/test_isa_calculation.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Mantener fallback QTextBrowser cuando no hay WebEngine; probar ambas rutas.",
@@ -187,7 +206,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_dock_sizing_qgis.py"
+        "tests/integration/test_dock_sizing_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -212,7 +232,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -241,7 +263,9 @@
       "unit_tests": [
         "tests/unit/test_pbn_target.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -265,7 +289,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -292,7 +318,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -323,7 +351,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_enroute_vor_vor_qgis.py",
-        "tests/integration/test_enroute_vor_vor_refined_qgis.py"
+        "tests/integration/test_enroute_vor_vor_refined_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -350,7 +379,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_pbn_enroute_gnss_qgis.py"
+        "tests/integration/test_pbn_enroute_gnss_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -376,7 +406,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -400,7 +432,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -425,7 +459,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -455,7 +491,9 @@
         "tests/integration/test_ama_grid_qgis.py",
         "tests/unit/test_ama_grid.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -484,7 +522,8 @@
         "tests/integration/test_selection_of_objects_table.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_selection_of_objects_qgis.py"
+        "tests/integration/test_selection_of_objects_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -510,7 +549,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -538,7 +579,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_dme_tolerance_qgis.py"
+        "tests/integration/test_dme_tolerance_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -565,7 +607,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_dme_dme_coverage_qgis.py"
+        "tests/integration/test_dme_dme_coverage_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -591,7 +634,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -620,7 +665,8 @@
         "tests/unit/test_overhead_tolerance.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_overhead_tolerance_qgis.py"
+        "tests/integration/test_overhead_tolerance_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -646,7 +692,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -675,7 +723,8 @@
         "tests/unit/test_radial_bearing_intersection.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_radial_bearing_intersection_qgis.py"
+        "tests/integration/test_radial_bearing_intersection_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -708,7 +757,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_enroute_vor_vor_qgis.py",
-        "tests/integration/test_enroute_vor_vor_refined_qgis.py"
+        "tests/integration/test_enroute_vor_vor_refined_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -738,7 +788,9 @@
         "tests/unit/test_circling_math.py",
         "tests/unit/test_circling_ui_defaults.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -767,7 +819,9 @@
         "tests/integration/test_basic_ils_table.py",
         "tests/unit/test_basic_ils_missed_approach.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -796,7 +850,8 @@
         "tests/unit/test_sid_initial_isa_dialog.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_sid_initial_marker_qgis.py"
+        "tests/integration/test_sid_initial_marker_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -825,7 +880,9 @@
         "tests/integration/test_wind_spiral_table.py",
         "tests/unit/test_wind_spiral_parameters.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -853,7 +910,9 @@
       "unit_tests": [
         "tests/unit/test_omnidirectional_sid_parameters.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -884,7 +943,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_primary_area_assessment_qgis.py",
-        "tests/integration/test_slope_primary_area_assessment_qgis.py"
+        "tests/integration/test_slope_primary_area_assessment_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -913,7 +973,8 @@
         "tests/unit/test_slope_primary_area_assessment.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_slope_primary_area_assessment_qgis.py"
+        "tests/integration/test_slope_primary_area_assessment_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -941,7 +1002,8 @@
       "support_files": [],
       "unit_tests": [],
       "runtime_tests": [
-        "tests/integration/test_secondary_area_assessment_qgis.py"
+        "tests/integration/test_secondary_area_assessment_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -976,7 +1038,8 @@
       ],
       "runtime_tests": [
         "tests/integration/test_holding_point_e_qgis.py",
-        "tests/integration/test_holding_preview_qgis.py"
+        "tests/integration/test_holding_preview_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -1005,7 +1068,9 @@
       "unit_tests": [
         "tests/integration/test_oas_ils_table.py"
       ],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -1036,7 +1101,8 @@
         "tests/integration/test_vss_tables.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_vss_reversal_qgis.py"
+        "tests/integration/test_vss_reversal_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "evidence": [],
       "notes": [
@@ -1068,7 +1134,9 @@
       ],
       "support_files": [],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
@@ -1094,7 +1162,9 @@
         "tests/conftest.py"
       ],
       "unit_tests": [],
-      "runtime_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "evidence": [],
       "notes": [
         "Eliminar qt_compat.py y registrar deleted_files aquí; retirar stubs/imports operativos del shim.",
