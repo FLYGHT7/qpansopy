@@ -17,7 +17,10 @@ htmlcov/
 tests/results/
 
 #agents skills
-.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/qpansopy-qt6-migration/
 .claude/
 .augment/
 .codex

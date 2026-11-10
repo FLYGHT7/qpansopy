@@ -1,0 +1,4 @@
+interface:
+  display_name: "QPANSOPY: migración Qt6"
+  short_description: "Migración por herramienta con ramas y pruebas Qt6"
+  default_prompt: "Usa $qpansopy-qt6-migration para continuar con la siguiente etapa pendiente del plan, validarla y crear su commit local."
