@@ -232,24 +232,35 @@
       "id": "04",
       "slug": "plugin-shell",
       "title": "Arranque y contenedor del plugin",
-      "status": "pending",
+      "status": "done",
       "branch": "refactor/qt6-04-plugin-shell",
       "parent_branch": "refactor/qt6-03-shared-dialogs",
-      "base_commit": null,
+      "base_commit": "d9e20399c674015d118debc7fb9637d248023814",
       "depends_on": [
         "03"
       ],
       "source_files": [
         "Q_Pansopy/qpansopy.py"
       ],
-      "support_files": [],
+      "support_files": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
       "unit_tests": [],
       "runtime_tests": [
         "tests/integration/test_dock_sizing_qgis.py",
         "tests/integration/test_qt6_plugin_runtime.py",
         "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
-      "evidence": [],
+      "evidence": [
+        "Plugin shell no longer imports qt_compat. QAction imported from QtGui; Qt6 scoped enums cover dock areas/features, event types, layouts, scroll/text/size policies and QGIS message levels.",
+        "Log drag uses globalPosition().toPoint() with real Qt6 mouse event regression tests for normal resizing, 60/260 bounds and release.",
+        "New switching regression verifies existing dock reuse, sibling hiding and live log visibility.",
+        "72 runtime cases passed: shared plugin gate 61, dock sizing 4, shared dialogs 7. Logs /tmp/qpansopy-qt6-tests-prxj3sza/. QGIS4.2.3/Qt6.12.0/PyQt6.12.0/Python3.14.9 offscreen.",
+        "Full non-runtime suite: 468 passed, 14 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected; existing compliance guard passed.",
+        "Configured shell Flake8, test error-level Flake8 and diff checks passed.",
+        "AST audit: no migration blockers. One review_fallback retained intentionally: missing optional KML control, not Qt5 compatibility. Dynamic lookups reviewed for lifecycle/optional controls.",
+        "PR draft docs/pyqt-migration/pr-04-plugin-shell.md. Interactive multi-monitor dragging not tested."
+      ],
       "notes": [
         "QAction desde QtGui; enums canónicos; comprobar _IMPORT_ERRORS vacío y registro completo.",
         "Preservar gestión de docks, anclaje, tamaño, settings y señales.",
