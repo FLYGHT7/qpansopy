@@ -16,16 +16,12 @@ _CASES = json.loads(_FIXTURES.read_text(encoding='utf-8'))
 # ---------------------------------------------------------------------------
 
 def test_nm_to_m_constant():
-    pytest.importorskip('Q_Pansopy.modules.pbn.pbn_target',
-                        reason='pbn_target.py not yet merged from feat/138')
     import importlib
     mod = importlib.import_module('Q_Pansopy.modules.pbn.pbn_target')
     assert mod._NM_TO_M == 1852.0
 
 
 def test_segments_constant():
-    pytest.importorskip('Q_Pansopy.modules.pbn.pbn_target',
-                        reason='pbn_target.py not yet merged from feat/138')
     import importlib
     mod = importlib.import_module('Q_Pansopy.modules.pbn.pbn_target')
     assert mod._SEGMENTS == 360
@@ -98,26 +94,22 @@ def test_utm_south_flag_exactly_equator():
 
 # ---------------------------------------------------------------------------
 # Module import smoke test
-# (pbn_target.py lives on feat/138-pbn-target; these tests run once it's merged)
+# PBN Target is required: import errors must fail rather than skip.
 # ---------------------------------------------------------------------------
 
 def test_module_imports_cleanly():
     import importlib
-    pytest.importorskip('Q_Pansopy.modules.pbn.pbn_target',
-                        reason='pbn_target.py not yet merged from feat/138')
     mod = importlib.import_module('Q_Pansopy.modules.pbn.pbn_target')
     assert mod is not None
 
 
 def test_run_pbn_target_exists():
     import importlib
-    pytest.importorskip('Q_Pansopy.modules.pbn.pbn_target',
-                        reason='pbn_target.py not yet merged from feat/138')
     mod = importlib.import_module('Q_Pansopy.modules.pbn.pbn_target')
     assert callable(mod.run_pbn_target)
 
 
 def test_constants_importable():
-    """Constants test also needs the module — skip if not merged yet."""
-    pytest.importorskip('Q_Pansopy.modules.pbn.pbn_target',
-                        reason='pbn_target.py not yet merged from feat/138')
+    """Constants are available from the required module."""
+    from Q_Pansopy.modules.pbn.pbn_target import _NM_TO_M, _SEGMENTS
+    assert _NM_TO_M > 0 and _SEGMENTS > 0

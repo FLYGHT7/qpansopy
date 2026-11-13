@@ -3,6 +3,7 @@ import pathlib
 import sys
 import types
 import contextlib
+from enum import IntEnum, IntFlag
 import pytest
 
 # Ensure the project root is on sys.path so tests can import Q_Pansopy modules
@@ -47,8 +48,16 @@ def _install_qgis_stubs():
     ]:
         setattr(core, name, _Dummy)
 
+    # Scoped Qt6/QGIS4 enums; flat aliases remain only for pending consumers.
+    message_levels = IntEnum('MessageLevel', {'Info': 0, 'Warning': 1,
+                                             'Critical': 2, 'Success': 3})
     core.Qgis = type('Qgis', (), {
-        'Success': 0, 'Info': 1, 'Warning': 2, 'Critical': 3, 'NoError': 0,
+        'QGIS_VERSION_INT': 40203, 'MessageLevel': message_levels,
+        'GeometryType': IntEnum('GeometryType', {'Point': 0, 'Line': 1,
+            'Polygon': 2, 'Unknown': 3, 'Null': 4}),
+        'LayerType': IntEnum('LayerType', {'Vector': 0, 'Raster': 1}),
+        'DistanceUnit': IntEnum('DistanceUnit', {'Meters': 0}),
+        **message_levels.__members__, 'NoError': 0,
     })
 
     # qgis.PyQt stubs
@@ -62,14 +71,21 @@ def _install_qgis_stubs():
     })
     qtcore.QVariant = _QVariant
     qtcore.Qt = type('Qt', (), {
+        'Orientation': IntEnum('Orientation', {'Horizontal': 1, 'Vertical': 2}),
+        'AlignmentFlag': IntFlag('AlignmentFlag', {'AlignLeft': 1,
+            'AlignRight': 2, 'AlignHCenter': 4, 'AlignTop': 32,
+            'AlignBottom': 64, 'AlignVCenter': 128, 'AlignCenter': 132}),
+        'PenStyle': IntEnum('PenStyle', {'NoPen': 0, 'SolidLine': 1}),
         'Horizontal': 1, 'Vertical': 2, 'AlignLeft': 1,
     })
     qtcore.QMetaType = type('QMetaType', (), {
         'Type': type('Type', (), {
-            'Double': 6, 'QString': 10, 'Int': 2, 'Bool': 1,
+            'Double': 6, 'QString': 10, 'Int': 2, 'Bool': 1, 'LongLong': 4,
         }),
         'Double': 6, 'QString': 10, 'Int': 2,
     })
+    qtcore.QT_VERSION_STR = '6.12.0'
+    qtcore.PYQT_VERSION_STR = '6.12.0'
     qtcore.pyqtSignal = lambda *a, **kw: None
     qtcore.pyqtSlot = lambda *a, **kw: (lambda fn: fn)
     qtcore.QObject = _Dummy
@@ -80,16 +96,13 @@ def _install_qgis_stubs():
     uic = types.ModuleType('qgis.PyQt.uic')
     uic.loadUiType = lambda *a, **kw: (_Dummy, None)
     PyQt.uic = uic
-    sys.modules['qgis.PyQt.uic'] = uic
 
     # QtWebEngineWidgets / QtWebChannel stubs — needed by parameters_inspector_dialog.py
     webengine = types.ModuleType('qgis.PyQt.QtWebEngineWidgets')
     webengine.QWebEngineView = _Dummy
-    sys.modules['qgis.PyQt.QtWebEngineWidgets'] = webengine
 
     webchannel = types.ModuleType('qgis.PyQt.QtWebChannel')
     webchannel.QWebChannel = _Dummy
-    sys.modules['qgis.PyQt.QtWebChannel'] = webchannel
 
     for widget_name in [
         'QFileDialog', 'QDialog', 'QFormLayout', 'QLineEdit', 'QComboBox',
@@ -99,26 +112,10 @@ def _install_qgis_stubs():
     ]:
         setattr(qtwidgets, widget_name, _Dummy)
 
-    # PyQt5 stubs (some modules import PyQt5 directly)
-    pyqt5 = types.ModuleType('PyQt5')
-    pyqt5_qtcore = types.ModuleType('PyQt5.QtCore')
-    pyqt5_qtgui = types.ModuleType('PyQt5.QtGui')
-    pyqt5_qtwidgets = types.ModuleType('PyQt5.QtWidgets')
-    pyqt5_qtcore.QVariant = _QVariant
-    pyqt5_qtcore.Qt = qtcore.Qt
-    pyqt5_qtcore.QMetaType = qtcore.QMetaType
-    pyqt5_qtcore.pyqtSignal = lambda *a, **kw: None
-    pyqt5_qtgui.QColor = _Dummy
-    for widget_name in [
-        'QFileDialog', 'QDialog', 'QFormLayout', 'QLineEdit', 'QComboBox',
-        'QDialogButtonBox', 'QMessageBox', 'QWidget', 'QApplication',
-        'QDockWidget', 'QPushButton', 'QTextEdit', 'QGroupBox', 'QVBoxLayout',
-    ]:
-        setattr(pyqt5_qtwidgets, widget_name, _Dummy)
-
     # qgis.gui stub — some conv modules do `from qgis.gui import *`
     gui = types.ModuleType('qgis.gui')
     gui.__all__ = []
+    gui.QgsRubberBand = _Dummy
 
     utils = types.ModuleType('qgis.utils')
     utils.iface = object()
@@ -132,11 +129,10 @@ def _install_qgis_stubs():
         (qtcore,          'qgis.PyQt.QtCore'),
         (qtgui,           'qgis.PyQt.QtGui'),
         (qtwidgets,       'qgis.PyQt.QtWidgets'),
+        (uic,             'qgis.PyQt.uic'),
+        (webengine,       'qgis.PyQt.QtWebEngineWidgets'),
+        (webchannel,      'qgis.PyQt.QtWebChannel'),
         (utils,           'qgis.utils'),
-        (pyqt5,           'PyQt5'),
-        (pyqt5_qtcore,    'PyQt5.QtCore'),
-        (pyqt5_qtgui,     'PyQt5.QtGui'),
-        (pyqt5_qtwidgets, 'PyQt5.QtWidgets'),
     ]:
         if name in sys.modules:
             to_restore[name] = sys.modules[name]
@@ -145,7 +141,6 @@ def _install_qgis_stubs():
         yield
     finally:
         names_to_clean = [
-            'PyQt5.QtWidgets', 'PyQt5.QtGui', 'PyQt5.QtCore', 'PyQt5',
             'qgis.PyQt.uic', 'qgis.PyQt.QtWebEngineWidgets', 'qgis.PyQt.QtWebChannel',
             'qgis.PyQt.QtWidgets', 'qgis.PyQt.QtCore',
             'qgis.PyQt.QtGui', 'qgis.PyQt', 'qgis.gui', 'qgis.core', 'qgis.utils', 'qgis',

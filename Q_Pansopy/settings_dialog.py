@@ -1,5 +1,5 @@
 from qgis.PyQt import QtWidgets, QtGui
-from .qt_compat import Qt_AlignVCenter, QDialogButtonBox_Ok, QDialogButtonBox_Cancel
+from qgis.PyQt.QtCore import Qt
 import os
 
 
@@ -19,7 +19,7 @@ class SettingsDialog(QtWidgets.QDialog):
             logo_label.setPixmap(logo.scaledToHeight(48))
             about_layout.addWidget(logo_label)
         label = QtWidgets.QLabel("<b>QPANSOPY by FLYGHT7</b>")
-        label.setAlignment(Qt_AlignVCenter)
+        label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         about_layout.addWidget(label)
         layout.addLayout(about_layout)
 
@@ -38,7 +38,8 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.addWidget(self.log_checkbox)
 
         # Buttons
-        btn_box = QtWidgets.QDialogButtonBox(QDialogButtonBox_Ok | QDialogButtonBox_Cancel)
+        buttons = QtWidgets.QDialogButtonBox.StandardButton
+        btn_box = QtWidgets.QDialogButtonBox(buttons.Ok | buttons.Cancel)
         btn_box.accepted.connect(self.accept)
         btn_box.rejected.connect(self.reject)
         layout.addWidget(btn_box)
