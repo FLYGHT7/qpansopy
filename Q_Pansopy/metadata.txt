@@ -1,6 +1,6 @@
 [general]
 name=qPansopy
-qgisMinimumVersion=3.34
+qgisMinimumVersion=4.0
 qgisMaximumVersion=4.99
 description=QPANSOPY Plugin for QGIS - Procedure Analysis and Obstacle Protection Surfaces (PANSOPS)
 version=0.5.3

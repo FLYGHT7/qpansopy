@@ -59,21 +59,8 @@ except ImportError:
 
 
 def _generic_python_action_type():
-    """
-    QgsAction.GenericPython (Qt5/PyQt5) vs QgsAction.ActionType.GenericPython
-    (Qt6/PyQt6, QGIS 4 scoped enum). Resolved lazily -- not at import time --
-    so importing this module never depends on QgsAction's enum shape (e.g.
-    under the test suite's QGIS stubs, which don't define either).
-
-    Note for automated Qt6-compatibility scanners: the flat QgsAction.GenericPython
-    access below is the intentional Qt5 fallback branch of this try/except
-    AttributeError pair -- the Qt6-scoped form is always tried first. Static
-    scanners can't see that context and will flag it; that's expected, not a bug.
-    """
-    try:
-        return QgsAction.ActionType.GenericPython
-    except AttributeError:
-        return QgsAction.GenericPython  # type: ignore[attr-defined]
+    """Return the scoped QGIS 4 Python action type."""
+    return QgsAction.ActionType.GenericPython
 
 
 # Reached from a QGIS layer action, which is triggered per-click rather than

@@ -2,7 +2,7 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsField,
     QgsGeometry, Qgis
 )
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 import os
 
 _NM_TO_M = 1852.0
@@ -13,7 +13,7 @@ def run_pbn_target(iface, point_layer):
     """Create 15 NM and 30 NM ARP buffer rings from a point layer."""
     try:
         if point_layer is None:
-            iface.messageBar().pushMessage('QPANSOPY', 'No point layer provided', level=Qgis.Critical)
+            iface.messageBar().pushMessage('QPANSOPY', 'No point layer provided', level=Qgis.MessageLevel.Critical)
             return None
 
         layer_crs = point_layer.crs()
@@ -22,7 +22,7 @@ def run_pbn_target(iface, point_layer):
                 'QPANSOPY',
                 'Layer CRS must be projected (metre-based). '
                 'Reproject your ARP layer before running PBN Target.',
-                level=Qgis.Critical,
+                level=Qgis.MessageLevel.Critical,
             )
             return None
 
@@ -30,14 +30,14 @@ def run_pbn_target(iface, point_layer):
         feat = selected[0] if selected else next(point_layer.getFeatures(), None)
 
         if feat is None:
-            iface.messageBar().pushMessage('QPANSOPY', 'No feature found in the point layer', level=Qgis.Critical)
+            iface.messageBar().pushMessage('QPANSOPY', 'No feature found in the point layer', level=Qgis.MessageLevel.Critical)
             return None
 
         geom = feat.geometry()
 
         v_layer = QgsVectorLayer(f'Polygon?crs={layer_crs.authid()}', 'PBN_target', 'memory')
         pr = v_layer.dataProvider()
-        pr.addAttributes([QgsField('target', QVariant.String)])
+        pr.addAttributes([QgsField('target', QMetaType.Type.QString)])
         v_layer.updateFields()
 
         features = []
@@ -62,11 +62,11 @@ def run_pbn_target(iface, point_layer):
         iface.mapCanvas().zoomToSelected(v_layer)
         v_layer.removeSelection()
 
-        iface.messageBar().pushMessage('QPANSOPY', 'PBN Target rings created (15 NM / 30 NM)', level=Qgis.Success)
+        iface.messageBar().pushMessage('QPANSOPY', 'PBN Target rings created (15 NM / 30 NM)', level=Qgis.MessageLevel.Success)
         return {'layer': v_layer}
 
     except Exception as e:
         import traceback
         print(traceback.format_exc())
-        iface.messageBar().pushMessage('QPANSOPY', f'PBN Target error: {e}', level=Qgis.Critical)
+        iface.messageBar().pushMessage('QPANSOPY', f'PBN Target error: {e}', level=Qgis.MessageLevel.Critical)
         return None
