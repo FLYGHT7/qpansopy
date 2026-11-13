@@ -1,0 +1,1337 @@
+{
+  "schema_version": 1,
+  "target": "QGIS 4 + Qt6 via qgis.PyQt",
+  "baseline": {
+    "commit": "b7c7be080d1fc76609722294cdf3e24e146b7451",
+    "date": "2026-11-09",
+    "python": "3.14.9",
+    "qgis": "4.2.3",
+    "qt": "6.12.0",
+    "pyqt": "6.12.0",
+    "non_runtime": {
+      "passed": 435,
+      "skipped": 12,
+      "failed": 1,
+      "errors": 4,
+      "deselected": 240
+    },
+    "known_failures": [
+      "tests/unit/test_circling_ui_defaults.py::test_circling_category_checkboxes_have_expected_defaults"
+    ],
+    "known_error_file": "tests/unit/test_sid_initial_isa_dialog.py",
+    "known_error_reason": "QgsRubberBand falta en los stubs: 4 casos; corregir en 01.",
+    "isolated_runtime_passed": {
+      "dme_tolerance": 45,
+      "dme_dme_coverage": 17,
+      "dock_sizing": 4
+    }
+  },
+  "batches": [
+    {
+      "id": "00",
+      "slug": "workflow",
+      "title": "Skill, plan e inventario",
+      "status": "done",
+      "branch": "refactor/qt6-00-workflow",
+      "parent_branch": "origin/main",
+      "base_commit": "b7c7be080d1fc76609722294cdf3e24e146b7451",
+      "depends_on": [],
+      "source_files": [],
+      "support_files": [
+        ".gitignore",
+        ".agents/skills/qpansopy-qt6-migration/SKILL.md",
+        ".agents/skills/qpansopy-qt6-migration/agents/openai.yaml",
+        ".agents/skills/qpansopy-qt6-migration/references/qt6-rules.md",
+        ".agents/skills/qpansopy-qt6-migration/scripts/context.py",
+        ".agents/skills/qpansopy-qt6-migration/scripts/run_qgis_tests.py",
+        "plans/qt6-only/PLAN.md",
+        "plans/qt6-only/batches.json",
+        "tests/unit/test_qt6_migration_workflow.py"
+      ],
+      "unit_tests": [
+        "tests/unit/test_qt6_migration_workflow.py"
+      ],
+      "runtime_tests": [],
+      "evidence": [
+        "Inventario: 37 etapas; 86 Python y 27 UI asignados sin faltantes ni duplicados.",
+        "tests/unit/test_qt6_migration_workflow.py: 16 casos pasan (incluidos timeout, JUnit viejo, grafo ausente/corrupto y reanudación con trailer Git).",
+        "quick_validate.py: Skill is valid!",
+        "Runner QGIS real: DME 45, DME/DME 17 y dock sizing 4 pasan en procesos separados; logs /tmp/qpansopy-qt6-tests-auqg5e0b/.",
+        "Suite sin runtime: 451 passed, 12 skipped, 1 failed, 4 errors, 240 deselected; mismos nodeids previos CAT E/SID; 16 pruebas nuevas pasan.",
+        "Flake8 de errores de los helpers/tests con --jobs 1: sin hallazgos; guard de compliance existente pasa dentro de la suite.",
+        "Etapa 00 no modifica código funcional Q_Pansopy."
+      ],
+      "notes": [
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-00-workflow.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 0,
+      "pr_draft": "docs/pyqt-migration/pr-00-workflow.md"
+    },
+    {
+      "id": "01",
+      "slug": "test-harness",
+      "title": "Pruebas Qt6 y stubs",
+      "status": "done",
+      "branch": "refactor/qt6-01-test-harness",
+      "parent_branch": "refactor/qt6-00-workflow",
+      "base_commit": "e67d054dc8d7330e3293ee39545f026d6a9b57a1",
+      "depends_on": [
+        "00"
+      ],
+      "source_files": [],
+      "support_files": [
+        "tests/conftest.py",
+        "tests/unit/test_sid_initial_isa_dialog.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/unit/test_qt6_stubs.py",
+        "plans/qt6-only/PLAN.md"
+      ],
+      "unit_tests": [
+        "tests/unit/test_sid_initial_isa_dialog.py",
+        "tests/unit/test_preview_dock_lifecycle.py",
+        "tests/unit/test_qt6_stubs.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_dme_tolerance_qgis.py",
+        "tests/integration/test_dme_dme_coverage_qgis.py",
+        "tests/integration/test_dock_sizing_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
+      "evidence": [
+        "Stubs: namespaces Qt6/QGIS4 y tipos de campos disponibles; retirados módulos simulados PyQt5. Aliases planos temporales preservados para consumidores aún pendientes.",
+        "Corregidos QgsRubberBand y Qgis_GeomType_Polygon faltantes: los cuatro casos SID pasan, junto a los 14 de lifecycle.",
+        "Dos pruebas nuevas verifican enums scoped y restauración de módulos opcionales tras stubs anidados.",
+        "Runtime nuevo: 56 passed en 14.05s; registro 27 herramientas, 26 ciclos completos de docks por QAction, 27 UI con uic, Feature Merge directo con 2 features y dock antiguo.",
+        "Logs runtime nuevo: /tmp/qpansopy-qt6-tests-esgnaat4/00-test_qt6_plugin_runtime.log (sin Traceback).",
+        "Runtime existente por archivo: DME 45, DME/DME 17, sizing 4 pasan; logs /tmp/qpansopy-qt6-tests-xfy53i1y/. Total runtime validado: 120 casos.",
+        "Suite sin runtime: 457 passed, 13 skipped, 1 failed, cero errores, 240 deselected. Único fallo: CAT E preexistente de Circling. Guard Flake8 existente pasa dentro de esta suite.",
+        "20 pruebas dirigidas de stubs/SID/lifecycle pasan. Flake8 errores en archivos cambiados y git diff --check limpios.",
+        "Código funcional Q_Pansopy sin cambios; pruebas nominales de salida por herramienta siguen asignadas a 05–35."
+      ],
+      "notes": [
+        "Actualizar stubs a enums Qt6; corregir QgsRubberBand faltante sin alterar producción.",
+        "Crear tests/integration/test_qt6_plugin_runtime.py con carga UI, ciclo de docks y registro de las 27 herramientas; añadirlo a runtime_tests de las etapas siguientes.",
+        "El runtime compartido usa una única QgsApplication por proceso. El runner ya aísla archivos.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-01-test-harness.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 0,
+      "pr_draft": "docs/pyqt-migration/pr-01-test-harness.md"
+    },
+    {
+      "id": "02",
+      "slug": "foundation",
+      "title": "Contrato QGIS 4 y base Qt6",
+      "status": "done",
+      "branch": "refactor/qt6-02-foundation",
+      "parent_branch": "refactor/qt6-01-test-harness",
+      "base_commit": "873aa4a36125758458411d3e6d6a20ddfaee28bb",
+      "depends_on": [
+        "01"
+      ],
+      "source_files": [
+        "Q_Pansopy/__init__.py",
+        "Q_Pansopy/dockwidgets/base_dockwidget.py",
+        "Q_Pansopy/dockwidgets/conv/__init__.py",
+        "Q_Pansopy/dockwidgets/departures/__init__.py",
+        "Q_Pansopy/dockwidgets/ils/__init__.py",
+        "Q_Pansopy/dockwidgets/pbn/__init__.py",
+        "Q_Pansopy/dockwidgets/utilities/__init__.py",
+        "Q_Pansopy/modules/__init__.py",
+        "Q_Pansopy/modules/constants.py",
+        "Q_Pansopy/modules/departures/__init__.py",
+        "Q_Pansopy/modules/isa.py",
+        "Q_Pansopy/qt_compat.py",
+        "Q_Pansopy/utils.py"
+      ],
+      "support_files": [
+        "Q_Pansopy/metadata.txt",
+        "tests/unit/test_qt6_foundation.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
+      "unit_tests": [
+        "tests/unit/test_utils_calc.py",
+        "tests/unit/test_isa_calculation.py",
+        "tests/unit/test_qt6_foundation.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_dme_tolerance_qgis.py",
+        "tests/integration/test_dme_dme_coverage_qgis.py",
+        "tests/integration/test_dock_sizing_qgis.py"
+      ],
+      "evidence": [
+        "Metadata: QGIS 4.0–4.99. classFactory rejects QGIS 3/5, Qt5 or PyQt5 before importing plugin implementation; accepts mocked QGIS 4.0 and actual QGIS 4.2.3.",
+        "Shim simplified to qgis.PyQt + scoped QGIS4/Qt6 enums; no standalone backends, fake QVariant, legacy fallback branches or non-QGIS sentinels remain.",
+        "AST export comparison: all 111 public names preserved. preseed_active_layer moved unchanged in behavior to utils and temporarily re-exported.",
+        "Reviewed all assigned package initializers, constants and ISA: no Qt5-specific changes needed. Base dock uses Qgis.MessageLevel.Critical.",
+        "11 new unit cases cover runtime acceptance/rejection and best-effort preselection. 35 targeted foundation/math/compliance cases passed.",
+        "Real-QGIS isolated files: shared gate 59, DME 45, DME/DME 17, dock sizing 4 = 123 passed. Logs: /tmp/qpansopy-qt6-tests-7bf1_mtz/.",
+        "Non-runtime suite: 468 passed, 13 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected.",
+        "Stage AST findings: zero; inventory 86 Python/27 UI with no missing or duplicate ownership. Changed production files configured Flake8 clean; existing compliance ratchet unchanged and passing.",
+        "PR draft: docs/pyqt-migration/pr-02-foundation.md; QGIS 4.0 was version-mocked, actual installed runtime is QGIS 4.2.3. Interactive GUI not tested."
+      ],
+      "notes": [
+        "Rechazar QGIS 3/Qt5 desde classFactory antes de importar el plugin completo.",
+        "Simplificar shim a qgis.PyQt/Qt6 manteniendo temporalmente sus exports.",
+        "Mover preseed_active_layer a utils y reexportarlo temporalmente desde el shim.",
+        "Verificar inicializadores y constantes aunque no necesiten cambios.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-02-foundation.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1152,
+      "pr_draft": "docs/pyqt-migration/pr-02-foundation.md"
+    },
+    {
+      "id": "03",
+      "slug": "shared-dialogs",
+      "title": "Diálogos compartidos",
+      "status": "done",
+      "branch": "refactor/qt6-03-shared-dialogs",
+      "parent_branch": "refactor/qt6-02-foundation",
+      "base_commit": "fc2aae0d2ed8aea53248dee5fbc60cc94194fc92",
+      "depends_on": [
+        "02"
+      ],
+      "source_files": [
+        "Q_Pansopy/isa_calculator_dialog.py",
+        "Q_Pansopy/object_extraction_dialog.py",
+        "Q_Pansopy/parameters_inspector_dialog.py",
+        "Q_Pansopy/settings_dialog.py"
+      ],
+      "support_files": [
+        "tests/unit/test_parameters_inspector_dialog.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "unit_tests": [
+        "tests/unit/test_parameters_inspector_dialog.py",
+        "tests/unit/test_isa_calculation.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [
+        "ISA/Settings use direct qgis.PyQt imports and scoped alignment/button enums; no shim imports remain in the four dialogs.",
+        "Inspector uses QgsAction.ActionType.GenericPython exclusively; unit fake updated to scoped namespace. Optional WebEngine import fallback retained.",
+        "Extraction placeholder now initializes QDialog and exposes exec(), preserving immediate False/cancel behavior.",
+        "35 targeted inspector/ISA tests passed, including mocked WebEngine/fallback dispatch and custom content forwarding.",
+        "Real runtime: 7 shared-dialog tests + 59 plugin/form/dock gates passed. Settings/ISA accept+cancel, real action scopes, fallback theme/rendering and clipboard, native ClipboardBridge, extraction cancellation.",
+        "Runtime logs: /tmp/qpansopy-qt6-tests-mrn4cgw2/. QGIS4.2.3/Qt6.12.0/PyQt6.12.0/Python3.14.9 offscreen. Chromium rendering not exercised.",
+        "Full non-runtime suite: 468 passed, 14 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected.",
+        "Changed production Flake8 clean, existing compliance guards pass, stage AST findings zero and inventory remains complete.",
+        "PR draft: docs/pyqt-migration/pr-03-shared-dialogs.md."
+      ],
+      "notes": [
+        "Mantener fallback QTextBrowser cuando no hay WebEngine; probar ambas rutas.",
+        "Retirar fallback QgsAction antiguo y método exec_ del diálogo de extracción.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-03-shared-dialogs.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 908,
+      "pr_draft": "docs/pyqt-migration/pr-03-shared-dialogs.md"
+    },
+    {
+      "id": "04",
+      "slug": "plugin-shell",
+      "title": "Arranque y contenedor del plugin",
+      "status": "done",
+      "branch": "refactor/qt6-04-plugin-shell",
+      "parent_branch": "refactor/qt6-03-shared-dialogs",
+      "base_commit": "d9e20399c674015d118debc7fb9637d248023814",
+      "depends_on": [
+        "03"
+      ],
+      "source_files": [
+        "Q_Pansopy/qpansopy.py"
+      ],
+      "support_files": [
+        "tests/integration/test_qt6_plugin_runtime.py"
+      ],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_dock_sizing_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [
+        "Plugin shell no longer imports qt_compat. QAction imported from QtGui; Qt6 scoped enums cover dock areas/features, event types, layouts, scroll/text/size policies and QGIS message levels.",
+        "Log drag uses globalPosition().toPoint() with real Qt6 mouse event regression tests for normal resizing, 60/260 bounds and release.",
+        "New switching regression verifies existing dock reuse, sibling hiding and live log visibility.",
+        "72 runtime cases passed: shared plugin gate 61, dock sizing 4, shared dialogs 7. Logs /tmp/qpansopy-qt6-tests-prxj3sza/. QGIS4.2.3/Qt6.12.0/PyQt6.12.0/Python3.14.9 offscreen.",
+        "Full non-runtime suite: 468 passed, 14 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected; existing compliance guard passed.",
+        "Configured shell Flake8, test error-level Flake8 and diff checks passed.",
+        "AST audit: no migration blockers. One review_fallback retained intentionally: missing optional KML control, not Qt5 compatibility. Dynamic lookups reviewed for lifecycle/optional controls.",
+        "PR draft docs/pyqt-migration/pr-04-plugin-shell.md. Interactive multi-monitor dragging not tested."
+      ],
+      "notes": [
+        "QAction desde QtGui; enums canónicos; comprobar _IMPORT_ERRORS vacío y registro completo.",
+        "Preservar gestión de docks, anclaje, tamaño, settings y señales.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-04-plugin-shell.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1513,
+      "pr_draft": "docs/pyqt-migration/pr-04-plugin-shell.md"
+    },
+    {
+      "id": "05",
+      "slug": "legacy-gnss-waypoint",
+      "title": "Script antiguo GNSS Waypoint",
+      "status": "done",
+      "branch": "refactor/qt6-05-legacy-gnss-waypoint",
+      "parent_branch": "refactor/qt6-04-plugin-shell",
+      "base_commit": "e5f993f18b7ef6e2af5616b106359f6226e05fc8",
+      "depends_on": [
+        "04"
+      ],
+      "source_files": [
+        "Q_Pansopy/modules/utilities/fix_tolerances/GNSS_waypoint.py"
+      ],
+      "support_files": [
+        "tests/integration/test_legacy_gnss_waypoint_qgis.py"
+      ],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_legacy_gnss_waypoint_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [
+        "Migrated QVariant.String fields to QMetaType.Type.QString and message levels to Qgis.MessageLevel; explicit Qt/QGIS imports replace wildcards.",
+        "Console execution and cleanup preserved; caller iface explicitly bound from globals after wildcard removal exposed F821. No suppressions/baseline increases.",
+        "New runtime script execution tests passed all 3 route orientations before migration and after migration; verify rotated corners/area/centroid/CRS, fields/types/values, style/opacity, messages, refresh and caller globals.",
+        "71 runtime cases passed in separate processes: legacy 3, shared plugin 61, shared dialogs 7. Logs /tmp/qpansopy-qt6-tests-11tdw0ak/. Final iface-binding rerun: 3 passed, /tmp/qpansopy-qt6-tests-uinr09xn/.",
+        "Non-runtime suite: 468 passed, 15 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected. Compliance guards passed.",
+        "Configured Flake8 clean, test error-level Flake8 clean; stage AST findings zero, inventory complete, diff checks clean.",
+        "PR: docs/pyqt-migration/pr-05-legacy-gnss-waypoint.md. Offscreen QGIS4.2.3/Qt6.12.0/PyQt6.12.0/Python3.14.9; manual console and invalid inputs outside scope."
+      ],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "No importar este script para comprobar carga: ejecuta operaciones en import time.",
+        "Crear tests/integration/test_legacy_gnss_waypoint_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-05-legacy-gnss-waypoint.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 101,
+      "pr_draft": "docs/pyqt-migration/pr-05-legacy-gnss-waypoint.md"
+    },
+    {
+      "id": "06",
+      "slug": "pbn-target",
+      "title": "PBN Target",
+      "status": "pending",
+      "branch": "refactor/qt6-06-pbn-target",
+      "parent_branch": "refactor/qt6-05-legacy-gnss-waypoint",
+      "base_commit": null,
+      "depends_on": [
+        "05"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/pbn/qpansopy_pbn_target_dockwidget.py",
+        "Q_Pansopy/modules/pbn/pbn_target.py",
+        "Q_Pansopy/ui/pbn/qpansopy_pbn_target_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_pbn_target.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-06-pbn-target.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 118,
+      "pr_draft": "docs/pyqt-migration/pr-06-pbn-target.md"
+    },
+    {
+      "id": "07",
+      "slug": "legacy-conv-initial-straight",
+      "title": "Script antiguo CONV Initial Straight",
+      "status": "pending",
+      "branch": "refactor/qt6-07-legacy-conv-initial-straight",
+      "parent_branch": "refactor/qt6-06-pbn-target",
+      "base_commit": null,
+      "depends_on": [
+        "06"
+      ],
+      "source_files": [
+        "Q_Pansopy/modules/conv/conv_initial_approach_straight.py"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "No importar este script para comprobar carga: ejecuta operaciones en import time.",
+        "Crear tests/integration/test_legacy_conv_initial_straight_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-07-legacy-conv-initial-straight.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 202,
+      "pr_draft": "docs/pyqt-migration/pr-07-legacy-conv-initial-straight.md"
+    },
+    {
+      "id": "08",
+      "slug": "ndb",
+      "title": "NDB",
+      "status": "pending",
+      "branch": "refactor/qt6-08-ndb",
+      "parent_branch": "refactor/qt6-07-legacy-conv-initial-straight",
+      "base_commit": null,
+      "depends_on": [
+        "07"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/conv/qpansopy_ndb_dockwidget.py",
+        "Q_Pansopy/modules/conv/ndb_approach.py",
+        "Q_Pansopy/ui/conv/qpansopy_ndb_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-08-ndb.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 203,
+      "pr_draft": "docs/pyqt-migration/pr-08-ndb.md"
+    },
+    {
+      "id": "09",
+      "slug": "vor",
+      "title": "VOR",
+      "status": "pending",
+      "branch": "refactor/qt6-09-vor",
+      "parent_branch": "refactor/qt6-08-ndb",
+      "base_commit": null,
+      "depends_on": [
+        "08"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/conv/qpansopy_vor_dockwidget.py",
+        "Q_Pansopy/modules/conv/vor_approach.py",
+        "Q_Pansopy/ui/conv/qpansopy_vor_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_enroute_vor_vor.py",
+        "tests/unit/test_enroute_vor_vor_refined.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_enroute_vor_vor_qgis.py",
+        "tests/integration/test_enroute_vor_vor_refined_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-09-vor.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 203,
+      "pr_draft": "docs/pyqt-migration/pr-09-vor.md"
+    },
+    {
+      "id": "10",
+      "slug": "pbn-enroute-gnss",
+      "title": "PBN Enroute GNSS",
+      "status": "pending",
+      "branch": "refactor/qt6-10-pbn-enroute-gnss",
+      "parent_branch": "refactor/qt6-09-vor",
+      "base_commit": null,
+      "depends_on": [
+        "09"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/pbn/qpansopy_pbn_enroute_gnss_dockwidget.py",
+        "Q_Pansopy/modules/pbn/pbn_enroute_gnss.py",
+        "Q_Pansopy/ui/pbn/qpansopy_pbn_enroute_gnss_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_pbn_enroute_gnss_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-10-pbn-enroute-gnss.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 225,
+      "pr_draft": "docs/pyqt-migration/pr-10-pbn-enroute-gnss.md"
+    },
+    {
+      "id": "11",
+      "slug": "gnss-waypoint",
+      "title": "GNSS Waypoint",
+      "status": "pending",
+      "branch": "refactor/qt6-11-gnss-waypoint",
+      "parent_branch": "refactor/qt6-10-pbn-enroute-gnss",
+      "base_commit": null,
+      "depends_on": [
+        "10"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/pbn/qpansopy_gnss_waypoint_dockwidget.py",
+        "Q_Pansopy/modules/pbn/gnss_waypoint.py",
+        "Q_Pansopy/ui/pbn/qpansopy_gnss_waypoint_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-11-gnss-waypoint.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 272,
+      "pr_draft": "docs/pyqt-migration/pr-11-gnss-waypoint.md"
+    },
+    {
+      "id": "12",
+      "slug": "legacy-holding-navaid",
+      "title": "Script antiguo Conventional Holding Navaid",
+      "status": "pending",
+      "branch": "refactor/qt6-12-legacy-holding-navaid",
+      "parent_branch": "refactor/qt6-11-gnss-waypoint",
+      "base_commit": null,
+      "depends_on": [
+        "11"
+      ],
+      "source_files": [
+        "Q_Pansopy/modules/utilities/conventional_holding_navaid.py"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "No importar este script para comprobar carga: ejecuta operaciones en import time.",
+        "Crear tests/integration/test_legacy_holding_navaid_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-12-legacy-holding-navaid.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 285,
+      "pr_draft": "docs/pyqt-migration/pr-12-legacy-holding-navaid.md"
+    },
+    {
+      "id": "13",
+      "slug": "legacy-rnav-missed",
+      "title": "Script antiguo RNAV Missed <15 NM",
+      "status": "pending",
+      "branch": "refactor/qt6-13-legacy-rnav-missed",
+      "parent_branch": "refactor/qt6-12-legacy-holding-navaid",
+      "base_commit": null,
+      "depends_on": [
+        "12"
+      ],
+      "source_files": [
+        "Q_Pansopy/modules/pbn/rnav1_2_missed_less_15nm.py"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "No importar este script para comprobar carga: ejecuta operaciones en import time.",
+        "Crear tests/integration/test_legacy_rnav_missed_qgis.py con iface/datos controlados y añadirlo a runtime_tests.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-13-legacy-rnav-missed.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 305,
+      "pr_draft": "docs/pyqt-migration/pr-13-legacy-rnav-missed.md"
+    },
+    {
+      "id": "14",
+      "slug": "ama-grid",
+      "title": "AMA Grid",
+      "status": "pending",
+      "branch": "refactor/qt6-14-ama-grid",
+      "parent_branch": "refactor/qt6-13-legacy-rnav-missed",
+      "base_commit": null,
+      "depends_on": [
+        "13"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_ama_grid_dockwidget.py",
+        "Q_Pansopy/modules/utilities/ama_grid.py",
+        "Q_Pansopy/ui/utilities/qpansopy_ama_grid_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/integration/test_ama_grid_qgis.py",
+        "tests/unit/test_ama_grid.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-14-ama-grid.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 331,
+      "pr_draft": "docs/pyqt-migration/pr-14-ama-grid.md"
+    },
+    {
+      "id": "15",
+      "slug": "object-selection",
+      "title": "Object Selection",
+      "status": "pending",
+      "branch": "refactor/qt6-15-object-selection",
+      "parent_branch": "refactor/qt6-14-ama-grid",
+      "base_commit": null,
+      "depends_on": [
+        "14"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_object_selection_dockwidget.py",
+        "Q_Pansopy/modules/utilities/selection_of_objects.py",
+        "Q_Pansopy/ui/utilities/qpansopy_object_selection_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/integration/test_selection_of_objects_table.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_selection_of_objects_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-15-object-selection.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 385,
+      "pr_draft": "docs/pyqt-migration/pr-15-object-selection.md"
+    },
+    {
+      "id": "16",
+      "slug": "feature-merge",
+      "title": "Feature Merge",
+      "status": "pending",
+      "branch": "refactor/qt6-16-feature-merge",
+      "parent_branch": "refactor/qt6-15-object-selection",
+      "base_commit": null,
+      "depends_on": [
+        "15"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_feature_merge_dockwidget.py",
+        "Q_Pansopy/modules/utilities/feature_merge.py",
+        "Q_Pansopy/ui/utilities/qpansopy_feature_merge_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Verificar acción directa activa y también dock/UI antiguos incluidos en el paquete.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-16-feature-merge.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 395,
+      "pr_draft": "docs/pyqt-migration/pr-16-feature-merge.md"
+    },
+    {
+      "id": "17",
+      "slug": "dme-tolerance",
+      "title": "DME Tolerance",
+      "status": "pending",
+      "branch": "refactor/qt6-17-dme-tolerance",
+      "parent_branch": "refactor/qt6-16-feature-merge",
+      "base_commit": null,
+      "depends_on": [
+        "16"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/conv/qpansopy_dme_tolerance_dockwidget.py",
+        "Q_Pansopy/modules/conv/dme_tolerance.py",
+        "Q_Pansopy/ui/conv/qpansopy_dme_tolerance_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_dme_tolerance_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-17-dme-tolerance.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 408,
+      "pr_draft": "docs/pyqt-migration/pr-17-dme-tolerance.md"
+    },
+    {
+      "id": "18",
+      "slug": "dme-dme-coverage",
+      "title": "DME/DME Coverage",
+      "status": "pending",
+      "branch": "refactor/qt6-18-dme-dme-coverage",
+      "parent_branch": "refactor/qt6-17-dme-tolerance",
+      "base_commit": null,
+      "depends_on": [
+        "17"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/pbn/qpansopy_dme_dme_coverage_dockwidget.py",
+        "Q_Pansopy/modules/pbn/dme_dme_coverage.py",
+        "Q_Pansopy/ui/pbn/qpansopy_dme_dme_coverage_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_dme_dme_coverage_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-18-dme-dme-coverage.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 409,
+      "pr_draft": "docs/pyqt-migration/pr-18-dme-dme-coverage.md"
+    },
+    {
+      "id": "19",
+      "slug": "conv-initial",
+      "title": "CONV Initial",
+      "status": "pending",
+      "branch": "refactor/qt6-19-conv-initial",
+      "parent_branch": "refactor/qt6-18-dme-dme-coverage",
+      "base_commit": null,
+      "depends_on": [
+        "18"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/conv/qpansopy_conv_initial_dockwidget.py",
+        "Q_Pansopy/modules/conv/conv_initial_approach.py",
+        "Q_Pansopy/ui/conv/qpansopy_conv_initial_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-19-conv-initial.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 429,
+      "pr_draft": "docs/pyqt-migration/pr-19-conv-initial.md"
+    },
+    {
+      "id": "20",
+      "slug": "overhead-tolerance",
+      "title": "Overhead Tolerance",
+      "status": "pending",
+      "branch": "refactor/qt6-20-overhead-tolerance",
+      "parent_branch": "refactor/qt6-19-conv-initial",
+      "base_commit": null,
+      "depends_on": [
+        "19"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/conv/qpansopy_overhead_tolerance_dockwidget.py",
+        "Q_Pansopy/modules/conv/overhead_tolerance.py",
+        "Q_Pansopy/ui/conv/qpansopy_overhead_tolerance_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_overhead_tolerance.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_overhead_tolerance_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-20-overhead-tolerance.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 471,
+      "pr_draft": "docs/pyqt-migration/pr-20-overhead-tolerance.md"
+    },
+    {
+      "id": "21",
+      "slug": "point-filter",
+      "title": "Point Filter",
+      "status": "pending",
+      "branch": "refactor/qt6-21-point-filter",
+      "parent_branch": "refactor/qt6-20-overhead-tolerance",
+      "base_commit": null,
+      "depends_on": [
+        "20"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_point_filter_dockwidget.py",
+        "Q_Pansopy/modules/utilities/point_filter.py",
+        "Q_Pansopy/ui/utilities/qpansopy_point_filter_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-21-point-filter.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 480,
+      "pr_draft": "docs/pyqt-migration/pr-21-point-filter.md"
+    },
+    {
+      "id": "22",
+      "slug": "radial-bearing",
+      "title": "Radial/Bearing Intersection",
+      "status": "pending",
+      "branch": "refactor/qt6-22-radial-bearing",
+      "parent_branch": "refactor/qt6-21-point-filter",
+      "base_commit": null,
+      "depends_on": [
+        "21"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/conv/qpansopy_radial_bearing_intersection_dockwidget.py",
+        "Q_Pansopy/modules/conv/radial_bearing_intersection.py",
+        "Q_Pansopy/ui/conv/qpansopy_radial_bearing_intersection_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_radial_bearing_intersection.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_radial_bearing_intersection_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-22-radial-bearing.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 552,
+      "pr_draft": "docs/pyqt-migration/pr-22-radial-bearing.md"
+    },
+    {
+      "id": "23",
+      "slug": "enroute-vor-vor",
+      "title": "Enroute VOR/VOR",
+      "status": "pending",
+      "branch": "refactor/qt6-23-enroute-vor-vor",
+      "parent_branch": "refactor/qt6-22-radial-bearing",
+      "base_commit": null,
+      "depends_on": [
+        "22"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/conv/qpansopy_enroute_vor_vor_dockwidget.py",
+        "Q_Pansopy/modules/conv/_enroute_output.py",
+        "Q_Pansopy/modules/conv/enroute_vor_vor.py",
+        "Q_Pansopy/modules/conv/enroute_vor_vor_refined.py",
+        "Q_Pansopy/ui/conv/qpansopy_enroute_vor_vor_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_enroute_vor_vor.py",
+        "tests/unit/test_enroute_vor_vor_refined.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_enroute_vor_vor_qgis.py",
+        "tests/integration/test_enroute_vor_vor_refined_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-23-enroute-vor-vor.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 638,
+      "pr_draft": "docs/pyqt-migration/pr-23-enroute-vor-vor.md"
+    },
+    {
+      "id": "24",
+      "slug": "circling",
+      "title": "Circling",
+      "status": "pending",
+      "branch": "refactor/qt6-24-circling",
+      "parent_branch": "refactor/qt6-23-enroute-vor-vor",
+      "base_commit": null,
+      "depends_on": [
+        "23"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_circling_dockwidget.py",
+        "Q_Pansopy/modules/utilities/circling.py",
+        "Q_Pansopy/ui/utilities/qpansopy_circling_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_circling_complete_table.py",
+        "tests/unit/test_circling_math.py",
+        "tests/unit/test_circling_ui_defaults.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-24-circling.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 718,
+      "pr_draft": "docs/pyqt-migration/pr-24-circling.md"
+    },
+    {
+      "id": "25",
+      "slug": "basic-ils",
+      "title": "Basic ILS",
+      "status": "pending",
+      "branch": "refactor/qt6-25-basic-ils",
+      "parent_branch": "refactor/qt6-24-circling",
+      "base_commit": null,
+      "depends_on": [
+        "24"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/ils/qpansopy_ils_dockwidget.py",
+        "Q_Pansopy/modules/basic_ils.py",
+        "Q_Pansopy/ui/ils/qpansopy_ils_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/integration/test_basic_ils_table.py",
+        "tests/unit/test_basic_ils_missed_approach.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-25-basic-ils.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 903,
+      "pr_draft": "docs/pyqt-migration/pr-25-basic-ils.md"
+    },
+    {
+      "id": "26",
+      "slug": "sid-initial",
+      "title": "SID Initial",
+      "status": "pending",
+      "branch": "refactor/qt6-26-sid-initial",
+      "parent_branch": "refactor/qt6-25-basic-ils",
+      "base_commit": null,
+      "depends_on": [
+        "25"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/departures/qpansopy_sid_initial_dockwidget.py",
+        "Q_Pansopy/modules/departures/sid_initial_climb.py",
+        "Q_Pansopy/ui/departures/qpansopy_sid_initial_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_sid_initial_isa_dialog.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_sid_initial_marker_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-26-sid-initial.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 996,
+      "pr_draft": "docs/pyqt-migration/pr-26-sid-initial.md"
+    },
+    {
+      "id": "27",
+      "slug": "wind-spiral",
+      "title": "Wind Spiral",
+      "status": "pending",
+      "branch": "refactor/qt6-27-wind-spiral",
+      "parent_branch": "refactor/qt6-26-sid-initial",
+      "base_commit": null,
+      "depends_on": [
+        "26"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_wind_spiral_dockwidget.py",
+        "Q_Pansopy/modules/wind_spiral.py",
+        "Q_Pansopy/ui/utilities/qpansopy_wind_spiral_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/integration/test_wind_spiral_table.py",
+        "tests/unit/test_wind_spiral_parameters.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-27-wind-spiral.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1016,
+      "pr_draft": "docs/pyqt-migration/pr-27-wind-spiral.md"
+    },
+    {
+      "id": "28",
+      "slug": "omnidirectional-sid",
+      "title": "Omnidirectional SID",
+      "status": "pending",
+      "branch": "refactor/qt6-28-omnidirectional-sid",
+      "parent_branch": "refactor/qt6-27-wind-spiral",
+      "base_commit": null,
+      "depends_on": [
+        "27"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/departures/qpansopy_omnidirectional_dockwidget.py",
+        "Q_Pansopy/modules/departures/omnidirectional_sid.py",
+        "Q_Pansopy/ui/departures/qpansopy_omnidirectional_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_omnidirectional_sid_parameters.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-28-omnidirectional-sid.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1035,
+      "pr_draft": "docs/pyqt-migration/pr-28-omnidirectional-sid.md"
+    },
+    {
+      "id": "29",
+      "slug": "primary-assessment",
+      "title": "Primary Area Assessment",
+      "status": "pending",
+      "branch": "refactor/qt6-29-primary-assessment",
+      "parent_branch": "refactor/qt6-28-omnidirectional-sid",
+      "base_commit": null,
+      "depends_on": [
+        "28"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_primary_area_assessment_dockwidget.py",
+        "Q_Pansopy/modules/utilities/primary_area_assessment.py",
+        "Q_Pansopy/ui/utilities/qpansopy_primary_area_assessment_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_primary_area_assessment.py",
+        "tests/unit/test_slope_primary_area_assessment.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_primary_area_assessment_qgis.py",
+        "tests/integration/test_slope_primary_area_assessment_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-29-primary-assessment.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1078,
+      "pr_draft": "docs/pyqt-migration/pr-29-primary-assessment.md"
+    },
+    {
+      "id": "30",
+      "slug": "slope-assessment",
+      "title": "Slope Primary Area Assessment",
+      "status": "pending",
+      "branch": "refactor/qt6-30-slope-assessment",
+      "parent_branch": "refactor/qt6-29-primary-assessment",
+      "base_commit": null,
+      "depends_on": [
+        "29"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_slope_primary_area_assessment_dockwidget.py",
+        "Q_Pansopy/modules/utilities/slope_primary_area_assessment.py",
+        "Q_Pansopy/ui/utilities/qpansopy_slope_primary_area_assessment_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/unit/test_slope_primary_area_assessment.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_slope_primary_area_assessment_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Depende de Primary ya migrado; justificar excepción al orden por tamaño.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-30-slope-assessment.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 623,
+      "pr_draft": "docs/pyqt-migration/pr-30-slope-assessment.md"
+    },
+    {
+      "id": "31",
+      "slug": "secondary-assessment",
+      "title": "Secondary Area Assessment",
+      "status": "pending",
+      "branch": "refactor/qt6-31-secondary-assessment",
+      "parent_branch": "refactor/qt6-30-slope-assessment",
+      "base_commit": null,
+      "depends_on": [
+        "30"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_secondary_area_assessment_dockwidget.py",
+        "Q_Pansopy/modules/utilities/secondary_area_assessment.py",
+        "Q_Pansopy/ui/utilities/qpansopy_secondary_area_assessment_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_secondary_area_assessment_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Depende de Primary ya migrado; justificar excepción al orden por tamaño.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-31-secondary-assessment.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 876,
+      "pr_draft": "docs/pyqt-migration/pr-31-secondary-assessment.md"
+    },
+    {
+      "id": "32",
+      "slug": "holding",
+      "title": "Holding",
+      "status": "pending",
+      "branch": "refactor/qt6-32-holding",
+      "parent_branch": "refactor/qt6-31-secondary-assessment",
+      "base_commit": null,
+      "depends_on": [
+        "31"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_holding_dockwidget.py",
+        "Q_Pansopy/modules/utilities/holding.py",
+        "Q_Pansopy/ui/utilities/qpansopy_holding_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/integration/test_holding_table_action_qgis.py",
+        "tests/unit/test_holding_compat.py",
+        "tests/unit/test_holding_complete_table.py",
+        "tests/unit/test_holding_point_e.py",
+        "tests/unit/test_holding_table_action.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_holding_point_e_qgis.py",
+        "tests/integration/test_holding_preview_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Revalidar helpers TAS compartidos con Wind Spiral, migrado en 27.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-32-holding.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1113,
+      "pr_draft": "docs/pyqt-migration/pr-32-holding.md"
+    },
+    {
+      "id": "33",
+      "slug": "oas-ils",
+      "title": "OAS ILS",
+      "status": "pending",
+      "branch": "refactor/qt6-33-oas-ils",
+      "parent_branch": "refactor/qt6-32-holding",
+      "base_commit": null,
+      "depends_on": [
+        "32"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/ils/qpansopy_oas_ils_dockwidget.py",
+        "Q_Pansopy/modules/oas_ils.py",
+        "Q_Pansopy/ui/ils/qpansopy_oas_ils_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/integration/test_oas_ils_table.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-33-oas-ils.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1133,
+      "pr_draft": "docs/pyqt-migration/pr-33-oas-ils.md"
+    },
+    {
+      "id": "34",
+      "slug": "vss",
+      "title": "VSS Straight/LOC",
+      "status": "pending",
+      "branch": "refactor/qt6-34-vss",
+      "parent_branch": "refactor/qt6-33-oas-ils",
+      "base_commit": null,
+      "depends_on": [
+        "33"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/utilities/qpansopy_vss_dockwidget.py",
+        "Q_Pansopy/modules/vss_loc.py",
+        "Q_Pansopy/modules/vss_reference.py",
+        "Q_Pansopy/modules/vss_straight.py",
+        "Q_Pansopy/ui/utilities/qpansopy_vss_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [
+        "tests/integration/test_vss_tables.py"
+      ],
+      "runtime_tests": [
+        "tests/integration/test_vss_reversal_qgis.py",
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-34-vss.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1320,
+      "pr_draft": "docs/pyqt-migration/pr-34-vss.md"
+    },
+    {
+      "id": "35",
+      "slug": "lnav",
+      "title": "LNAV y segmentos",
+      "status": "pending",
+      "branch": "refactor/qt6-35-lnav",
+      "parent_branch": "refactor/qt6-34-vss",
+      "base_commit": null,
+      "depends_on": [
+        "34"
+      ],
+      "source_files": [
+        "Q_Pansopy/dockwidgets/pbn/qpansopy_lnav_dockwidget.py",
+        "Q_Pansopy/modules/pbn/_lnav_common.py",
+        "Q_Pansopy/modules/pbn/lnav_final_approach.py",
+        "Q_Pansopy/modules/pbn/lnav_initial_approach.py",
+        "Q_Pansopy/modules/pbn/lnav_intermediate_approach.py",
+        "Q_Pansopy/modules/pbn/lnav_missed_approach.py",
+        "Q_Pansopy/modules/pbn/pbn_rnav1_arrival.py",
+        "Q_Pansopy/modules/pbn/rnav_sid_missed.py",
+        "Q_Pansopy/ui/pbn/qpansopy_lnav_dockwidget.ui"
+      ],
+      "support_files": [],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
+        "Crear prueba runtime nominal con capas en memoria si las pruebas compartidas no verifican la salida de esta herramienta.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-35-lnav.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 1423,
+      "pr_draft": "docs/pyqt-migration/pr-35-lnav.md"
+    },
+    {
+      "id": "36",
+      "slug": "cleanup",
+      "title": "Auditoría final y eliminación del shim",
+      "status": "pending",
+      "branch": "refactor/qt6-36-cleanup",
+      "parent_branch": "refactor/qt6-35-lnav",
+      "base_commit": null,
+      "depends_on": [
+        "35"
+      ],
+      "source_files": [],
+      "support_files": [
+        "README.md",
+        "TESTING.md",
+        "tests/conftest.py"
+      ],
+      "unit_tests": [],
+      "runtime_tests": [
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_qt6_shared_dialogs_qgis.py"
+      ],
+      "evidence": [],
+      "notes": [
+        "Eliminar qt_compat.py y registrar deleted_files aquí; retirar stubs/imports operativos del shim.",
+        "Auditar todos los archivos, incluyendo import *, getattr y accesos dinámicos que el detector no cubre.",
+        "Cargar las 27 herramientas y formularios; ejecutar suite runtime por archivo y documentar fallos previos.",
+        "Redactar el borrador PR local al cerrar: docs/pyqt-migration/pr-36-cleanup.md; no añadir docs/ al commit."
+      ],
+      "python_lines": 0,
+      "pr_draft": "docs/pyqt-migration/pr-36-cleanup.md"
+    }
+  ]
+}
