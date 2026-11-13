@@ -401,3 +401,20 @@ def get_desktop_path() -> str:
     the result as a file-system path continues to work unchanged.
     """
     return str(pathlib.Path.home() / "Desktop")
+
+
+def preseed_active_layer(iface, combo_box, geom_type) -> None:
+    """Pre-select iface.activeLayer() in combo_box if its geometry matches geom_type.
+
+    geom_type is a Qgis.GeometryType member.
+    All errors are silently swallowed so a missing active layer never breaks __init__.
+    """
+    try:
+        from qgis.core import QgsVectorLayer
+        active = iface.activeLayer()
+        if (active
+                and isinstance(active, QgsVectorLayer)
+                and active.geometryType() == geom_type):
+            combo_box.setLayer(active)
+    except Exception:  # nosec B110 - best-effort active-layer preseed; must not block combo box setup
+        pass

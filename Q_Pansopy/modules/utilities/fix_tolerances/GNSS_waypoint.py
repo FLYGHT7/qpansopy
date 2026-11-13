@@ -3,17 +3,17 @@ GNSS Waypoint
 '''
 
 myglobals = set(globals().keys())
+iface = globals()['iface']  # Supplied by the QGIS console; preserve the caller's interface.
 
-from qgis.core import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import QVariant
-from math import *
+from qgis.core import (
+    Qgis, QgsProject, QgsVectorLayer, QgsPoint, QgsField,
+    QgsRectangle, QgsGeometry, QgsFeature,
+)
+from qgis.PyQt.QtCore import QMetaType
+from qgis.PyQt.QtGui import QColor
 
 
-from qgis.core import Qgis
-iface.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint", level=Qgis.Info)
+iface.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint", level=Qgis.MessageLevel.Info)
 
 XTT = 1.0  # XTT siempre mas que ATT
 
@@ -49,8 +49,8 @@ azimuth =angle0
 
 # Create memory layer
 v_layer = QgsVectorLayer("Polygon?crs="+map_srid, "Tolerances", "memory")
-XTTn = QgsField( 'XTT', QVariant.String)
-ATTn = QgsField( 'ATT', QVariant.String)
+XTTn = QgsField( 'XTT', QMetaType.Type.QString)
+ATTn = QgsField( 'ATT', QMetaType.Type.QString)
 v_layer.dataProvider().addAttributes([XTTn])
 v_layer.dataProvider().addAttributes([ATTn])
 v_layer.updateFields()
@@ -92,7 +92,7 @@ v_layer.triggerRepaint()
 QgsProject.instance().addMapLayers([v_layer])
 
 
-iface.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint Finished", level=Qgis.Success)
+iface.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint Finished", level=Qgis.MessageLevel.Success)
 
 set(globals().keys()).difference(myglobals)
 
