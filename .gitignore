@@ -16,19 +16,21 @@ htmlcov/
 .coverage
 tests/results/
 
-#agents skills
+# Local agent and development configuration
 .agents/
 .claude/
 .augment/
+.aws/
 .codex
 CLAUDE.md
 skills-lock.json
 .idea/
 
-#logs
+# Local plans and drafts
+plans/qt6-only/
+graphify-out/
 doc/
 docs/
 DEVELOPMENT_PLAN.md
 
 .venv/
-.idea/
