@@ -2,12 +2,12 @@
 Conventional NDB Approach Areas
 '''
 
-from qgis.core import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import QVariant
-from math import *
+from qgis.core import (
+    Qgis, QgsProject, QgsPoint, QgsPointXY, QgsGeometry, QgsVectorLayer,
+    QgsField, QgsFeature, QgsPolygon, QgsLineString,
+)
+from qgis.PyQt.QtCore import QMetaType
+from math import tan, radians
 import os
 
 
@@ -22,7 +22,7 @@ def run_ndb_approach(iface, routing_layer):
         # Check if there are selected features
         selection = routing_layer.selectedFeatures()
         if not selection:
-            iface.messageBar().pushMessage("No features selected", level=Qgis.Critical)
+            iface.messageBar().pushMessage("No features selected", level=Qgis.MessageLevel.Critical)
             return False
 
         for feat in selection:
@@ -33,7 +33,7 @@ def run_ndb_approach(iface, routing_layer):
                 azimuth = start_point.azimuth(end_point)
                 length = feat.geometry().length()
             else:
-                iface.messageBar().pushMessage("Invalid geometry", level=Qgis.Warning)
+                iface.messageBar().pushMessage("Invalid geometry", level=Qgis.MessageLevel.Warning)
                 continue
 
             # Template Max Length is 15 NM
@@ -71,7 +71,7 @@ def run_ndb_approach(iface, routing_layer):
 
             # Create memory layer for polygons
             v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "NDB Approach Areas", "memory")
-            myField = QgsField('Symbol', QVariant.String)
+            myField = QgsField('Symbol', QMetaType.Type.QString)
             v_layer.dataProvider().addAttributes([myField])
             v_layer.updateFields()
 
@@ -113,10 +113,10 @@ def run_ndb_approach(iface, routing_layer):
                 sc = 200000
             canvas.zoomScale(sc)
 
-            iface.messageBar().pushMessage("QPANSOPY:", "NDB Approach Areas created successfully", level=Qgis.Success)
+            iface.messageBar().pushMessage("QPANSOPY:", "NDB Approach Areas created successfully", level=Qgis.MessageLevel.Success)
 
         return True
 
     except Exception as e:
-        iface.messageBar().pushMessage("Error creating NDB areas", str(e), level=Qgis.Critical)
+        iface.messageBar().pushMessage("Error creating NDB areas", str(e), level=Qgis.MessageLevel.Critical)
         return False
