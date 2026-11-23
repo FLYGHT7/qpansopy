@@ -10,10 +10,11 @@ pytestmark = pytest.mark.qgis_runtime
 from qgis.core import (  # noqa: E402
     Qgis, QgsApplication, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
     QgsDistanceArea, QgsFeature, QgsGeometry, QgsPointXY, QgsProject,
-    QgsVectorLayer,
+    QgsMapLayerProxyModel, QgsVectorLayer,
 )
 from qgis.gui import QgsMapCanvas  # noqa: E402
-from qgis.PyQt.QtCore import QVariant  # noqa: E402
+from qgis.PyQt.QtCore import QMetaType  # noqa: E402
+from qgis.PyQt.QtGui import QColor  # noqa: E402
 from qgis.PyQt.QtWidgets import QMainWindow  # noqa: E402
 
 from Q_Pansopy.modules.conv.dme_tolerance import (  # noqa: E402
@@ -205,7 +206,18 @@ def test_runner_attributes_and_single_feature_fallback(points, nav_type, rotate,
     feature = next(output.getFeatures())
     assert [field.name() for field in output.fields()] == [
         'Symbol', 'Distance_NM', 'Sector_Angle', 'DME_Tolerance_NM']
-    assert output.fields().field('DME_Tolerance_NM').type() == QVariant.Double
+    assert [field.type() for field in output.fields()] == [
+        QMetaType.Type.QString, QMetaType.Type.Double,
+        QMetaType.Type.Double, QMetaType.Type.Double]
+    assert output.name() == f"{nav_type.replace('/', '')}_tolerance"
+    assert output.geometryType() == Qgis.GeometryType.Polygon
+    symbol = output.renderer().symbol()
+    assert symbol.opacity() == pytest.approx(0.3)
+    assert symbol.color() == QColor('blue')
+    assert iface.bar.messages == [(
+        ('QPANSOPY:', f'{nav_type} Tolerance calculated successfully'),
+        {'level': Qgis.MessageLevel.Success},
+    )]
     assert feature['Symbol'] == f'{nav_type} Tolerance'
     assert feature['Distance_NM'] == round(10000 / 1852, 3)
     assert feature['Sector_Angle'] == rotate
@@ -371,8 +383,57 @@ def test_dock_warns_and_clears_preview_without_creating_layer(dock, points, fail
     assert dock.iface.bar.messages == []  # Preview does not repeatedly warn.
     dock.calculate()
     assert _outputs() == []
-    assert dock.iface.bar.messages[-1][1]['level'] == Qgis.Warning
+    assert dock.iface.bar.messages[-1][1]['level'] == Qgis.MessageLevel.Warning
     message = dock.iface.bar.messages[-1][0][1]
     assert message in dock.logTextEdit.toPlainText()
     if failure == 'divergence':
         assert '90' in message and '23' in message
+
+
+def test_runner_reports_multiple_selected_dme_as_warning(points):
+    dme = _point_layer('DME multiple', [(500000, 1600000), (500100, 1600000)])
+    iface = _Iface()
+    assert not run_dme_tolerance(iface, dme, points[2])
+    assert _outputs() == []
+    assert iface.bar.messages == [(
+        ('QPANSOPY:', 'More than one feature is selected. Please select only one feature.'),
+        {'level': Qgis.MessageLevel.Warning},
+    )]
+
+
+def test_dock_filters_preview_band_and_success_message(dock, points):
+    for combo in (dock.pointLayerComboBox, dock.fixLayerComboBox, dock.trackingLayerComboBox):
+        assert combo.filters() == QgsMapLayerProxyModel.Filter.PointLayer
+    preview = dock._preview_band.asGeometry()
+    assert not preview.isEmpty()
+    assert preview.type() == Qgis.GeometryType.Polygon
+    dock.calculate()
+    assert dock._preview_band.asGeometry().isEmpty()
+    assert dock.logTextEdit.toPlainText().splitlines()[-1] == \
+        'VOR/DME Tolerance calculation completed successfully'
+    assert dock.iface.bar.messages == [(
+        ('QPANSOPY:', 'VOR/DME Tolerance calculated successfully'),
+        {'level': Qgis.MessageLevel.Success},
+    )]
+    dock.hide()
+    dock.show()
+    assert dock._preview_band.asGeometry().type() == Qgis.GeometryType.Polygon
+
+
+@pytest.mark.parametrize('active', ['fix_point', 'polygon'])
+def test_dock_preseeds_point_combos_from_active_layer(points, active):
+    polygon = QgsVectorLayer('Polygon?crs=EPSG:32616', 'Area', 'memory')
+    QgsProject.instance().addMapLayer(polygon)
+    iface = _Iface()
+    active_layer = points[2] if active == 'fix_point' else polygon
+    iface.activeLayer = lambda: active_layer
+    widget = QPANSOPYDMEToleranceDockWidget(iface)
+    try:
+        # A polygon active layer is ignored; the combos keep their first point layer (DME).
+        expected = points[2] if active == 'fix_point' else points[0]
+        assert widget.pointLayerComboBox.currentLayer() is expected
+        assert widget.fixLayerComboBox.currentLayer() is expected
+        assert widget.trackingLayerComboBox.currentLayer() is None
+    finally:
+        widget.close()
+        iface.window.close()

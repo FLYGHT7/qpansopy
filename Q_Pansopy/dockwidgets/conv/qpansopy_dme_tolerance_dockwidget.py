@@ -5,13 +5,10 @@ from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtGui import QColor
 from qgis.gui import QgsRubberBand
 from qgis.core import (
-    QgsProject, QgsDistanceArea, QgsCsException, Qgis,
+    QgsProject, QgsDistanceArea, QgsCsException, Qgis, QgsMapLayerProxyModel,
 )
 from ...modules.conv.dme_tolerance import build_tolerance_geometry, _geom_to_map_crs
-from ...qt_compat import (
-    MLPM_PointLayer,
-    preseed_active_layer, Qgis_GeomType_Point, Qgis_GeomType_Polygon,
-)
+from ...utils import preseed_active_layer
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'conv',
@@ -44,18 +41,18 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.toleranceTypeComboBox.addItem(nav_type, (default_rotate, non_collocated))
         self.toleranceTypeComboBox.currentIndexChanged.connect(self._on_tolerance_type_changed)
 
-        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
-        self.fixLayerComboBox.setFilters(MLPM_PointLayer)
-        self.trackingLayerComboBox.setFilters(MLPM_PointLayer)
+        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PointLayer)
+        self.fixLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PointLayer)
+        self.trackingLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PointLayer)
         self.trackingLayerComboBox.setAllowEmptyLayer(True)
         self.trackingLayerComboBox.setLayer(None)
-        preseed_active_layer(iface, self.pointLayerComboBox, Qgis_GeomType_Point)
-        preseed_active_layer(iface, self.fixLayerComboBox, Qgis_GeomType_Point)
+        preseed_active_layer(iface, self.pointLayerComboBox, Qgis.GeometryType.Point)
+        preseed_active_layer(iface, self.fixLayerComboBox, Qgis.GeometryType.Point)
 
         self.calculateButton.clicked.connect(self.calculate)
 
         # Live preview rubber band
-        self._preview_band = QgsRubberBand(iface.mapCanvas(), Qgis_GeomType_Polygon)
+        self._preview_band = QgsRubberBand(iface.mapCanvas(), Qgis.GeometryType.Polygon)
         self._preview_band.setColor(QColor(0, 100, 255, 80))
         self._preview_band.setStrokeColor(QColor(0, 100, 255, 200))
         self._preview_band.setWidth(1)
@@ -120,7 +117,7 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def _clear_preview(self):
         if self._preview_band:
-            self._preview_band.reset(Qgis_GeomType_Polygon)
+            self._preview_band.reset(Qgis.GeometryType.Polygon)
 
     def log(self, message):
         self.logTextEdit.append(message)
@@ -171,7 +168,7 @@ class QPANSOPYDMEToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def _warn(self, message):
         self._clear_preview()
         self.log(f'Warning: {message}')
-        self.iface.messageBar().pushMessage('QPANSOPY', message, level=Qgis.Warning)
+        self.iface.messageBar().pushMessage('QPANSOPY', message, level=Qgis.MessageLevel.Warning)
 
     def calculate(self):
         navid_layer = self.pointLayerComboBox.currentLayer()

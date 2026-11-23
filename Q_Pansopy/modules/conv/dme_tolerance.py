@@ -8,7 +8,7 @@ from qgis.core import (
     QgsPoint, QgsLineString, QgsPolygon, QgsCircle, QgsField, Qgis,
     QgsDistanceArea, QgsCoordinateTransform, QgsPointXY,
 )
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtGui import QColor
 from ...utils import get_selected_feature
 
@@ -137,7 +137,7 @@ def run_dme_tolerance(iface, navid_layer, fix_layer, params=None, tracking_layer
     project = QgsProject.instance()
 
     def show_error(msg):
-        iface.messageBar().pushMessage("QPANSOPY:", msg, level=Qgis.Warning)
+        iface.messageBar().pushMessage("QPANSOPY:", msg, level=Qgis.MessageLevel.Warning)
 
     navid_feature = get_selected_feature(navid_layer, show_error)
     if navid_feature is None:
@@ -171,10 +171,10 @@ def run_dme_tolerance(iface, navid_layer, fix_layer, params=None, tracking_layer
     v_layer = QgsVectorLayer(f"Polygon?crs={map_srid}", layer_name, "memory")
     pr = v_layer.dataProvider()
     pr.addAttributes([
-        QgsField('Symbol', QVariant.String),
-        QgsField('Distance_NM', QVariant.Double),
-        QgsField('Sector_Angle', QVariant.Double),
-        QgsField('DME_Tolerance_NM', QVariant.Double),
+        QgsField('Symbol', QMetaType.Type.QString),
+        QgsField('Distance_NM', QMetaType.Type.Double),
+        QgsField('Sector_Angle', QMetaType.Type.Double),
+        QgsField('DME_Tolerance_NM', QMetaType.Type.Double),
     ])
     v_layer.updateFields()
 
@@ -190,6 +190,6 @@ def run_dme_tolerance(iface, navid_layer, fix_layer, params=None, tracking_layer
 
     QgsProject.instance().addMapLayer(v_layer)
     iface.messageBar().pushMessage(
-        "QPANSOPY:", f"{nav_type} Tolerance calculated successfully", level=Qgis.Success
+        "QPANSOPY:", f"{nav_type} Tolerance calculated successfully", level=Qgis.MessageLevel.Success
     )
     return True
