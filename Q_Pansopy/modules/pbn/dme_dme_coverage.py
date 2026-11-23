@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Callable
 
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (
     QgsCoordinateReferenceSystem,
@@ -204,12 +204,12 @@ def _build_outputs(point_a, point_b, d_m, fid_a, fid_b,
     coverage.convertToMultiType()
 
     fields = [
-        QgsField("A_FID", QVariant.LongLong),
-        QgsField("B_FID", QVariant.LongLong),
-        QgsField("D_NM", QVariant.Double),
-        QgsField("DOC_A_NM", QVariant.Double),
-        QgsField("DOC_B_NM", QVariant.Double),
-        QgsField("DOC_FIELD", QVariant.String),
+        QgsField("A_FID", QMetaType.Type.LongLong),
+        QgsField("B_FID", QMetaType.Type.LongLong),
+        QgsField("D_NM", QMetaType.Type.Double),
+        QgsField("DOC_A_NM", QMetaType.Type.Double),
+        QgsField("DOC_B_NM", QMetaType.Type.Double),
+        QgsField("DOC_FIELD", QMetaType.Type.QString),
     ]
     coverage_layer = _new_layer(
         "MultiPolygon", "DME_DME_Coverage", local_crs, fields)
@@ -235,8 +235,8 @@ def _build_outputs(point_a, point_b, d_m, fid_a, fid_b,
     construction_layer = _new_layer(
         "LineString", "DME_DME_Construction", local_crs,
         [
-            QgsField("Role", QVariant.String),
-            QgsField("Radius_NM", QVariant.Double),
+            QgsField("Role", QMetaType.Type.QString),
+            QgsField("Radius_NM", QMetaType.Type.Double),
         ],
     )
     line_features = [
@@ -253,7 +253,7 @@ def _build_outputs(point_a, point_b, d_m, fid_a, fid_b,
     construction_layer.updateExtents()
 
     excluded_layer = _new_layer("MultiPolygon", "DME_DME_Excluded_Areas",
-                                local_crs, [QgsField("Role", QVariant.String)])
+                                local_crs, [QgsField("Role", QMetaType.Type.QString)])
     excluded_features = [
         _add_feature(excluded_layer, geometry, [role])
         for role, geometry in [
@@ -336,5 +336,5 @@ def run_dme_dme_coverage(iface, dme_layer, params=None) -> bool:
         log("Added DOC, radius-D, 30°/150°, 1 NM, D and excluded-area layers.")
     iface.messageBar().pushMessage(
         "QPANSOPY", "DME/DME theoretical coverage calculated successfully",
-        level=Qgis.Success)
+        level=Qgis.MessageLevel.Success)
     return True
