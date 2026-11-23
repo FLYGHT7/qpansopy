@@ -3,13 +3,14 @@ CONV Initial Approach Segment Straight
 '''
 
 myglobals = set(globals().keys())
+iface = globals()['iface']  # Supplied by the QGIS console; preserve the caller's interface.
 
-from qgis.core import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import QVariant
-from math import *
+from qgis.core import (
+    Qgis, QgsFeature, QgsField, QgsLineString, QgsPoint, QgsPolygon,
+    QgsProject, QgsVectorLayer,
+)
+from qgis.PyQt.QtCore import QMetaType
+import math
 
 '''
 Constants 
@@ -64,8 +65,7 @@ delta = 0
 ##
 # OASconstants += OASconstants
 ##
-from qgis.core import Qgis
-iface.messageBar().pushMessage("QPANSOPY:", "Executing CONV Initial Approach Segment Straight", level=Qgis.Info)
+iface.messageBar().pushMessage("QPANSOPY:", "Executing CONV Initial Approach Segment Straight", level=Qgis.MessageLevel.Info)
 ##
 ##
 # for n in val:
@@ -205,7 +205,7 @@ print (pts)
 
 # Create memory layer
 v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "PBN RNAV 1/2", "memory")
-myField = QgsField( 'Symbol', QVariant.String)
+myField = QgsField( 'Symbol', QMetaType.Type.QString)
 v_layer.dataProvider().addAttributes([myField])
 v_layer.updateFields()
 
@@ -296,7 +296,7 @@ v_layer.removeSelection()
 v_layer.loadNamedStyle('c:/Users/anton/Documents/GitHub/qpansopy_og/styles/primary_secondary_areas.qml')
 
 
-iface.messageBar().pushMessage("QPANSOPY:", "Finished RNAV1/2 <30NM", level=Qgis.Success)
+iface.messageBar().pushMessage("QPANSOPY:", "Finished RNAV1/2 <30NM", level=Qgis.MessageLevel.Success)
 
 set(globals().keys()).difference(myglobals)
 
