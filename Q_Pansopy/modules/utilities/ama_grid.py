@@ -10,7 +10,7 @@ import datetime
 import math
 import os
 
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 from qgis.core import (
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
@@ -151,12 +151,12 @@ def _build_layer(indices, grid_type, output_crs):
         transform = QgsCoordinateTransform(wgs84_crs, output_crs, QgsProject.instance())
     provider = layer.dataProvider()
     provider.addAttributes([
-        QgsField("cell_id", QVariant.String),
-        QgsField("ama_type", QVariant.String),
-        QgsField("south_lat", QVariant.Double),
-        QgsField("west_lon", QVariant.Double),
-        QgsField("north_lat", QVariant.Double),
-        QgsField("east_lon", QVariant.Double),
+        QgsField("cell_id", QMetaType.Type.QString),
+        QgsField("ama_type", QMetaType.Type.QString),
+        QgsField("south_lat", QMetaType.Type.Double),
+        QgsField("west_lon", QMetaType.Type.Double),
+        QgsField("north_lat", QMetaType.Type.Double),
+        QgsField("east_lon", QMetaType.Type.Double),
     ])
     layer.updateFields()
     features = []
@@ -200,7 +200,7 @@ def _export_kml(layer, output_dir, grid_type):
     result = QgsVectorFileWriter.writeAsVectorFormat(
         layer, path, "utf-8", QgsCoordinateReferenceSystem(WGS84_AUTHID), "KML"
     )
-    if result[0] != QgsVectorFileWriter.NoError:
+    if result[0] != QgsVectorFileWriter.WriterError.NoError:
         raise RuntimeError("KML export failed: {0}".format(result[1]))
     return path
 
@@ -224,8 +224,8 @@ def run_ama_grid(iface, extent, source_crs, params=None):
         kml_path = _export_kml(layer, params.get("output_dir", ""), grid_type)
     QgsProject.instance().addMapLayer(layer)
     if kml_path:
-        iface.messageBar().pushMessage("QPANSOPY", "AMA grid exported to KML", level=Qgis.Success)
+        iface.messageBar().pushMessage("QPANSOPY", "AMA grid exported to KML", level=Qgis.MessageLevel.Success)
     iface.messageBar().pushMessage(
-        "QPANSOPY", "Created {0} AMA grid cells".format(layer.featureCount()), level=Qgis.Success
+        "QPANSOPY", "Created {0} AMA grid cells".format(layer.featureCount()), level=Qgis.MessageLevel.Success
     )
     return True

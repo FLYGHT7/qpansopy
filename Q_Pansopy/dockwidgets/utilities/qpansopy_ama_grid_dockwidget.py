@@ -5,9 +5,7 @@ import traceback
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import Qgis
-
-from ...qt_compat import MLPM_All
+from qgis.core import Qgis, QgsMapLayerProxyModel
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -35,7 +33,7 @@ class QPANSOPYAMAGridDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.amaSizeComboBox.setItemData(1, "AMA_05")
         self.outputCrsComboBox.setItemData(0, "project")
         self.outputCrsComboBox.setItemData(1, "wgs84")
-        self.extentLayerComboBox.setFilters(MLPM_All)
+        self.extentLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.All)
         self.extentLayerComboBox.setAllowEmptyLayer(True)
         self.extentSourceComboBox.currentIndexChanged.connect(self._update_source_controls)
         self.calculateButton.clicked.connect(self.calculate)
@@ -97,4 +95,4 @@ class QPANSOPYAMAGridDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Error: {0}".format(exc))
             self.log(traceback.format_exc())
             self.iface.messageBar().pushMessage(
-                "QPANSOPY", str(exc), level=Qgis.Warning)
+                "QPANSOPY", str(exc), level=Qgis.MessageLevel.Warning)

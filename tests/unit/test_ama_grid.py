@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 pytest.importorskip("qgis")
+pytestmark = pytest.mark.qgis_runtime
 
 from qgis.core import QgsRectangle  # noqa: E402
 
