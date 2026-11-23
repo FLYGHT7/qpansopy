@@ -292,7 +292,7 @@ def test_dockwidget_warns_when_selected_surface_is_missing(
         widget.logTextEdit.toPlainText()
     )
     assert any(
-        kwargs.get('level') == Qgis.Warning
+        kwargs.get('level') == Qgis.MessageLevel.Warning
         and 'surface layer' in args[1]
         for args, kwargs in iface.message_bar.messages
     )
@@ -327,7 +327,7 @@ def test_dockwidget_exposes_and_restores_busy_state(
         observed['button_enabled'] = widget.calculateButton.isEnabled()
         observed['extracting'] = getattr(widget, '_extracting', False)
         observed['had_info_message'] = any(
-            message_kwargs.get('level') == Qgis.Info
+            message_kwargs.get('level') == Qgis.MessageLevel.Info
             for _, message_kwargs in iface.message_bar.messages
         )
         raise RuntimeError('controlled extraction failure')
@@ -352,12 +352,12 @@ def test_dockwidget_exposes_and_restores_busy_state(
     assert widget.calculateButton.isEnabled()
     assert not widget._extracting
     assert 'controlled extraction failure' in widget.logTextEdit.toPlainText()
-    assert iface.message_bar.messages[-1][1].get('level') == Qgis.Critical
+    assert iface.message_bar.messages[-1][1].get('level') == Qgis.MessageLevel.Critical
     widget.close()
 
 
 def test_result_layer_converts_unsupported_fields_without_losing_rows(qgis_app):
-    from qgis.PyQt.QtCore import QMetaType, QUrl, QVariant
+    from qgis.PyQt.QtCore import QMetaType, QUrl
     from qgis.core import (
         QgsCoordinateReferenceSystem,
         QgsFeature,
@@ -370,15 +370,10 @@ def test_result_layer_converts_unsupported_fields_without_losing_rows(qgis_app):
         _create_result_layer,
     )
 
-    try:
-        url_type = QMetaType.Type.QUrl
-    except AttributeError:
-        url_type = QVariant.Url
-
     fields = QgsFields()
-    fields.append(QgsField('name', QVariant.String))
-    fields.append(QgsField('url', url_type))
-    fields.append(QgsField('height', QVariant.Double))
+    fields.append(QgsField('name', QMetaType.Type.QString))
+    fields.append(QgsField('url', QMetaType.Type.QUrl))
+    fields.append(QgsField('height', QMetaType.Type.Double))
 
     features = []
     for index in range(2):
@@ -420,7 +415,7 @@ def test_result_layer_converts_unsupported_fields_without_losing_rows(qgis_app):
 
 
 def test_result_layer_rolls_back_and_reports_partial_insert(qgis_app):
-    from qgis.PyQt.QtCore import QVariant
+    from qgis.PyQt.QtCore import QMetaType
     from qgis.core import (
         QgsCoordinateReferenceSystem,
         QgsFeature,
@@ -434,7 +429,7 @@ def test_result_layer_rolls_back_and_reports_partial_insert(qgis_app):
     )
 
     fields = QgsFields()
-    fields.append(QgsField('height', QVariant.Double))
+    fields.append(QgsField('height', QMetaType.Type.Double))
 
     valid_feature = QgsFeature(fields)
     valid_feature.setGeometry(QgsGeometry.fromWkt('POINT (1 1)'))
@@ -458,3 +453,190 @@ def test_result_layer_rolls_back_and_reports_partial_insert(qgis_app):
             RuntimeError,
             match=r'expected 2, stored 0.*Could not convert value'):
         _create_result_layer(_SourceLayerSchema(), features)
+
+
+def test_extraction_styles_output_and_exports_kml(qgis_app, tmp_path):
+    from pathlib import Path
+
+    from qgis.PyQt.QtGui import QColor
+    from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsVectorLayer
+
+    from Q_Pansopy.modules.utilities.selection_of_objects import extract_objects
+
+    project = QgsProject.instance()
+    project.clear()
+    points = QgsVectorLayer(
+        'PointZ?crs=EPSG:32616&field=name:string', 'obstacles', 'memory'
+    )
+    point_features = []
+    for name, wkt in (('inside', 'POINT Z (100 100 10)'),
+                      ('outside', 'POINT Z (900 900 40)')):
+        feature = QgsFeature(points.fields())
+        feature.setGeometry(QgsGeometry.fromWkt(wkt))
+        feature.setAttribute('name', name)
+        point_features.append(feature)
+    assert points.dataProvider().addFeatures(point_features)[0]
+    surfaces = QgsVectorLayer('Polygon?crs=EPSG:32616', 'surfaces', 'memory')
+    surface = QgsFeature()
+    surface.setGeometry(QgsGeometry.fromWkt(
+        'POLYGON ((0 0, 500 0, 500 500, 0 500, 0 0))'
+    ))
+    assert surfaces.dataProvider().addFeatures([surface])[0]
+    project.addMapLayers([points, surfaces])
+    iface = _DockIface()
+
+    result = extract_objects(
+        iface, points, surfaces, export_kml=True, output_dir=str(tmp_path)
+    )
+
+    assert result['count'] == 1
+    kml_path = Path(result['kml_path'])
+    assert kml_path.parent == tmp_path
+    assert kml_path.name.startswith('extracted_objects_')
+    assert kml_path.suffix == '.kml'
+    text = kml_path.read_text(encoding='utf-8')
+    assert text.count('<Placemark') == 1
+    assert '<altitudeMode>absolute</altitudeMode>' in text
+    assert iface.message_bar.messages == []
+    output = project.mapLayersByName('Extracted Objects')[0]
+    symbol = output.renderer().symbol()
+    assert symbol.symbolLayerCount() == 1
+    marker = symbol.symbolLayer(0)
+    assert marker.layerType() == 'SimpleMarker'
+    assert marker.color() == QColor('red')
+    assert marker.size() == 3
+    assert marker.strokeColor().alpha() == 0
+    assert marker.strokeWidth() == 0
+
+
+def test_unreprojectable_points_are_skipped_with_warning(qgis_app):
+    from qgis.core import (
+        Qgis,
+        QgsCoordinateReferenceSystem,
+        QgsFeature,
+        QgsGeometry,
+        QgsProject,
+        QgsVectorLayer,
+    )
+
+    from Q_Pansopy.modules.utilities.selection_of_objects import extract_objects
+
+    project = QgsProject.instance()
+    project.clear()
+    points = QgsVectorLayer(
+        'Point?crs=EPSG:4326&field=name:string', 'obstacles', 'memory'
+    )
+    point_features = []
+    # (180 0) lies on the far side of the orthographic projection and cannot
+    # be transformed into the surface CRS.
+    for name, wkt in (('inside', 'POINT (0 0)'), ('far-side', 'POINT (180 0)')):
+        feature = QgsFeature(points.fields())
+        feature.setGeometry(QgsGeometry.fromWkt(wkt))
+        feature.setAttribute('name', name)
+        point_features.append(feature)
+    assert points.dataProvider().addFeatures(point_features)[0]
+    surfaces = QgsVectorLayer('Polygon', 'surfaces', 'memory')
+    surfaces.setCrs(QgsCoordinateReferenceSystem.fromProj(
+        '+proj=ortho +lat_0=0 +lon_0=0 +ellps=WGS84 +units=m +no_defs'
+    ))
+    surface = QgsFeature()
+    surface.setGeometry(QgsGeometry.fromWkt(
+        'POLYGON ((-7000000 -7000000, 7000000 -7000000, 7000000 7000000, '
+        '-7000000 7000000, -7000000 -7000000))'
+    ))
+    assert surfaces.dataProvider().addFeatures([surface])[0]
+    project.addMapLayers([points, surfaces])
+    iface = _DockIface()
+
+    result = extract_objects(iface, points, surfaces)
+
+    assert result['count'] == 1
+    output = project.mapLayersByName('Extracted Objects')[0]
+    assert [feature['name'] for feature in output.getFeatures()] == ['inside']
+    assert [
+        (args, kwargs.get('level')) for args, kwargs in iface.message_bar.messages
+    ] == [(
+        ('QPANSOPY:', '1 obstacle point(s) could not be reprojected to the '
+                      'surface CRS and were skipped'),
+        Qgis.MessageLevel.Warning,
+    )]
+
+
+def test_dockwidget_filters_wait_cursor_and_success_message(
+        qgis_app, monkeypatch):
+    from qgis.PyQt import QtWidgets
+    from qgis.PyQt.QtCore import Qt
+    from qgis.core import Qgis, QgsMapLayerProxyModel, QgsProject
+
+    from Q_Pansopy.dockwidgets.utilities \
+        .qpansopy_object_selection_dockwidget import (
+            QPANSOPYObjectSelectionDockWidget,
+        )
+    from Q_Pansopy.modules.utilities import selection_of_objects
+
+    QgsProject.instance().clear()
+    points, _, surfaces, _ = _make_dockwidget_layers()
+    iface = _DockIface()
+    widget = QPANSOPYObjectSelectionDockWidget(iface)
+    assert widget.pointLayerComboBox.filters() == \
+        QgsMapLayerProxyModel.Filter.PointLayer
+    assert widget.surfaceLayerComboBox.filters() == \
+        QgsMapLayerProxyModel.Filter.PolygonLayer
+    widget.pointLayerComboBox.setLayer(points)
+    widget.surfaceLayerComboBox.setLayer(surfaces)
+    assert not widget.useSelectionOnlyCheckBox.isChecked()
+
+    real_extraction = selection_of_objects.extract_objects
+    observed = []
+
+    def recording_extraction(*args, **kwargs):
+        observed.append(QtWidgets.QApplication.overrideCursor().shape())
+        return real_extraction(*args, **kwargs)
+
+    monkeypatch.setattr(
+        selection_of_objects, 'extract_objects', recording_extraction
+    )
+    QtWidgets.QApplication.setOverrideCursor(Qt.CursorShape.CrossCursor)
+    try:
+        widget.extract_objects()
+        assert observed == [Qt.CursorShape.WaitCursor]
+        assert QtWidgets.QApplication.overrideCursor().shape() == \
+            Qt.CursorShape.CrossCursor
+    finally:
+        QtWidgets.QApplication.restoreOverrideCursor()
+    assert QtWidgets.QApplication.overrideCursor() is None
+    assert widget.calculateButton.isEnabled()
+    assert 'Extracted 1 objects' in widget.logTextEdit.toPlainText()
+    assert [
+        (args[1], kwargs.get('level'))
+        for args, kwargs in iface.message_bar.messages
+    ] == [
+        ('Extracting objects...', Qgis.MessageLevel.Info),
+        ('Extracted 1 objects', Qgis.MessageLevel.Success),
+    ]
+    output = QgsProject.instance().mapLayersByName('Extracted Objects')[0]
+    assert output.featureCount() == 1
+    widget.close()
+
+
+def test_dockwidget_requires_both_layers(qgis_app):
+    from qgis.core import QgsProject
+
+    from Q_Pansopy.dockwidgets.utilities \
+        .qpansopy_object_selection_dockwidget import (
+            QPANSOPYObjectSelectionDockWidget,
+        )
+
+    QgsProject.instance().clear()
+    iface = _DockIface()
+    widget = QPANSOPYObjectSelectionDockWidget(iface)
+    assert widget.pointLayerComboBox.currentLayer() is None
+
+    widget.extract_objects()
+
+    assert 'Error: Please select both input layers' in \
+        widget.logTextEdit.toPlainText()
+    assert iface.message_bar.messages == []
+    assert widget.calculateButton.isEnabled()
+    assert not QgsProject.instance().mapLayersByName('Extracted Objects')
+    widget.close()

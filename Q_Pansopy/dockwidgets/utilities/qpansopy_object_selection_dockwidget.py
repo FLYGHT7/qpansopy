@@ -1,11 +1,6 @@
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import Qgis
-from ...qt_compat import (
-    MLPM_PointLayer,
-    MLPM_PolygonLayer,
-    Qt_WaitCursor,
-)
+from qgis.PyQt.QtCore import Qt, pyqtSignal
+from qgis.core import Qgis, QgsMapLayerProxyModel
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -22,8 +17,8 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._extracting = False
 
         # Setup layer combos
-        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
-        self.surfaceLayerComboBox.setFilters(MLPM_PolygonLayer)
+        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PointLayer)
+        self.surfaceLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer)
 
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
@@ -88,21 +83,21 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 )
                 self.log(message)
                 self.iface.messageBar().pushMessage(
-                    "QPANSOPY", message, level=Qgis.Warning
+                    "QPANSOPY", message, level=Qgis.MessageLevel.Warning
                 )
                 return
 
             self._extracting = True
             self.calculateButton.setEnabled(False)
 
-            QtWidgets.QApplication.setOverrideCursor(Qt_WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             cursor_set = True
 
             self.log("Starting object extraction...")
             self.iface.messageBar().pushMessage(
                 "QPANSOPY",
                 "Extracting objects...",
-                level=Qgis.Info,
+                level=Qgis.MessageLevel.Info,
                 duration=0,
             )
             QtWidgets.QApplication.processEvents()
@@ -123,11 +118,11 @@ class QPANSOPYObjectSelectionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 if export_kml and 'kml_path' in result:
                     msg += f"\nKML exported to: {result['kml_path']}"
                 self.log(msg)
-                self.iface.messageBar().pushMessage("QPANSOPY", msg, level=Qgis.Success)
+                self.iface.messageBar().pushMessage("QPANSOPY", msg, level=Qgis.MessageLevel.Success)
 
         except Exception as e:
             self.log(f"Error during extraction: {str(e)}")
-            self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.Critical)
+            self.iface.messageBar().pushMessage("Error", str(e), level=Qgis.MessageLevel.Critical)
             import traceback
             self.log(traceback.format_exc())
         finally:
