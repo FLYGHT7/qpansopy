@@ -26,7 +26,6 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsWkbTypes, QgsFeature,
     QgsFields, QgsField, QgsFeatureRequest, Qgis
 )
-from qgis.PyQt.QtCore import QVariant
 
 
 def merge_selected_layers(iface, selected_layers=None, merged_layer_name="Merged_Layer", output_dir=None):
