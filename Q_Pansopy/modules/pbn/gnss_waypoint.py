@@ -10,7 +10,7 @@ from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry,
     QgsPointXY, QgsField, QgsRectangle, QgsPoint, Qgis
 )
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtGui import QColor
 from math import radians, cos, sin
 import os
@@ -48,7 +48,7 @@ def run_gnss_waypoint(iface_param, waypoint_layer, routing_layer, params=None):
 
         # Validate waypoint layer
         if not waypoint_layer:
-            iface_param.messageBar().pushMessage("Error", "No waypoint layer provided", level=Qgis.Critical)
+            iface_param.messageBar().pushMessage("Error", "No waypoint layer provided", level=Qgis.MessageLevel.Critical)
             return None
 
         # Get waypoint - either selected or single feature
@@ -59,12 +59,12 @@ def run_gnss_waypoint(iface_param, waypoint_layer, routing_layer, params=None):
             if len(all_features) == 1:
                 waypoint_feature = all_features[0]
             else:
-                iface_param.messageBar().pushMessage("Error", "Please select a waypoint", level=Qgis.Critical)
+                iface_param.messageBar().pushMessage("Error", "Please select a waypoint", level=Qgis.MessageLevel.Critical)
                 return None
         elif len(selection) == 1:
             waypoint_feature = selection[0]
         else:
-            iface_param.messageBar().pushMessage("Error", "Please select only one waypoint", level=Qgis.Critical)
+            iface_param.messageBar().pushMessage("Error", "Please select only one waypoint", level=Qgis.MessageLevel.Critical)
             return None
 
         # Get waypoint geometry
@@ -82,17 +82,17 @@ def run_gnss_waypoint(iface_param, waypoint_layer, routing_layer, params=None):
                     end_point = QgsPoint(geom[0])
                     azimuth = start_point.azimuth(end_point) + 180
 
-        iface_param.messageBar().pushMessage("QPANSOPY:", f"GNSS Waypoint - XTT: {xtt} NM, Azimuth: {azimuth:.1f}°", level=Qgis.Info)
+        iface_param.messageBar().pushMessage("QPANSOPY:", f"GNSS Waypoint - XTT: {xtt} NM, Azimuth: {azimuth:.1f}°", level=Qgis.MessageLevel.Info)
 
         # Create memory layer
         v_layer = QgsVectorLayer("Polygon?crs=" + map_srid, "GNSS Waypoint Tolerance", "memory")
 
         # Add fields
         fields = [
-            QgsField('XTT', QVariant.String),
-            QgsField('ATT', QVariant.String),
-            QgsField('XTT_m', QVariant.Double),
-            QgsField('ATT_m', QVariant.Double)
+            QgsField('XTT', QMetaType.Type.QString),
+            QgsField('ATT', QMetaType.Type.QString),
+            QgsField('XTT_m', QMetaType.Type.Double),
+            QgsField('ATT_m', QMetaType.Type.Double)
         ]
         v_layer.dataProvider().addAttributes(fields)
         v_layer.updateFields()
@@ -145,7 +145,7 @@ def run_gnss_waypoint(iface_param, waypoint_layer, routing_layer, params=None):
         # canvas.zoomToSelected(v_layer)
         # v_layer.removeSelection()
 
-        iface_param.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint Tolerance created successfully", level=Qgis.Success)
+        iface_param.messageBar().pushMessage("QPANSOPY:", "GNSS Waypoint Tolerance created successfully", level=Qgis.MessageLevel.Success)
 
         return {
             'layer': v_layer,
@@ -155,7 +155,7 @@ def run_gnss_waypoint(iface_param, waypoint_layer, routing_layer, params=None):
         }
 
     except Exception as e:
-        iface_param.messageBar().pushMessage("Error", f"GNSS Waypoint error: {str(e)}", level=Qgis.Critical)
+        iface_param.messageBar().pushMessage("Error", f"GNSS Waypoint error: {str(e)}", level=Qgis.MessageLevel.Critical)
         import traceback
-        iface_param.messageBar().pushMessage("Traceback:", traceback.format_exc(), level=Qgis.Critical)
+        iface_param.messageBar().pushMessage("Traceback:", traceback.format_exc(), level=Qgis.MessageLevel.Critical)
         return None
