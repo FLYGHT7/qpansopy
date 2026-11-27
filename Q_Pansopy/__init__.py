@@ -31,5 +31,16 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     #
+    from qgis.core import Qgis
+    from qgis.PyQt.QtCore import QT_VERSION_STR, PYQT_VERSION_STR
+
+    if (not 40000 <= Qgis.QGIS_VERSION_INT < 50000
+            or QT_VERSION_STR.split('.')[0] != '6'
+            or PYQT_VERSION_STR.split('.')[0] != '6'):
+        raise RuntimeError(
+            'QPANSOPY requires QGIS 4 with Qt6 and PyQt6 '
+            f'(found QGIS version {Qgis.QGIS_VERSION_INT}, '
+            f'Qt {QT_VERSION_STR}, PyQt {PYQT_VERSION_STR}).')
+
     from .qpansopy import Qpansopy
     return Qpansopy(iface)

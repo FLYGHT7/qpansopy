@@ -53,7 +53,7 @@ class BasePansopyDockWidget(QtWidgets.QDockWidget):
         if iface is not None:
             try:
                 from qgis.core import Qgis
-                iface.messageBar().pushMessage("QPANSOPY Error", message, level=Qgis.Critical)
+                iface.messageBar().pushMessage("QPANSOPY Error", message, level=Qgis.MessageLevel.Critical)
             except Exception:  # nosec B110 - last-resort error reporter; must not raise while handling an error
                 pass
 

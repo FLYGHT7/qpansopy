@@ -68,7 +68,8 @@ def plugin(qgis_app, monkeypatch, tmp_path):
         layerTreeView=lambda: SimpleNamespace(selectedLayers=lambda: selected),
     )
     assert not qpansopy._IMPORT_ERRORS
-    instance = qpansopy.Qpansopy(iface)
+    from Q_Pansopy import classFactory
+    instance = classFactory(iface)
     instance.initGui()
     window.show()
     qgis_app.processEvents()
@@ -154,3 +155,27 @@ def test_legacy_feature_merge_dock_still_loads(plugin, qgis_app):
     assert dock.isVisible() and dock.widget() is not None
     dock.close()
     dock.deleteLater()
+
+
+@pytest.mark.parametrize('geometry,kind', [
+    ('Point', Qgis.GeometryType.Point),
+    ('LineString', Qgis.GeometryType.Line),
+    ('Polygon', Qgis.GeometryType.Polygon),
+])
+def test_transitional_preseed_uses_real_qgis_layer_combo(plugin, geometry, kind):
+    from qgis.gui import QgsMapLayerComboBox
+    from Q_Pansopy import qt_compat
+    from Q_Pansopy.utils import preseed_active_layer
+
+    assert qt_compat.get_qt_backend() == 'qgis.PyQt'
+    assert qt_compat.preseed_active_layer is preseed_active_layer
+    instance, _ = plugin
+    layer = QgsVectorLayer(f'{geometry}?crs=EPSG:32616', 'active', 'memory')
+    assert layer.isValid()
+    QgsProject.instance().addMapLayer(layer)
+    combo = QgsMapLayerComboBox(instance.iface.mainWindow())
+    combo.setFilters(qt_compat.MLPM_VectorLayer)
+    combo.setAllowEmptyLayer(True)
+    combo.setLayer(None)
+    preseed_active_layer(SimpleNamespace(activeLayer=lambda: layer), combo, kind)
+    assert combo.currentLayer() is layer

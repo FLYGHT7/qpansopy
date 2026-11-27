@@ -121,10 +121,10 @@
       "id": "02",
       "slug": "foundation",
       "title": "Contrato QGIS 4 y base Qt6",
-      "status": "pending",
+      "status": "done",
       "branch": "refactor/qt6-02-foundation",
       "parent_branch": "refactor/qt6-01-test-harness",
-      "base_commit": null,
+      "base_commit": "873aa4a36125758458411d3e6d6a20ddfaee28bb",
       "depends_on": [
         "01"
       ],
@@ -144,16 +144,32 @@
         "Q_Pansopy/utils.py"
       ],
       "support_files": [
-        "Q_Pansopy/metadata.txt"
+        "Q_Pansopy/metadata.txt",
+        "tests/unit/test_qt6_foundation.py",
+        "tests/integration/test_qt6_plugin_runtime.py"
       ],
       "unit_tests": [
         "tests/unit/test_utils_calc.py",
-        "tests/unit/test_isa_calculation.py"
+        "tests/unit/test_isa_calculation.py",
+        "tests/unit/test_qt6_foundation.py"
       ],
       "runtime_tests": [
-        "tests/integration/test_qt6_plugin_runtime.py"
+        "tests/integration/test_qt6_plugin_runtime.py",
+        "tests/integration/test_dme_tolerance_qgis.py",
+        "tests/integration/test_dme_dme_coverage_qgis.py",
+        "tests/integration/test_dock_sizing_qgis.py"
       ],
-      "evidence": [],
+      "evidence": [
+        "Metadata: QGIS 4.0–4.99. classFactory rejects QGIS 3/5, Qt5 or PyQt5 before importing plugin implementation; accepts mocked QGIS 4.0 and actual QGIS 4.2.3.",
+        "Shim simplified to qgis.PyQt + scoped QGIS4/Qt6 enums; no standalone backends, fake QVariant, legacy fallback branches or non-QGIS sentinels remain.",
+        "AST export comparison: all 111 public names preserved. preseed_active_layer moved unchanged in behavior to utils and temporarily re-exported.",
+        "Reviewed all assigned package initializers, constants and ISA: no Qt5-specific changes needed. Base dock uses Qgis.MessageLevel.Critical.",
+        "11 new unit cases cover runtime acceptance/rejection and best-effort preselection. 35 targeted foundation/math/compliance cases passed.",
+        "Real-QGIS isolated files: shared gate 59, DME 45, DME/DME 17, dock sizing 4 = 123 passed. Logs: /tmp/qpansopy-qt6-tests-7bf1_mtz/.",
+        "Non-runtime suite: 468 passed, 13 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected.",
+        "Stage AST findings: zero; inventory 86 Python/27 UI with no missing or duplicate ownership. Changed production files configured Flake8 clean; existing compliance ratchet unchanged and passing.",
+        "PR draft: docs/pyqt-migration/pr-02-foundation.md; QGIS 4.0 was version-mocked, actual installed runtime is QGIS 4.2.3. Interactive GUI not tested."
+      ],
       "notes": [
         "Rechazar QGIS 3/Qt5 desde classFactory antes de importar el plugin completo.",
         "Simplificar shim a qgis.PyQt/Qt6 manteniendo temporalmente sus exports.",
