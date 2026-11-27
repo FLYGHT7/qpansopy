@@ -115,7 +115,7 @@ def _create_result_layer(
     provider = extracted_layer.dataProvider()
     expected_count = len(features)
     if expected_count:
-        flags = QgsFeatureSink.FastInsert | QgsFeatureSink.RollBackOnErrors
+        flags = QgsFeatureSink.Flag.FastInsert | QgsFeatureSink.Flag.RollBackOnErrors
         inserted, _ = provider.addFeatures(list(features), flags)
     else:
         inserted = True
@@ -183,8 +183,8 @@ def extract_objects(iface, point_layer, surface_layer,
         if xform is not None:
             test_geom = QgsGeometry(src_geom)
             try:
-                # 0 == Qgis.GeometryOperationResult.Success (flat int, Qt5/Qt6 safe)
-                failed = test_geom.transform(xform) != 0
+                failed = (test_geom.transform(xform)
+                          != Qgis.GeometryOperationResult.Success)
             except Exception:
                 # QgsCsException etc. - treat as an unreprojectable point
                 failed = True
@@ -204,7 +204,7 @@ def extract_objects(iface, point_layer, surface_layer,
             "QPANSOPY:",
             "{0} obstacle point(s) could not be reprojected to the surface "
             "CRS and were skipped".format(skipped_transforms),
-            level=Qgis.Warning,
+            level=Qgis.MessageLevel.Warning,
         )
 
     # ----- Build result layer (original, untransformed geometries) -----
@@ -236,12 +236,12 @@ def extract_objects(iface, point_layer, surface_layer,
             extracted_layer, kml_path, 'utf-8', kml_crs, 'KML',
             layerOptions=['MODE=2']
         )
-        if err[0] == QgsVectorFileWriter.NoError:
+        if err[0] == QgsVectorFileWriter.WriterError.NoError:
             fix_kml_altitude_mode(kml_path)
             result['kml_path'] = kml_path
         else:
             iface.messageBar().pushMessage(
-                "QPANSOPY:", "KML export failed", level=Qgis.Warning
+                "QPANSOPY:", "KML export failed", level=Qgis.MessageLevel.Warning
             )
 
     return result
