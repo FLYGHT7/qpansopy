@@ -2,25 +2,16 @@
 CONV Initial Approach Segment Straight
 '''
 
-from qgis.core import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import QVariant
-from math import *
+from qgis.core import (
+    Qgis, QgsCoordinateReferenceSystem, QgsFeature, QgsField, QgsGeometry,
+    QgsLineString, QgsPoint, QgsPolygon, QgsProject, QgsVectorFileWriter,
+    QgsVectorLayer,
+)
+from qgis.PyQt.QtCore import QMetaType
+from math import cos, radians, sin
 import os
 import datetime
 from ...utils import fix_kml_altitude_mode, fix_kml_polygon_fill_color
-
-# Qt5 / Qt6 compatible field-type constants for QgsField constructors.
-# QGIS 3.34+ / Qt6 deprecates QVariant.Type; QMetaType.Type is the replacement.
-try:
-    from qgis.PyQt.QtCore import QMetaType as _QMetaType
-    _T_DOUBLE = _QMetaType.Type.Double
-    _T_STRING = _QMetaType.Type.QString
-except (ImportError, AttributeError):
-    _T_DOUBLE = QVariant.Double
-    _T_STRING = QVariant.String
 
 
 def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=False, output_dir=None):
@@ -54,22 +45,22 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
 
         # Verify routing layer is provided
         if not routing_layer:
-            iface.messageBar().pushMessage("No routing layer provided", level=Qgis.Critical)
+            iface.messageBar().pushMessage("No routing layer provided", level=Qgis.MessageLevel.Critical)
             return False
 
         # Check if there are selected features
         selection = routing_layer.selectedFeatures()
         if not selection:
-            iface.messageBar().pushMessage("No features selected in routing layer", level=Qgis.Critical)
+            iface.messageBar().pushMessage("No features selected in routing layer", level=Qgis.MessageLevel.Critical)
             return False
 
-        iface.messageBar().pushMessage("QPANSOPY:", "Executing CONV Initial Approach Segment Straight", level=Qgis.Info)
+        iface.messageBar().pushMessage("QPANSOPY:", "Executing CONV Initial Approach Segment Straight", level=Qgis.MessageLevel.Info)
 
         features_processed = 0
         for feat in selection:
             geom = feat.geometry().asPolyline()
             if len(geom) < 2:
-                iface.messageBar().pushMessage("Invalid geometry - need at least 2 points", level=Qgis.Warning)
+                iface.messageBar().pushMessage("Invalid geometry - need at least 2 points", level=Qgis.MessageLevel.Warning)
                 continue
 
             # Note: Using the original logic with start_point as geom[-1] and end_point as geom[0]
@@ -132,17 +123,17 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
             required_points = ["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9"]
             missing_points = [p for p in required_points if p not in pts]
             if missing_points:
-                iface.messageBar().pushMessage("Error:", f"Missing points: {missing_points}", level=Qgis.Critical)
+                iface.messageBar().pushMessage("Error:", f"Missing points: {missing_points}", level=Qgis.MessageLevel.Critical)
                 return False
 
             # Create memory layer
             v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "CONV Initial Approach Areas", "memory")
             fields = [
-                QgsField('Symbol',       _T_STRING),
-                QgsField('area_side',    _T_STRING),
-                QgsField('proc_alt_ft',  _T_DOUBLE),
-                QgsField('moc',          _T_DOUBLE),
-                QgsField('moc_unit',     _T_STRING),
+                QgsField('Symbol',       QMetaType.Type.QString),
+                QgsField('area_side',    QMetaType.Type.QString),
+                QgsField('proc_alt_ft',  QMetaType.Type.Double),
+                QgsField('moc',          QMetaType.Type.Double),
+                QgsField('moc_unit',     QMetaType.Type.QString),
             ]
             v_layer.dataProvider().addAttributes(fields)
             v_layer.updateFields()
@@ -225,7 +216,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
                 pr.addFeatures([f])
                 features_created += 1
             except Exception as area_error:
-                iface.messageBar().pushMessage("Error creating primary area:", str(area_error), level=Qgis.Warning)
+                iface.messageBar().pushMessage("Error creating primary area:", str(area_error), level=Qgis.MessageLevel.Warning)
 
             try:
                 # Secondary left: inner vertices at z_primary, outer vertices at z_outer.
@@ -244,7 +235,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
                 pr.addFeatures([f])
                 features_created += 1
             except Exception as area_error:
-                iface.messageBar().pushMessage("Error creating secondary left area:", str(area_error), level=Qgis.Warning)
+                iface.messageBar().pushMessage("Error creating secondary left area:", str(area_error), level=Qgis.MessageLevel.Warning)
 
             try:
                 # Secondary right: inner vertices at z_primary, outer vertices at z_outer.
@@ -261,7 +252,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
                 pr.addFeatures([f])
                 features_created += 1
             except Exception as area_error:
-                iface.messageBar().pushMessage("Error creating secondary right area:", str(area_error), level=Qgis.Warning)
+                iface.messageBar().pushMessage("Error creating secondary right area:", str(area_error), level=Qgis.MessageLevel.Warning)
 
             v_layer.updateExtents()
             QgsProject.instance().addMapLayers([v_layer])
@@ -271,7 +262,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
             if os.path.exists(style_path):
                 v_layer.loadNamedStyle(style_path)
             else:
-                iface.messageBar().pushMessage("Warning:", f"Style file not found at {style_path}", level=Qgis.Warning)
+                iface.messageBar().pushMessage("Warning:", f"Style file not found at {style_path}", level=Qgis.MessageLevel.Warning)
 
             # Zoom to layer
             v_layer.selectAll()
@@ -282,7 +273,7 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
             iface.messageBar().pushMessage(
                 "QPANSOPY:",
                 f"Finished CONV Initial Approach Segment - {features_created} areas created (Z_primary={z_primary:.2f} m, Z_outer={z_outer:.2f} m)",
-                level=Qgis.Success
+                level=Qgis.MessageLevel.Success
             )
 
             # KML export
@@ -299,25 +290,25 @@ def run_conv_initial_approach(iface, routing_layer, params=None, export_kml=Fals
                         'KML',
                         layerOptions=['MODE=2', 'AltitudeMode=absolute'],
                     )
-                    if kml_error[0] == QgsVectorFileWriter.NoError:
+                    if kml_error[0] == QgsVectorFileWriter.WriterError.NoError:
                         altitude_ok = fix_kml_altitude_mode(kml_path)
                         # Green 50 % transparent fill to match primary_secondary_areas style
                         color_ok = fix_kml_polygon_fill_color(kml_path, '7f00c800', 'ff458b23')
                         if altitude_ok and color_ok:
-                            iface.messageBar().pushMessage("Success", f"KML exported: {kml_path}", level=Qgis.Success)
+                            iface.messageBar().pushMessage("Success", f"KML exported: {kml_path}", level=Qgis.MessageLevel.Success)
                         else:
-                            iface.messageBar().pushMessage("Warning", f"KML exported but post-processing failed: {kml_path}", level=Qgis.Warning)
+                            iface.messageBar().pushMessage("Warning", f"KML exported but post-processing failed: {kml_path}", level=Qgis.MessageLevel.Warning)
                     else:
-                        iface.messageBar().pushMessage("Warning", f"KML export failed (error {kml_error[0]})", level=Qgis.Warning)
+                        iface.messageBar().pushMessage("Warning", f"KML export failed (error {kml_error[0]})", level=Qgis.MessageLevel.Warning)
                 except Exception as kml_err:
-                    iface.messageBar().pushMessage("Warning", f"KML export error: {kml_err}", level=Qgis.Warning)
+                    iface.messageBar().pushMessage("Warning", f"KML export error: {kml_err}", level=Qgis.MessageLevel.Warning)
 
             features_processed += 1
 
         return True
 
     except Exception as e:
-        iface.messageBar().pushMessage("Error creating CONV Initial Approach areas", str(e), level=Qgis.Critical)
+        iface.messageBar().pushMessage("Error creating CONV Initial Approach areas", str(e), level=Qgis.MessageLevel.Critical)
         import traceback
-        iface.messageBar().pushMessage("Traceback:", traceback.format_exc(), level=Qgis.Critical)
+        iface.messageBar().pushMessage("Traceback:", traceback.format_exc(), level=Qgis.MessageLevel.Critical)
         return False
