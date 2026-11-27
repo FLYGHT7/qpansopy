@@ -3,13 +3,16 @@ Holding/Racetrack
 '''
 
 myglobals = set(globals().keys())
+iface = globals()['iface']  # Supplied by the QGIS console; preserve the caller's interface.
 
-from qgis.core import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import QVariant
-from math import *
+from qgis.core import (
+    Qgis, QgsCircularString, QgsFeature, QgsField, QgsGeometry,
+    QgsPoint, QgsProject, QgsVectorLayer,
+)
+from qgis.PyQt.QtCore import QMetaType
+from qgis.PyQt.QtGui import QColor
+import math
+from math import cos, pi, radians, sin, tan
 
 # side = 90 LEFT
 # side = -90 RIGHT
@@ -88,8 +91,7 @@ values = holding_basic_area(195,10000,0,15,25,1)
 
 print (values[11-1])
 
-from qgis.core import Qgis
-iface.messageBar().pushMessage("QPANSOPY:", "Holding/Racetrack Basic Area", level=Qgis.Info)
+iface.messageBar().pushMessage("QPANSOPY:", "Holding/Racetrack Basic Area", level=Qgis.MessageLevel.Info)
 
 # Select line
 # Gets the routing layer
@@ -121,7 +123,7 @@ map_srid = iface.mapCanvas().mapSettings().destinationCrs().authid()
 
 # Create memory layer
 v_layer = QgsVectorLayer("Linestring?crs="+map_srid, "HLDG/RACETRACK "+str(int(values[2-1]/values[1-1]))+"KTS", "memory")
-myField = QgsField( 'segment', QVariant.String)
+myField = QgsField( 'segment', QMetaType.Type.QString)
 v_layer.dataProvider().addAttributes([myField])
 v_layer.updateFields()
 
@@ -276,7 +278,7 @@ v_layer.triggerRepaint()
 # v_layer.loadNamedStyle('c:/Users/Antonio/Documents/GitHub/qpansopy/styles/primary_secondary_areas.qml')
 ##
 
-iface.messageBar().pushMessage("QPANSOPY:", "Finished Holding/Racetrack", level=Qgis.Success)
+iface.messageBar().pushMessage("QPANSOPY:", "Finished Holding/Racetrack", level=Qgis.MessageLevel.Success)
 
 set(globals().keys()).difference(myglobals)
 
