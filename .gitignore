@@ -16,22 +16,21 @@ htmlcov/
 .coverage
 tests/results/
 
-#agents skills
-.agents/*
-!.agents/skills/
-.agents/skills/*
-!.agents/skills/qpansopy-qt6-migration/
+# Local agent and development configuration
+.agents/
 .claude/
 .augment/
+.aws/
 .codex
 CLAUDE.md
 skills-lock.json
 .idea/
 
-#logs
+# Local plans and drafts
+plans/qt6-only/
+graphify-out/
 doc/
 docs/
 DEVELOPMENT_PLAN.md
 
 .venv/
-.idea/

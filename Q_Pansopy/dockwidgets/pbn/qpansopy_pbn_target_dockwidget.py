@@ -1,7 +1,7 @@
 import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from ...qt_compat import MLPM_PointLayer
+from qgis.core import QgsMapLayerProxyModel
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), '..', '..', 'ui', 'pbn', 'qpansopy_pbn_target_dockwidget.ui'))
@@ -15,7 +15,7 @@ class QPANSOPYPBNTargetDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
         self.setupUi(self)
 
-        self.pointLayerComboBox.setFilters(MLPM_PointLayer)
+        self.pointLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PointLayer)
         self.calculateButton.clicked.connect(self.calculate)
 
     def closeEvent(self, event):
