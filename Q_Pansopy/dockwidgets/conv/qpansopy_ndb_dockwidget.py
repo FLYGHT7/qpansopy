@@ -1,6 +1,7 @@
 ﻿from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from ...qt_compat import MLPM_LineLayer, preseed_active_layer, Qgis_GeomType_Line
+from qgis.core import Qgis, QgsMapLayerProxyModel
+from ...utils import preseed_active_layer
 import os
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -16,8 +17,8 @@ class QPANSOPYNDBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
 
         # Setup layer combobox
-        self.routingLayerComboBox.setFilters(MLPM_LineLayer)
-        preseed_active_layer(iface, self.routingLayerComboBox, Qgis_GeomType_Line)
+        self.routingLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.LineLayer)
+        preseed_active_layer(iface, self.routingLayerComboBox, Qgis.GeometryType.Line)
 
         # Set default output folder
         self.outputFolderLineEdit.setText(self.get_desktop_path())
