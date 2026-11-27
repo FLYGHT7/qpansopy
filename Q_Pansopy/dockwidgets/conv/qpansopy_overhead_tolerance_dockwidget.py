@@ -7,13 +7,10 @@ import traceback
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtGui import QColor, QDoubleValidator
-from qgis.core import Qgis, QgsGeometry, QgsPointXY, QgsProject
+from qgis.core import Qgis, QgsGeometry, QgsMapLayerProxyModel, QgsPointXY, QgsProject
 from qgis.gui import QgsRubberBand
 
-from ...qt_compat import (
-    MLPM_LineLayer, MLPM_PointLayer, Qgis_GeomType_Line, Qgis_GeomType_Point,
-    Qgis_GeomType_Polygon, preseed_active_layer,
-)
+from ...utils import preseed_active_layer
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -42,10 +39,10 @@ class QPANSOPYOverheadToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._preview_active = False
         self._preview_closed = False
         self._removing_layer_ids = set()
-        self.navaidLayerComboBox.setFilters(MLPM_PointLayer)
-        self.trackLayerComboBox.setFilters(MLPM_LineLayer)
-        preseed_active_layer(iface, self.navaidLayerComboBox, Qgis_GeomType_Point)
-        preseed_active_layer(iface, self.trackLayerComboBox, Qgis_GeomType_Line)
+        self.navaidLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PointLayer)
+        self.trackLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.LineLayer)
+        preseed_active_layer(iface, self.navaidLayerComboBox, Qgis.GeometryType.Point)
+        preseed_active_layer(iface, self.trackLayerComboBox, Qgis.GeometryType.Line)
         for field in (self.aircraftAltitudeLineEdit, self.stationElevationLineEdit):
             field.setValidator(QDoubleValidator(field))
         self.calculateButton.clicked.connect(self.calculate)
@@ -74,7 +71,7 @@ class QPANSOPYOverheadToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         if not self._preview_active:
             canvas = self.iface.mapCanvas()
-            self._direction_preview_band = QgsRubberBand(canvas, Qgis_GeomType_Polygon)
+            self._direction_preview_band = QgsRubberBand(canvas, Qgis.GeometryType.Polygon)
             self._direction_preview_band.setColor(QColor(0, 170, 0, 120))
             self._direction_preview_band.setStrokeColor(QColor(0, 120, 0, 220))
             self._direction_preview_band.setWidth(1)
@@ -121,7 +118,7 @@ class QPANSOPYOverheadToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def _clear_direction_preview(self):
         if self._direction_preview_band is not None:
-            self._direction_preview_band.reset(Qgis_GeomType_Polygon)
+            self._direction_preview_band.reset(Qgis.GeometryType.Polygon)
 
     def _stop_preview(self):
         self._disconnect_layer_signals()
@@ -216,9 +213,9 @@ class QPANSOPYOverheadToleranceDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         except (ValueError, RuntimeError) as exc:
             self.log('Error: {0}'.format(exc))
             self.iface.messageBar().pushMessage(
-                'QPANSOPY', str(exc), level=Qgis.Warning)
+                'QPANSOPY', str(exc), level=Qgis.MessageLevel.Warning)
         except Exception as exc:
             self.log('Error: {0}'.format(exc))
             self.log(traceback.format_exc())
             self.iface.messageBar().pushMessage(
-                'QPANSOPY', str(exc), level=Qgis.Critical)
+                'QPANSOPY', str(exc), level=Qgis.MessageLevel.Critical)

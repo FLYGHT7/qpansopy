@@ -4,7 +4,7 @@ import math
 import os
 from datetime import datetime
 
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (
     Qgis, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeature,
@@ -158,7 +158,7 @@ def resolve_overhead_direction_from_layers(
 def _polygon_layer(name, crs, ring, color):
     layer = QgsVectorLayer('Polygon', name, 'memory')
     layer.setCrs(crs)
-    layer.dataProvider().addAttributes([QgsField('Name', QVariant.String)])
+    layer.dataProvider().addAttributes([QgsField('Name', QMetaType.Type.QString)])
     layer.updateFields()
     feature = QgsFeature(layer.fields())
     feature.setGeometry(QgsGeometry.fromPolygonXY([[QgsPointXY(*p) for p in ring]]))
@@ -175,7 +175,7 @@ def _polygon_layer(name, crs, ring, color):
 def _points_layer(name, crs, points):
     layer = QgsVectorLayer('Point', name, 'memory')
     layer.setCrs(crs)
-    layer.dataProvider().addAttributes([QgsField('Name', QVariant.String)])
+    layer.dataProvider().addAttributes([QgsField('Name', QMetaType.Type.QString)])
     layer.updateFields()
     features = []
     for label, coordinates in points.items():
@@ -196,7 +196,7 @@ def _export_kml(layer, output_dir, stamp):
     path = os.path.join(output_dir, '{0}_{1}.kml'.format(layer.name(), stamp))
     result = QgsVectorFileWriter.writeAsVectorFormat(
         layer, path, 'utf-8', QgsCoordinateReferenceSystem('EPSG:4326'), 'KML')
-    if result[0] != QgsVectorFileWriter.NoError:
+    if result[0] != QgsVectorFileWriter.WriterError.NoError:
         raise RuntimeError('KML export failed: {0}'.format(result[1]))
     return path
 
@@ -229,10 +229,10 @@ def run_overhead_tolerance(iface, navaid_layer, track_layer, params=None):
     if tied:
         iface.messageBar().pushMessage(
             'QPANSOPY', 'Track endpoints equidistant: using digitized direction; '
-            'check Invert direction if needed', level=Qgis.Warning)
+            'check Invert direction if needed', level=Qgis.MessageLevel.Warning)
     iface.messageBar().pushMessage(
         'QPANSOPY', '{0} overhead tolerance created (z={1:.3f} NM, q={2:.3f} NM)'.format(
-            navaid_type, radius_nm, q_nm), level=Qgis.Success)
+            navaid_type, radius_nm, q_nm), level=Qgis.MessageLevel.Success)
     if params.get('export_kml', False):
         output_dir = params.get('output_dir', '')
         try:
@@ -243,5 +243,5 @@ def run_overhead_tolerance(iface, navaid_layer, track_layer, params=None):
                 _export_kml(layer, output_dir, stamp)
         except (OSError, RuntimeError, ValueError) as exc:
             iface.messageBar().pushMessage(
-                'QPANSOPY', 'Layers created, but {0}'.format(exc), level=Qgis.Warning)
+                'QPANSOPY', 'Layers created, but {0}'.format(exc), level=Qgis.MessageLevel.Warning)
     return True
