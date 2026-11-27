@@ -12,6 +12,7 @@ def sid_dock_module(monkeypatch):
     qt_compat.DOCK_FEATURES_DEFAULT = 0
     qt_compat.MLPM_LineLayer = 0
     qt_compat.Qgis_GeomType_Line = 1
+    qt_compat.Qgis_GeomType_Polygon = 2
     qt_compat.Qt_ALLOWED_DOCK_AREAS = 0
     qt_compat.preseed_active_layer = lambda *args: None
     monkeypatch.setitem(sys.modules, 'Q_Pansopy.qt_compat', qt_compat)
