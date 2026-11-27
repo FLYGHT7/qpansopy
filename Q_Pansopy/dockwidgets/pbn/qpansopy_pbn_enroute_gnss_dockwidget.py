@@ -4,12 +4,10 @@ import os
 import traceback
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import Qgis
+from qgis.PyQt.QtCore import Qt, pyqtSignal
+from qgis.core import Qgis, QgsMapLayerProxyModel
 
-from ...qt_compat import (
-    MLPM_LineLayer, Qgis_GeomType_Line, Qt_WaitCursor, preseed_active_layer,
-)
+from ...utils import preseed_active_layer
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -27,9 +25,9 @@ class QPANSOPYPBNEnrouteGNSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
         self.setupUi(self)
         self._calculating = False
-        self.routingLayerComboBox.setFilters(MLPM_LineLayer)
+        self.routingLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.LineLayer)
         self.routingLayerComboBox.setAllowEmptyLayer(True)
-        preseed_active_layer(iface, self.routingLayerComboBox, Qgis_GeomType_Line)
+        preseed_active_layer(iface, self.routingLayerComboBox, Qgis.GeometryType.Line)
         from ...modules.pbn.pbn_enroute_gnss import SPECS
         for spec in SPECS:
             self.specComboBox.addItem(spec.label, spec.identifier)
@@ -57,7 +55,7 @@ class QPANSOPYPBNEnrouteGNSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
         self._calculating = True
         self.calculateButton.setEnabled(False)
-        QtWidgets.QApplication.setOverrideCursor(Qt_WaitCursor)
+        QtWidgets.QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             from ...modules.pbn.pbn_enroute_gnss import run_pbn_enroute_gnss
 
@@ -71,7 +69,7 @@ class QPANSOPYPBNEnrouteGNSSDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log(f'Error: {error}')
             if not isinstance(error, ValueError):
                 self.log(traceback.format_exc())
-            self.iface.messageBar().pushMessage('QPANSOPY', str(error), level=Qgis.Warning)
+            self.iface.messageBar().pushMessage('QPANSOPY', str(error), level=Qgis.MessageLevel.Warning)
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
             self.calculateButton.setEnabled(True)

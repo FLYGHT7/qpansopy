@@ -63,11 +63,17 @@ def test_oblique_reversal():
 
 @pytest.mark.parametrize('identifier', ['rnav5', 'rnp4', 'rnav2', 'rnp2', 'arnp2', 'arnp1', 'rnav1', 'rnp03'])
 def test_output_style_and_provenance(identifier):
+    from qgis.PyQt.QtCore import QMetaType
     from Q_Pansopy.modules.pbn.pbn_enroute_gnss import resolve_spec
     source = route()
     source_id = source.selectedFeatures()[0].id()
     output = run(source, identifier)
     assert output.featureCount() == 3
+    assert output.fields().names() == [
+        'Symbol', 'nav_spec', 'sensor', 'half_width_nm', 'distance_nm', 'source_fid']
+    assert [field.type() for field in output.fields()] == [
+        QMetaType.Type.QString, QMetaType.Type.QString, QMetaType.Type.QString,
+        QMetaType.Type.Double, QMetaType.Type.Double, QMetaType.Type.LongLong]
     assert output.renderer().classAttribute() == 'Symbol'
     features = list(output.getFeatures())
     assert sorted(f['Symbol'] for f in features) == ['Primary Area', 'Secondary Area', 'Secondary Area']
@@ -286,3 +292,53 @@ def test_local_width_and_utm_measurement_are_distinct(points, identifier, expect
     assert 0.1 < abs(grid_width - expected) < 10
     notes = QgsLayerNotesUtils.layerNotes(output)
     assert 'local AEQD CRS' in notes and 'Cartesian' in notes
+
+
+@pytest.mark.parametrize('outcome', ['success', 'validation_error', 'runtime_error'])
+def test_calculation_restores_cursor_and_controls_after_every_outcome(qgis_app, monkeypatch, outcome):
+    from qgis.PyQt.QtCore import Qt
+    from qgis.PyQt.QtWidgets import QApplication, QMainWindow
+    from qgis.gui import QgsMessageBar
+    from Q_Pansopy.dockwidgets.pbn.qpansopy_pbn_enroute_gnss_dockwidget import (
+        QPANSOPYPBNEnrouteGNSSDockWidget,
+    )
+    from Q_Pansopy.modules.pbn import pbn_enroute_gnss
+
+    layer = route()
+    window = QMainWindow()
+    bar = QgsMessageBar(window)
+    iface = SimpleNamespace(mainWindow=lambda: window, messageBar=lambda: bar, activeLayer=lambda: layer)
+    dock = QPANSOPYPBNEnrouteGNSSDockWidget(iface)
+    observed = []
+
+    def calculate(iface, routing, params):
+        observed.append((routing is layer, params['nav_spec'],
+                         QApplication.overrideCursor().shape(),
+                         dock.calculateButton.isEnabled(), dock._calculating))
+        dock.calculate()  # Re-entry while busy must not start another calculation.
+        if outcome == 'validation_error':
+            raise ValueError('Invalid test input')
+        if outcome == 'runtime_error':
+            raise RuntimeError('Test runtime failure')
+        return True
+
+    monkeypatch.setattr(pbn_enroute_gnss, 'run_pbn_enroute_gnss', calculate)
+    QApplication.setOverrideCursor(Qt.CursorShape.CrossCursor)
+    try:
+        dock.calculateButton.click()
+        assert observed == [(True, 'rnav5', Qt.CursorShape.WaitCursor, False, True)]
+        assert QApplication.overrideCursor().shape() == Qt.CursorShape.CrossCursor
+        assert dock.calculateButton.isEnabled() and not dock._calculating
+        text = dock.logTextEdit.toPlainText()
+        if outcome == 'success':
+            assert 'Error:' not in text
+        else:
+            assert 'Error:' in text
+            assert ('Traceback' in text) == (outcome == 'runtime_error')
+    finally:
+        QApplication.restoreOverrideCursor()
+        dock.close()
+        dock.deleteLater()
+        window.close()
+        window.deleteLater()
+        qgis_app.processEvents()

@@ -65,7 +65,7 @@ def build_enroute_geometry(
 
 def run_pbn_enroute_gnss(iface, routing_layer, params=None) -> bool:
     """Generate one three-feature corridor from one selected straight segment."""
-    from qgis.PyQt.QtCore import QVariant
+    from qgis.PyQt.QtCore import QMetaType
     from qgis.core import (
         Qgis, QgsCategorizedSymbolRenderer, QgsCoordinateReferenceSystem,
         QgsCoordinateTransform, QgsDistanceArea, QgsFeature, QgsField,
@@ -108,9 +108,9 @@ def run_pbn_enroute_gnss(iface, routing_layer, params=None) -> bool:
     a, b = transform.transform(a), transform.transform(b)
     areas = build_enroute_geometry((a.x(), a.y()), (b.x(), b.y()), spec.identifier)
     layer = _new_layer('Polygon', 'PBN ENR GNSS — ' + spec.label, crs, [
-        QgsField('Symbol', QVariant.String), QgsField('nav_spec', QVariant.String),
-        QgsField('sensor', QVariant.String), QgsField('half_width_nm', QVariant.Double),
-        QgsField('distance_nm', QVariant.Double), QgsField('source_fid', QVariant.LongLong),
+        QgsField('Symbol', QMetaType.Type.QString), QgsField('nav_spec', QMetaType.Type.QString),
+        QgsField('sensor', QMetaType.Type.QString), QgsField('half_width_nm', QMetaType.Type.Double),
+        QgsField('distance_nm', QMetaType.Type.Double), QgsField('source_fid', QMetaType.Type.LongLong),
     ])
     features = []
     for area, symbol in zip(areas, ('Primary Area', 'Secondary Area', 'Secondary Area')):
@@ -143,5 +143,5 @@ def run_pbn_enroute_gnss(iface, routing_layer, params=None) -> bool:
         '{0}; distance {1:.6f} NM; outer ±{2:g} NM; primary ±{3:g} NM.'.format(
             spec.label, length / 1852.0, spec.half_width_nm, spec.half_width_nm / 2))
     params.get('log', lambda message: None)('Construction CRS (metres): ' + crs.toProj())
-    iface.messageBar().pushMessage('QPANSOPY', 'PBN ENR GNSS areas created', level=Qgis.Success)
+    iface.messageBar().pushMessage('QPANSOPY', 'PBN ENR GNSS areas created', level=Qgis.MessageLevel.Success)
     return True
