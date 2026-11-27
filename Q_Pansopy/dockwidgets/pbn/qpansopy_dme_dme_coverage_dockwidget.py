@@ -5,9 +5,9 @@ import traceback
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import Qgis
+from qgis.core import Qgis, QgsMapLayerProxyModel
 
-from ...qt_compat import MLPM_PointLayer, Qgis_GeomType_Point, preseed_active_layer
+from ...utils import preseed_active_layer
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -24,10 +24,10 @@ class QPANSOPYDMEDMECoverageDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         super().__init__(iface.mainWindow())
         self.iface = iface
         self.setupUi(self)
-        self.dmeLayerComboBox.setFilters(MLPM_PointLayer)
+        self.dmeLayerComboBox.setFilters(QgsMapLayerProxyModel.Filter.PointLayer)
         self.dmeLayerComboBox.setAllowEmptyLayer(True)
         preseed_active_layer(iface, self.dmeLayerComboBox,
-                             Qgis_GeomType_Point)
+                             Qgis.GeometryType.Point)
         self.dmeLayerComboBox.layerChanged.connect(self._populate_doc_fields)
         self.calculateButton.clicked.connect(self.calculate)
         self._populate_doc_fields(self.dmeLayerComboBox.currentLayer())
@@ -66,4 +66,4 @@ class QPANSOPYDMEDMECoverageDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log("Error: {0}".format(error))
             self.log(traceback.format_exc())
             self.iface.messageBar().pushMessage(
-                "QPANSOPY", str(error), level=Qgis.Warning)
+                "QPANSOPY", str(error), level=Qgis.MessageLevel.Warning)

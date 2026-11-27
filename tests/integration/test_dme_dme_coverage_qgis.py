@@ -8,14 +8,16 @@ import pytest
 pytest.importorskip("qgis")
 pytestmark = pytest.mark.qgis_runtime
 
-from qgis.PyQt.QtCore import QVariant  # noqa: E402
+from qgis.PyQt.QtCore import QMetaType  # noqa: E402
 from qgis.core import (  # noqa: E402
+    Qgis,
     QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsFeature,
     QgsField,
     QgsGeometry,
+    QgsMapLayerProxyModel,
     QgsPointXY,
     QgsProject,
     QgsVariantUtils,
@@ -65,7 +67,7 @@ class _Iface:
 
 def _dme_layer(project, crs="EPSG:4326", docs=(150.0, 250.0)):
     layer = QgsVectorLayer("Point?crs={0}".format(crs), "DMEs", "memory")
-    layer.dataProvider().addAttributes([QgsField("DOC_NM", QVariant.Double)])
+    layer.dataProvider().addAttributes([QgsField("DOC_NM", QMetaType.Type.Double)])
     layer.updateFields()
     source_crs = QgsCoordinateReferenceSystem("EPSG:4326")
     target_crs = QgsCoordinateReferenceSystem(crs)
@@ -119,11 +121,19 @@ def test_coverage_builds_two_valid_lobes_and_optional_construction_layers():
     coverage = outputs["DME_DME_Coverage"]
     assert coverage.crs().isValid()
     assert coverage.crs().mapUnits().name == "Meters"
-    assert coverage.wkbType() != 0
+    assert coverage.wkbType() == Qgis.WkbType.MultiPolygon
     result = next(coverage.getFeatures())
     assert coverage.fields().names() == [
         "A_FID", "B_FID", "D_NM", "DOC_A_NM", "DOC_B_NM", "DOC_FIELD",
     ]
+    assert [field.type() for field in coverage.fields()] == [
+        QMetaType.Type.LongLong, QMetaType.Type.LongLong, QMetaType.Type.Double,
+        QMetaType.Type.Double, QMetaType.Type.Double, QMetaType.Type.QString,
+    ]
+    assert iface.bar.messages == [(
+        ("QPANSOPY", "DME/DME theoretical coverage calculated successfully"),
+        {"level": Qgis.MessageLevel.Success},
+    )]
     assert result["DOC_A_NM"] == 150.0
     assert result["DOC_B_NM"] == MAX_DOC_NM
     assert result["DOC_FIELD"] == "DOC_NM"
@@ -202,6 +212,13 @@ def test_coverage_builds_two_valid_lobes_and_optional_construction_layers():
     construction = outputs["DME_DME_Construction"]
     assert construction.featureCount() == 9
     assert construction.fields().names() == ["Role", "Radius_NM"]
+    assert construction.wkbType() == Qgis.WkbType.LineString
+    assert [field.type() for field in construction.fields()] == [
+        QMetaType.Type.QString, QMetaType.Type.Double]
+    excluded_layer = outputs["DME_DME_Excluded_Areas"]
+    assert excluded_layer.wkbType() == Qgis.WkbType.MultiPolygon
+    assert [(field.name(), field.type()) for field in excluded_layer.fields()] == [
+        ("Role", QMetaType.Type.QString)]
     assert {feature["Role"] for feature in construction.getFeatures()} == {
         "DOC_A", "DOC_B", "D_A", "D_B", "ANGLE_PLUS", "ANGLE_MINUS",
         "NO_UPDATE_A", "NO_UPDATE_B", "D",
@@ -422,3 +439,41 @@ def test_doc_value_rejects_nonpositive_and_nonfinite_values(value):
     feature["DOC"] = value
     with pytest.raises(ValueError, match="greater than zero"):
         _doc_value(feature, "DOC", "A")
+
+
+def test_dock_filters_points_ignores_polygon_active_layer_and_warns():
+    project = QgsProject.instance()
+    layer = _dme_layer(project)
+    layer.selectByIds([next(layer.getFeatures()).id()])
+    polygon = QgsVectorLayer("Polygon?crs=EPSG:4326", "Area", "memory")
+    project.addMapLayer(polygon)
+
+    class _DockIface:
+        def __init__(self):
+            self.window = QMainWindow()
+            self.bar = _MessageBar()
+
+        def mainWindow(self):
+            return self.window
+
+        def activeLayer(self):
+            return polygon
+
+        def messageBar(self):
+            return self.bar
+
+    iface = _DockIface()
+    dock = QPANSOPYDMEDMECoverageDockWidget(iface)
+    try:
+        assert dock.dmeLayerComboBox.filters() == QgsMapLayerProxyModel.Filter.PointLayer
+        assert dock.dmeLayerComboBox.currentLayer() == layer
+        dock.calculateButton.click()
+        assert "Error: Select exactly two DME stations in the layer" in \
+            dock.logTextEdit.toPlainText().splitlines()
+        assert iface.bar.messages == [(
+            ("QPANSOPY", "Select exactly two DME stations in the layer"),
+            {"level": Qgis.MessageLevel.Warning},
+        )]
+        assert not _output_layers(project)
+    finally:
+        dock.close()
