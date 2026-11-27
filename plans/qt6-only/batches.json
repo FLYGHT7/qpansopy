@@ -273,23 +273,34 @@
       "id": "05",
       "slug": "legacy-gnss-waypoint",
       "title": "Script antiguo GNSS Waypoint",
-      "status": "pending",
+      "status": "done",
       "branch": "refactor/qt6-05-legacy-gnss-waypoint",
       "parent_branch": "refactor/qt6-04-plugin-shell",
-      "base_commit": null,
+      "base_commit": "e5f993f18b7ef6e2af5616b106359f6226e05fc8",
       "depends_on": [
         "04"
       ],
       "source_files": [
         "Q_Pansopy/modules/utilities/fix_tolerances/GNSS_waypoint.py"
       ],
-      "support_files": [],
+      "support_files": [
+        "tests/integration/test_legacy_gnss_waypoint_qgis.py"
+      ],
       "unit_tests": [],
       "runtime_tests": [
+        "tests/integration/test_legacy_gnss_waypoint_qgis.py",
         "tests/integration/test_qt6_plugin_runtime.py",
         "tests/integration/test_qt6_shared_dialogs_qgis.py"
       ],
-      "evidence": [],
+      "evidence": [
+        "Migrated QVariant.String fields to QMetaType.Type.QString and message levels to Qgis.MessageLevel; explicit Qt/QGIS imports replace wildcards.",
+        "Console execution and cleanup preserved; caller iface explicitly bound from globals after wildcard removal exposed F821. No suppressions/baseline increases.",
+        "New runtime script execution tests passed all 3 route orientations before migration and after migration; verify rotated corners/area/centroid/CRS, fields/types/values, style/opacity, messages, refresh and caller globals.",
+        "71 runtime cases passed in separate processes: legacy 3, shared plugin 61, shared dialogs 7. Logs /tmp/qpansopy-qt6-tests-11tdw0ak/. Final iface-binding rerun: 3 passed, /tmp/qpansopy-qt6-tests-uinr09xn/.",
+        "Non-runtime suite: 468 passed, 15 skipped, 1 failed (pre-existing Circling CAT E), zero errors, 240 deselected. Compliance guards passed.",
+        "Configured Flake8 clean, test error-level Flake8 clean; stage AST findings zero, inventory complete, diff checks clean.",
+        "PR: docs/pyqt-migration/pr-05-legacy-gnss-waypoint.md. Offscreen QGIS4.2.3/Qt6.12.0/PyQt6.12.0/Python3.14.9; manual console and invalid inputs outside scope."
+      ],
       "notes": [
         "Conservar resultados y esquema de campos; migrar enums y tipos sin cambiar fórmulas.",
         "No importar este script para comprobar carga: ejecuta operaciones en import time.",
