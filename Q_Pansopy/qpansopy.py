@@ -5,25 +5,12 @@ Aviation surfaces plugin for QGIS developed by FLYGHT7
 Copyright (C) 2020-2025 FLYGHT7
 """
 import os
-from qgis.PyQt.QtCore import QSettings
-from qgis.PyQt.QtGui import QIcon, QGuiApplication
-from qgis.PyQt.QtWidgets import QAction, QMenu, QMessageBox, QSizePolicy
+from qgis.PyQt.QtCore import QSettings, Qt, QEvent
+from qgis.PyQt.QtGui import QAction, QIcon, QGuiApplication
+from qgis.PyQt.QtWidgets import QMenu, QMessageBox, QSizePolicy
 from qgis.PyQt import sip
 from qgis.PyQt import QtWidgets, QtCore
 from qgis.core import QgsProject, QgsVectorLayer, QgsApplication, Qgis
-from .qt_compat import (
-    Qt_RightDockWidgetArea, Qt_ALLOWED_DOCK_AREAS, Qt_AlignTop,
-    Qt_ScrollBarAsNeeded, Qt_SizeVerCursor, Qt_LeftButton,
-    QEvent_MouseButtonPress, QEvent_MouseMove, QEvent_MouseButtonRelease,
-    QFrame_NoFrame, QDockWidget_VerticalTitleBar,
-    QSizePolicy_Fixed, QSizePolicy_Minimum, QSizePolicy_Preferred,
-    QSizePolicy_Expanding,
-    QFormLayout_AllNonFixedFieldsGrow,
-    QTextEdit_WidgetWidth,
-    QLayout_SetDefaultConstraint,
-    Qt_Vertical,
-)
-
 
 # Collect import errors to surface them in initGui()
 _IMPORT_ERRORS: list = []
@@ -581,7 +568,8 @@ class Qpansopy:
             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             try:
-                instance.setAllowedAreas(Qt_ALLOWED_DOCK_AREAS)
+                instance.setAllowedAreas(
+                    Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             # Initial configuration
@@ -643,7 +631,7 @@ class Qpansopy:
             # This gives Qt the context of the dock area to calculate geometry correctly
             # Without this, Qt doesn't know the available space on first opening
             instance.hide()  # Ensure it's hidden before adding
-            self.iface.addDockWidget(Qt_RightDockWidgetArea, instance)
+            self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, instance)
             self._ensure_dock_anchor(name, instance)
 
             # Now that dock is in the area (hidden), force geometry calculation with proper context
@@ -716,21 +704,21 @@ class Qpansopy:
             log_widget.setMaximumHeight(16777215)
             # We'll control height explicitly via a handle (Fixed vertical policy)
             log_widget.setMinimumHeight(max(60, log_widget.minimumHeight()))
-            log_widget.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Fixed)
+            log_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             # Ensure horizontal content never forces wider than the dock
             try:
-                log_widget.setLineWrapMode(QTextEdit_WidgetWidth)
+                log_widget.setLineWrapMode(QtWidgets.QTextEdit.LineWrapMode.WidgetWidth)
             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             try:
                 # Only import when available in QGIS' Qt shim
                 from qgis.PyQt import QtGui as _QtGui  # type: ignore
-                log_widget.setWordWrapMode(_QtGui.QTextOption.WrapAtWordBoundaryOrAnywhere)
+                log_widget.setWordWrapMode(_QtGui.QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
             try:
-                log_widget.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
-                log_widget.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
+                log_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+                log_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
         except Exception:  # nosec B110 - outer defensive wrapper around cosmetic dock/log setup
@@ -743,7 +731,7 @@ class Qpansopy:
                 parent = parent.parentWidget()
             if isinstance(parent, QtWidgets.QGroupBox):
                 parent.setMaximumHeight(16777215)
-                parent.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
+                parent.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
@@ -751,7 +739,7 @@ class Qpansopy:
         try:
             layout = log_widget.parentWidget().layout() or dock_instance.layout()
             if isinstance(layout, QtWidgets.QFormLayout):
-                layout.setFieldGrowthPolicy(QFormLayout_AllNonFixedFieldsGrow)
+                layout.setFieldGrowthPolicy(QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
 
@@ -821,7 +809,7 @@ class Qpansopy:
                         pass
                 # Prefer top alignment for contained widgets
                 try:
-                    lg_layout.setAlignment(Qt_AlignTop)
+                    lg_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
                 except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                     pass
             except Exception:  # nosec B110 - outer defensive wrapper around cosmetic dock/log setup
@@ -836,7 +824,7 @@ class Qpansopy:
             log_widget.setFixedHeight(default_h)
             # Prevent the log group from expanding vertically; keep it tight to content
             try:
-                log_group.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Fixed)
+                log_group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
 
@@ -845,10 +833,10 @@ class Qpansopy:
             if handle is None:
                 handle = QtWidgets.QFrame(log_group)
                 handle.setObjectName("qpansopyLogResizeHandle")
-                handle.setFrameShape(QFrame_NoFrame)
+                handle.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
                 handle.setFixedHeight(6)
-                handle.setCursor(Qt_SizeVerCursor)
-                handle.setSizePolicy(QSizePolicy_Expanding, QSizePolicy_Fixed)
+                handle.setCursor(Qt.CursorShape.SizeVerCursor)
+                handle.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
                 # subtle visual cue
                 handle.setStyleSheet(
                     "QFrame#qpansopyLogResizeHandle { background: rgba(0,0,0,0.08); border-radius: 2px; }")
@@ -865,12 +853,12 @@ class Qpansopy:
 
                     def eventFilter(self, obj, event):
                         et = event.type()
-                        if et == QEvent_MouseButtonPress and (event.button() == Qt_LeftButton):
-                            self._press_pos = event.globalPos()
+                        if et == QEvent.Type.MouseButtonPress and (event.button() == Qt.MouseButton.LeftButton):
+                            self._press_pos = event.globalPosition().toPoint()
                             self._start_h = self._target.height()
                             return True
-                        if et == QEvent_MouseMove and self._press_pos is not None:
-                            dy = event.globalPos().y() - self._press_pos.y()
+                        if et == QEvent.Type.MouseMove and self._press_pos is not None:
+                            dy = event.globalPosition().toPoint().y() - self._press_pos.y()
                             nh = max(self._min, min(self._max, self._start_h + dy))
                             self._target.setFixedHeight(nh)
                             try:
@@ -880,7 +868,7 @@ class Qpansopy:
                             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                                 pass
                             return True
-                        if et == QEvent_MouseButtonRelease:
+                        if et == QEvent.Type.MouseButtonRelease:
                             self._press_pos = None
                             self._start_h = None
                             return True
@@ -918,7 +906,7 @@ class Qpansopy:
                     try:
                         for j in range(layout.count()):
                             layout.setStretch(j, 0)
-                        layout.setAlignment(Qt_AlignTop)
+                        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
                     except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
 
@@ -926,14 +914,14 @@ class Qpansopy:
                     _strip_spacers(root_layout)
                     try:
                         # Use SetDefaultConstraint instead of SetMinAndMaxSize to avoid forcing QGIS window resize
-                        root_layout.setSizeConstraint(QLayout_SetDefaultConstraint)
+                        root_layout.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetDefaultConstraint)
                     except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
 
                 # Ensure every group box hugs its content (no vertical expansion)
                 for gb in root_widget.findChildren(QtWidgets.QGroupBox):
                     try:
-                        gb.setSizePolicy(QSizePolicy_Preferred, QSizePolicy_Minimum)
+                        gb.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                     except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                         pass
 
@@ -1026,9 +1014,9 @@ class Qpansopy:
             # Create new scroll area
             scroll_area = QtWidgets.QScrollArea()
             scroll_area.setWidgetResizable(True)  # CRITICAL: Allow content to resize
-            scroll_area.setFrameShape(QFrame_NoFrame)  # Seamless appearance
-            scroll_area.setHorizontalScrollBarPolicy(Qt_ScrollBarAsNeeded)
-            scroll_area.setVerticalScrollBarPolicy(Qt_ScrollBarAsNeeded)
+            scroll_area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)  # Seamless appearance
+            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
             # Reparent the existing content widget into the scroll area
             scroll_area.setWidget(content_widget)
@@ -1125,7 +1113,7 @@ class Qpansopy:
         """
         try:
             self.iface.mainWindow().resizeDocks(
-                [dock_instance], [self._available_dock_height()], Qt_Vertical
+                [dock_instance], [self._available_dock_height()], Qt.Orientation.Vertical
             )
         except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
             pass
@@ -1232,7 +1220,7 @@ class Qpansopy:
             # CRITICAL: Disable the feature that allows dock to resize the main window
             # This is the key fix - prevents dock from requesting main window resize
             dock_instance.setFeatures(
-                dock_instance.features() & ~QDockWidget_VerticalTitleBar
+                dock_instance.features() & ~QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetVerticalTitleBar
             )
 
             # Match the height cap to the screen containing the QGIS window.
@@ -1256,8 +1244,8 @@ class Qpansopy:
                     content_widget.setMaximumSize(max_dock_width, max_dock_height)
                     # Also set size policy on content widget to prevent expansion
                     content_policy = content_widget.sizePolicy()
-                    content_policy.setVerticalPolicy(QSizePolicy_Preferred)
-                    content_policy.setHorizontalPolicy(QSizePolicy_Preferred)
+                    content_policy.setVerticalPolicy(QSizePolicy.Policy.Preferred)
+                    content_policy.setHorizontalPolicy(QSizePolicy.Policy.Preferred)
                     content_widget.setSizePolicy(content_policy)
             else:
                 # Fallback if no screen info available
@@ -1266,16 +1254,16 @@ class Qpansopy:
                 if content_widget:
                     content_widget.setMaximumSize(800, 550)
                     content_policy = content_widget.sizePolicy()
-                    content_policy.setVerticalPolicy(QSizePolicy_Preferred)
-                    content_policy.setHorizontalPolicy(QSizePolicy_Preferred)
+                    content_policy.setVerticalPolicy(QSizePolicy.Policy.Preferred)
+                    content_policy.setHorizontalPolicy(QSizePolicy.Policy.Preferred)
                     content_widget.setSizePolicy(content_policy)
 
             # Configure size policy to prefer staying within bounds
             # Preferred = can grow/shrink, but prefers its size hint
             # This makes the dock adapt to available space rather than force resize
             size_policy = dock_instance.sizePolicy()
-            size_policy.setVerticalPolicy(QSizePolicy_Preferred)
-            size_policy.setHorizontalPolicy(QSizePolicy_Preferred)
+            size_policy.setVerticalPolicy(QSizePolicy.Policy.Preferred)
+            size_policy.setHorizontalPolicy(QSizePolicy.Policy.Preferred)
             size_policy.setRetainSizeWhenHidden(False)  # Don't force size when re-showing
             dock_instance.setSizePolicy(size_policy)
 
@@ -1283,7 +1271,7 @@ class Qpansopy:
             # If anything fails, try basic fallback
             try:
                 dock_instance.setMaximumSize(800, 600)
-                size_policy = QSizePolicy(QSizePolicy_Preferred, QSizePolicy_Preferred)
+                size_policy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
                 dock_instance.setSizePolicy(size_policy)
             except Exception:  # nosec B110 - cosmetic dock setup; must not crash plugin load
                 pass
@@ -1473,15 +1461,15 @@ class Qpansopy:
             if result and result.get('merged_layer'):
                 count = result.get('total_features', 0)
                 self.iface.messageBar().pushMessage(
-                    "QPANSOPY", f"Feature Merge completed: {count} features", level=Qgis.Success)
+                    "QPANSOPY", f"Feature Merge completed: {count} features", level=Qgis.MessageLevel.Success)
             else:
                 self.iface.messageBar().pushMessage(
-                    "QPANSOPY", "Feature Merge finished with no result", level=Qgis.Warning)
+                    "QPANSOPY", "Feature Merge finished with no result", level=Qgis.MessageLevel.Warning)
         except Exception as e:
             QMessageBox.critical(self.iface.mainWindow(), "Feature Merge", f"Merge failed: {e}")
             try:
                 from qgis.core import Qgis as _Q
-                self.iface.messageBar().pushMessage("QPANSOPY", f"Merge failed: {e}", level=_Q.Critical)
+                self.iface.messageBar().pushMessage("QPANSOPY", f"Merge failed: {e}", level=_Q.MessageLevel.Critical)
             except Exception:  # nosec B110 - last-resort error reporter; must not raise while handling a merge failure
                 pass
 

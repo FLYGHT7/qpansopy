@@ -10,8 +10,8 @@ class ObjectExtractionDialog(QDialog):
     """
 
     def __init__(self, iface=None, point_layer=None, surface_layer=None):
-        pass
+        super().__init__()
 
-    def exec_(self):
+    def exec(self):
         # No hacer nada, simplemente regresar como si el diálogo hubiera sido cancelado
         return False

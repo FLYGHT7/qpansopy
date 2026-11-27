@@ -26,9 +26,8 @@ from typing import Optional
 from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
                                  QLineEdit, QComboBox, QPushButton, QLabel,
                                  QMessageBox, QGroupBox, QWidget)
-from qgis.PyQt.QtCore import QRegularExpression
+from qgis.PyQt.QtCore import Qt, QRegularExpression
 from qgis.PyQt.QtGui import QRegularExpressionValidator
-from .qt_compat import Qt_AlignRight, Qt_AlignVCenter
 from .dockwidgets.base_dockwidget import load_base_qss
 from .modules.isa import calculate_isa_variation
 
@@ -63,7 +62,7 @@ class ISACalculatorDialog(QDialog):
         input_layout = QFormLayout(input_group)
         input_layout.setVerticalSpacing(12)
         input_layout.setHorizontalSpacing(10)
-        input_layout.setLabelAlignment(Qt_AlignRight | Qt_AlignVCenter)
+        input_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         # Create validator for numeric inputs
         regex = QRegularExpression(r"[-+]?[0-9]*\.?[0-9]+")

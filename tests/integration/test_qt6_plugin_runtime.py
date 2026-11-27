@@ -179,3 +179,50 @@ def test_transitional_preseed_uses_real_qgis_layer_combo(plugin, geometry, kind)
     combo.setLayer(None)
     preseed_active_layer(SimpleNamespace(activeLayer=lambda: layer), combo, kind)
     assert combo.currentLayer() is layer
+
+
+def test_switching_tools_reuses_docks_and_applies_log_visibility(plugin, qgis_app):
+    instance, _ = plugin
+    instance.toggle_dock('VSS')
+    first = instance.modules['VSS']['GUI_INSTANCE']
+    instance.toggle_dock('ILS_BASIC')
+    second = instance.modules['ILS_BASIC']['GUI_INSTANCE']
+    assert second.isVisible() and not first.isVisible()
+    instance._apply_log_visibility(False)
+    assert second.logTextEdit.isHidden()
+    instance._apply_log_visibility(True)
+    qgis_app.processEvents()
+    assert not second.logTextEdit.isHidden()
+    instance.toggle_dock('VSS')
+    assert instance.modules['VSS']['GUI_INSTANCE'] is first
+    assert first.isVisible() and not second.isVisible()
+
+
+def test_log_drag_uses_qt6_mouse_events_and_clamps_height(plugin):
+    from qgis.PyQt.QtCore import Qt, QEvent, QPointF
+    from qgis.PyQt.QtGui import QMouseEvent
+    from qgis.PyQt.QtWidgets import QGroupBox
+
+    instance, _ = plugin
+    instance.toggle_dock('VSS')
+    dock = instance.modules['VSS']['GUI_INSTANCE']
+    group = next(g for g in dock.findChildren(QGroupBox)
+                 if hasattr(g, '_qpansopy_logHandleFilter'))
+    handler = group._qpansopy_logHandleFilter
+    handle = group._qpansopy_logHandle
+
+    def event(kind, y):
+        return QMouseEvent(kind, QPointF(2, 2), QPointF(20, y),
+                           Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton,
+                           Qt.KeyboardModifier.NoModifier)
+
+    assert handler.eventFilter(handle, event(QEvent.Type.MouseButtonPress, 100))
+    start_height = dock.logTextEdit.height()
+    assert handler.eventFilter(handle, event(QEvent.Type.MouseMove, 120))
+    assert dock.logTextEdit.height() == start_height + 20
+    assert handler.eventFilter(handle, event(QEvent.Type.MouseMove, 1000))
+    assert dock.logTextEdit.height() == 260
+    assert handler.eventFilter(handle, event(QEvent.Type.MouseMove, -1000))
+    assert dock.logTextEdit.height() == 60
+    assert handler.eventFilter(handle, event(QEvent.Type.MouseButtonRelease, 100))
+    assert not handler.eventFilter(handle, event(QEvent.Type.MouseMove, 150))

@@ -55,7 +55,8 @@ class _FakeLayer:
 
 
 class _FakeQgsAction:
-    GenericPython = 'generic-python'
+    class ActionType:
+        GenericPython = 'generic-python'
 
     def __init__(self, action_type, name, action_code):
         self.action_type = action_type
