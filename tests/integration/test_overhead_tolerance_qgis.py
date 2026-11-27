@@ -8,17 +8,23 @@ pytest.importorskip('qgis')
 pytestmark = pytest.mark.qgis_runtime
 
 from qgis.core import (  # noqa: E402
-    QgsApplication, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
-    QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsRectangle, QgsVectorLayer,
+    Qgis, QgsApplication, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
+    QgsFeature, QgsGeometry, QgsMapLayerProxyModel, QgsPointXY, QgsProject,
+    QgsRectangle, QgsVectorFileWriter, QgsVectorLayer,
 )
 from qgis.gui import QgsMapCanvas  # noqa: E402
-from qgis.PyQt.QtCore import QCoreApplication, QEvent, Qt  # noqa: E402
+from qgis.PyQt.QtCore import QCoreApplication, QEvent, QMetaType, Qt  # noqa: E402
 from qgis.PyQt.QtWidgets import QApplication, QMainWindow  # noqa: E402
 
+from Q_Pansopy.modules.conv import overhead_tolerance as overhead  # noqa: E402
 from Q_Pansopy.modules.conv.overhead_tolerance import run_overhead_tolerance  # noqa: E402
 from Q_Pansopy.dockwidgets.conv.qpansopy_overhead_tolerance_dockwidget import (  # noqa: E402
     QPANSOPYOverheadToleranceDockWidget,
 )
+
+
+UTM = 'EPSG:32616'
+TIE = 'Track endpoints equidistant: using digitized direction; check Invert direction if needed'
 
 
 class _Bar:
@@ -443,3 +449,115 @@ def test_taking_and_reinserting_input_recovers_preview(dock, selected_layers):
     _assert_marker(dock)
     assert len(dock._connected_layers) == 2
     assert len({id(layer) for layer in dock._connected_layers}) == 2
+
+
+def _outputs():
+    return {layer.name(): layer for layer in QgsProject.instance().mapLayers().values()
+            if layer.name() not in ('navaid', 'track')}
+
+
+def _run(iface, layers, **extra):
+    params = {'aircraft_altitude_ft': 8000, 'station_elevation_ft': 1500, **extra}
+    return run_overhead_tolerance(iface, layers[0], layers[1], params)
+
+
+@pytest.mark.parametrize('navaid_type,prefix,summary', [
+    ('VOR', 'V', 'VOR overhead tolerance created (z=1.270 NM, q=0.111 NM)'),
+    ('NDB', 'N', 'NDB overhead tolerance created (z=0.894 NM, q=0.232 NM)'),
+])
+def test_output_schema_style_labels_and_success_message(
+        selected_layers, navaid_type, prefix, summary):
+    iface = _Iface(QgsCoordinateReferenceSystem(UTM))
+    assert _run(iface, selected_layers, navaid_type=navaid_type,
+                include_cone=True, include_points=True)
+    layers = _outputs()
+    area, cone, points = (f'{navaid_type}_{suffix}' for suffix in (
+        'Overhead_Tolerance', 'Cone_of_Silence', 'Construction_Points'))
+    assert sorted(layers) == sorted((area, cone, points))
+    for layer in layers.values():
+        assert layer.crs().authid() == UTM
+        assert [(field.name(), field.type()) for field in layer.fields()] == [
+            ('Name', QMetaType.Type.QString)]
+    for name, color in ((area, '#f28c28'), (cone, '#6c86a0')):
+        layer = layers[name]
+        assert layer.wkbType() == Qgis.WkbType.Polygon
+        assert [feature.attributes() for feature in layer.getFeatures()] == [[name]]
+        assert layer.renderer().symbol().color().name() == color
+        assert layer.renderer().symbol().opacity() == pytest.approx(0.35)
+    assert layers[points].wkbType() == Qgis.WkbType.Point
+    assert sorted(feature['Name'] for feature in layers[points].getFeatures()) == sorted(
+        ['Station'] + [f'{prefix}{index}' for index in range(1, 5)])
+    assert layers[points].labelsEnabled()
+    assert layers[points].labeling().settings().fieldName == 'Name'
+    assert iface.bar.messages == [
+        (('QPANSOPY', summary), {'level': Qgis.MessageLevel.Success})]
+
+
+def test_tied_endpoints_warn_before_success(selected_layers):
+    iface = _Iface(QgsCoordinateReferenceSystem(UTM))
+    line = selected_layers[1]
+    geometry = QgsGeometry.fromPolylineXY([
+        QgsPointXY(499000, 1600000), QgsPointXY(499000, 1599000),
+        QgsPointXY(501000, 1600000)])
+    assert line.dataProvider().changeGeometryValues(
+        {next(line.getFeatures()).id(): geometry})
+    assert _run(iface, selected_layers)
+    assert iface.bar.messages[0] == (
+        ('QPANSOPY', TIE), {'level': Qgis.MessageLevel.Warning})
+    assert [kwargs['level'] for _, kwargs in iface.bar.messages] == [
+        Qgis.MessageLevel.Warning, Qgis.MessageLevel.Success]
+
+
+def test_kml_writer_error_warns_and_keeps_layers(selected_layers, tmp_path, monkeypatch):
+    iface = _Iface(QgsCoordinateReferenceSystem(UTM))
+    monkeypatch.setattr(
+        QgsVectorFileWriter, 'writeAsVectorFormat',
+        lambda *args: (QgsVectorFileWriter.WriterError.ErrCreateDataSource, 'disk refused'))
+    assert _run(iface, selected_layers, export_kml=True, output_dir=str(tmp_path))
+    assert list(_outputs()) == ['VOR_Overhead_Tolerance']
+    assert iface.bar.messages[-1] == (
+        ('QPANSOPY', 'Layers created, but KML export failed: disk refused'),
+        {'level': Qgis.MessageLevel.Warning})
+
+
+@pytest.mark.parametrize('combo_name,uri,layer_filter', [
+    ('navaidLayerComboBox', 'Point', QgsMapLayerProxyModel.Filter.PointLayer),
+    ('trackLayerComboBox', 'LineString', QgsMapLayerProxyModel.Filter.LineLayer),
+])
+def test_dock_filters_layers_and_preseeds_active_layer(
+        selected_layers, combo_name, uri, layer_filter):
+    active = QgsVectorLayer(f'{uri}?crs={UTM}', 'zz active', 'memory')
+    QgsProject.instance().addMapLayer(active)
+    iface = _Iface(QgsCoordinateReferenceSystem(UTM))
+    iface.activeLayer = lambda: active
+    widget = QPANSOPYOverheadToleranceDockWidget(iface)
+    try:
+        combo = getattr(widget, combo_name)
+        assert combo.filters() == layer_filter
+        assert combo.currentLayer() is active
+    finally:
+        widget.close()
+        widget.deleteLater()
+        iface.window.deleteLater()
+
+
+def test_dock_reports_input_error_as_warning(dock):
+    dock.calculate()
+    message = 'Enter both aircraft altitude and station elevation'
+    assert dock.iface.bar.messages == [
+        (('QPANSOPY', message), {'level': Qgis.MessageLevel.Warning})]
+    assert dock.logTextEdit.toPlainText() == f'Error: {message}'
+    assert len(QgsProject.instance().mapLayers()) == 2
+
+
+def test_dock_reports_unexpected_error_as_critical(dock, monkeypatch):
+    def fail(*args):
+        raise TypeError('boom')
+
+    monkeypatch.setattr(overhead, 'run_overhead_tolerance', fail)
+    dock.aircraftAltitudeLineEdit.setText('8000')
+    dock.stationElevationLineEdit.setText('1500')
+    dock.calculate()
+    assert dock.iface.bar.messages == [
+        (('QPANSOPY', 'boom'), {'level': Qgis.MessageLevel.Critical})]
+    assert dock.logTextEdit.toPlainText().startswith('Error: boom')
