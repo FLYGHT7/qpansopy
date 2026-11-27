@@ -4,12 +4,14 @@ CONV Initial Approach Segment Straight
 
 myglobals = set(globals().keys())
 
-from qgis.core import *
-from qgis.PyQt.QtCore import *
-from qgis.PyQt.QtGui import *
-from qgis.gui import *
-from qgis.PyQt.QtCore import QVariant
-from math import *
+from qgis.core import (
+    Qgis, QgsProject, QgsPoint, QgsVectorLayer, QgsField,
+    QgsFeature, QgsPolygon, QgsLineString,
+)
+from qgis.PyQt.QtCore import QMetaType
+import math
+
+iface = globals()['iface']  # Supplied by the QGIS console.
 
 '''
 Constants 
@@ -18,8 +20,7 @@ Constants
 
 delta = 0
 
-from qgis.core import Qgis
-iface.messageBar().pushMessage("QPANSOPY:", "Executing CONV Initial Approach Segment Straight", level=Qgis.Info)
+iface.messageBar().pushMessage("QPANSOPY:", "Executing CONV Initial Approach Segment Straight", level=Qgis.MessageLevel.Info)
 
 # Select line
 # Gets the runway layer
@@ -32,7 +33,7 @@ for layer in QgsProject.instance().mapLayers().values():
         selection = layer.selectedFeatures()
     else:
         pass
-        iface.messageBar().pushMessage("No Routing Selected", level=Qgis.Critical)
+        iface.messageBar().pushMessage("No Routing Selected", level=Qgis.MessageLevel.Critical)
 
 for feat in selection:
     geom = feat.geometry().asPolyline()
@@ -127,7 +128,7 @@ print (pts)
 
 # Create memory layer
 v_layer = QgsVectorLayer("PolygonZ?crs="+map_srid, "Initial Approach Area", "memory")
-myField = QgsField( 'Symbol', QVariant.String)
+myField = QgsField( 'Symbol', QMetaType.Type.QString)
 v_layer.dataProvider().addAttributes([myField])
 v_layer.updateFields()
 
@@ -193,7 +194,7 @@ v_layer.removeSelection()
 v_layer.loadNamedStyle('c:/Users/anton/Documents/GitHub/qpansopy_og/styles/primary_secondary_areas.qml')
 
 
-iface.messageBar().pushMessage("QPANSOPY:", "Finished Initial Approach Segment", level=Qgis.Success)
+iface.messageBar().pushMessage("QPANSOPY:", "Finished Initial Approach Segment", level=Qgis.MessageLevel.Success)
 
 set(globals().keys()).difference(myglobals)
 
