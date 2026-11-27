@@ -105,7 +105,7 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if len(selected_layers) < 2:
             self.log("Error: Select at least two vector layers in the Layers panel.")
             self.iface.messageBar().pushMessage(
-                "Error", "Select at least two vector layers in the Layers panel.", level=Qgis.Warning)
+                "Error", "Select at least two vector layers in the Layers panel.", level=Qgis.MessageLevel.Warning)
             return False, []
 
         # Check geometry and CRS compatibility
@@ -118,11 +118,12 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     f"Error: Geometry type mismatch between layer '{selected_layers[0].name()}' and '{layer.name()}'")
 
                 self.iface.messageBar().pushMessage(
-                    "Error", "Geometry types differ between selected layers", level=Qgis.Warning)
+                    "Error", "Geometry types differ between selected layers", level=Qgis.MessageLevel.Warning)
                 return False, []
             if layer.crs() != crs:
                 self.log(f"Error: CRS mismatch between layer '{selected_layers[0].name()}' and '{layer.name()}'")
-                self.iface.messageBar().pushMessage("Error", "CRS differ between selected layers", level=Qgis.Warning)
+                self.iface.messageBar().pushMessage(
+                    "Error", "CRS differ between selected layers", level=Qgis.MessageLevel.Warning)
                 return False, []
 
         # Check if layer name is provided
@@ -198,7 +199,7 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.iface.messageBar().pushMessage(
                     "QPANSOPY",
                     f"Layer merging completed: {result.get('total_features', 0)} features merged",
-                    level=Qgis.Success)
+                    level=Qgis.MessageLevel.Success)
             else:
                 self.log("Layer merging completed but no results were returned.")
 
@@ -206,7 +207,8 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.log(f"Error during layer merging: {str(e)}")
             import traceback
             self.log(traceback.format_exc())
-            self.iface.messageBar().pushMessage("Error", f"Layer merging failed: {str(e)}", level=Qgis.Critical)
+            self.iface.messageBar().pushMessage(
+                "Error", f"Layer merging failed: {str(e)}", level=Qgis.MessageLevel.Critical)
 
     def export_results_to_kml(self, merged_layer, output_dir):
         """Export merged results to KML format"""
@@ -226,10 +228,10 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                     merged_layer.crs(),
                     "KML"
                 )
-                if error[0] == QgsVectorFileWriter.NoError:
+                if error[0] == QgsVectorFileWriter.WriterError.NoError:
                     self.log(f"Merged layer exported to KML: {kml_path}")
                     self.iface.messageBar().pushMessage(
-                        "QPANSOPY", "Feature Merge results exported to KML", level=Qgis.Success)
+                        "QPANSOPY", "Feature Merge results exported to KML", level=Qgis.MessageLevel.Success)
                 else:
                     self.log(f"Error exporting merged layer: {error[1]}")
             else:
@@ -278,7 +280,7 @@ class QPANSOPYFeatureMergeDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         clipboard.setText(params_json)
         self.log("Feature Merge parameters copied to clipboard as JSON.")
         self.iface.messageBar().pushMessage(
-            "QPANSOPY", "Feature Merge parameters copied to clipboard as JSON", level=Qgis.Success)
+            "QPANSOPY", "Feature Merge parameters copied to clipboard as JSON", level=Qgis.MessageLevel.Success)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
